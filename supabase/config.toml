@@ -1,0 +1,24 @@
+# Minimal Supabase CLI config — project is linked in CI via `supabase link`.
+# https://supabase.com/docs/guides/cli/config
+
+[project]
+id = "hub"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.migrations]
+enabled = true
+schema_paths = []
+
+[db.seed]
+enabled = false
