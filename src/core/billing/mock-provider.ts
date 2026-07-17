@@ -13,16 +13,18 @@ export class MockPaymentProvider implements PaymentProvider {
   readonly id = "mock";
 
   async createCheckout(
-    _userId: string,
+    userId: string,
     planId: PlanId,
   ): Promise<CheckoutResult> {
+    void userId;
     return {
       deferred: true,
       message: `Mock checkout for plan "${planId}". Use the in-app upgrade action.`,
     };
   }
 
-  async createPortal(_userId: string): Promise<PortalResult> {
+  async createPortal(userId: string): Promise<PortalResult> {
+    void userId;
     return {
       unsupported: true,
       message:
@@ -30,7 +32,8 @@ export class MockPaymentProvider implements PaymentProvider {
     };
   }
 
-  async syncSubscription(_payload: unknown): Promise<void> {
+  async syncSubscription(payload: unknown): Promise<void> {
+    void payload;
     // Webhook stub — real providers will implement this.
   }
 }
