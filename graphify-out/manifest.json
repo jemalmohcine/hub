@@ -1,0 +1,482 @@
+{
+  "/Users/mohcinejemal/Desktop/hub/components.json": {
+    "mtime": 1784289458.3737698,
+    "ast_hash": "f9b838065323828efd209f38da0e25f2",
+    "semantic_hash": "f9b838065323828efd209f38da0e25f2"
+  },
+  "/Users/mohcinejemal/Desktop/hub/eslint.config.mjs": {
+    "mtime": 1784288302.586511,
+    "ast_hash": "00bdaefe666ba5afaea3cee6c49d889f",
+    "semantic_hash": "00bdaefe666ba5afaea3cee6c49d889f"
+  },
+  "/Users/mohcinejemal/Desktop/hub/next.config.ts": {
+    "mtime": 1784288997.9764483,
+    "ast_hash": "8a9becd0dd0447503aa37374a503d4d9",
+    "semantic_hash": "8a9becd0dd0447503aa37374a503d4d9"
+  },
+  "/Users/mohcinejemal/Desktop/hub/package.json": {
+    "mtime": 1784290201.4046316,
+    "ast_hash": "3cb56526bcf946b6d740f2c55d6f0c7c",
+    "semantic_hash": "3cb56526bcf946b6d740f2c55d6f0c7c"
+  },
+  "/Users/mohcinejemal/Desktop/hub/postcss.config.mjs": {
+    "mtime": 1784287908.8375494,
+    "ast_hash": "239f3ebf717465dc636818a1a619398d",
+    "semantic_hash": "239f3ebf717465dc636818a1a619398d"
+  },
+  "/Users/mohcinejemal/Desktop/hub/public/sw.js": {
+    "mtime": 1784288998.7552557,
+    "ast_hash": "a76b4779131462ef2a06dbbba35e9dbd",
+    "semantic_hash": "a76b4779131462ef2a06dbbba35e9dbd"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(admin)/admin/page.tsx": {
+    "mtime": 1784289257.4171734,
+    "ast_hash": "0f6e94187b4940a6be465671bf5505e2",
+    "semantic_hash": "0f6e94187b4940a6be465671bf5505e2"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(admin)/layout.tsx": {
+    "mtime": 1784288128.6345897,
+    "ast_hash": "6dca65e9347b342a6c5ba51ca8042a44",
+    "semantic_hash": "6dca65e9347b342a6c5ba51ca8042a44"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(app)/app/ai/page.tsx": {
+    "mtime": 1784289239.063592,
+    "ast_hash": "8c80a9dd95dcf444e93c376d983d7060",
+    "semantic_hash": "8c80a9dd95dcf444e93c376d983d7060"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(app)/app/loading.tsx": {
+    "mtime": 1784290849.3142996,
+    "ast_hash": "b26e0f46c8c40b57d7e51fd209b3741e",
+    "semantic_hash": "b26e0f46c8c40b57d7e51fd209b3741e"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(app)/app/overview/page.tsx": {
+    "mtime": 1784291309.7739153,
+    "ast_hash": "1dd9dfc022c64b82ad2c7de30fc74873",
+    "semantic_hash": "1dd9dfc022c64b82ad2c7de30fc74873"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(app)/app/page.tsx": {
+    "mtime": 1784288091.7764966,
+    "ast_hash": "07ff87638564624218c0b12bd9509ebb",
+    "semantic_hash": "07ff87638564624218c0b12bd9509ebb"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(app)/app/settings/account/page.tsx": {
+    "mtime": 1784291268.0780072,
+    "ast_hash": "11e486adc63f9f7ed9d56909b4d9e50b",
+    "semantic_hash": "11e486adc63f9f7ed9d56909b4d9e50b"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(app)/app/settings/appearance/page.tsx": {
+    "mtime": 1784290527.2714944,
+    "ast_hash": "410a5f0ab29083b80acefc170198cb10",
+    "semantic_hash": "410a5f0ab29083b80acefc170198cb10"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(app)/app/settings/billing/page.tsx": {
+    "mtime": 1784290535.0811152,
+    "ast_hash": "9d5a0d14d75cf652abaf7a9ed8e97323",
+    "semantic_hash": "9d5a0d14d75cf652abaf7a9ed8e97323"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(app)/app/settings/loading.tsx": {
+    "mtime": 1784290850.980974,
+    "ast_hash": "27e715a4747e2b3b5c5e1f376080920c",
+    "semantic_hash": "27e715a4747e2b3b5c5e1f376080920c"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(app)/app/settings/modules/page.tsx": {
+    "mtime": 1784290541.753154,
+    "ast_hash": "325b5e1aef2854d19ff4ad47db995051",
+    "semantic_hash": "325b5e1aef2854d19ff4ad47db995051"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(app)/app/settings/page.tsx": {
+    "mtime": 1784292595.56981,
+    "ast_hash": "b62d1c5fefd31a020f255197923bf5ab",
+    "semantic_hash": "b62d1c5fefd31a020f255197923bf5ab"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(app)/app/settings/security/page.tsx": {
+    "mtime": 1784291260.039865,
+    "ast_hash": "12d1235fb7b573273a10f5b15eaaaed8",
+    "semantic_hash": "12d1235fb7b573273a10f5b15eaaaed8"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(app)/layout.tsx": {
+    "mtime": 1784288086.5643184,
+    "ast_hash": "45fe220320a0a743b6c7286892b88ad1",
+    "semantic_hash": "45fe220320a0a743b6c7286892b88ad1"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(auth)/forgot-password/page.tsx": {
+    "mtime": 1784291254.1751535,
+    "ast_hash": "a48edd49e30ca6af236f10179b042194",
+    "semantic_hash": "a48edd49e30ca6af236f10179b042194"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(auth)/reset-password/page.tsx": {
+    "mtime": 1784291257.70022,
+    "ast_hash": "e645d8acac6d6c95c7168c01c0988308",
+    "semantic_hash": "e645d8acac6d6c95c7168c01c0988308"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(auth)/sign-in/page.tsx": {
+    "mtime": 1784289230.3308,
+    "ast_hash": "89e242e4bb228652704fde13d0c466ec",
+    "semantic_hash": "89e242e4bb228652704fde13d0c466ec"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/(auth)/sign-up/page.tsx": {
+    "mtime": 1784289233.264783,
+    "ast_hash": "152279a5132575a05f79b13fe07c0d3c",
+    "semantic_hash": "152279a5132575a05f79b13fe07c0d3c"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/api/billing/checkout/route.ts": {
+    "mtime": 1784288046.0192218,
+    "ast_hash": "09787b9810897d197eb5c35d7019182e",
+    "semantic_hash": "09787b9810897d197eb5c35d7019182e"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/api/billing/webhook/route.ts": {
+    "mtime": 1784288045.7914639,
+    "ast_hash": "59a33f746fc54a0cdf8a7367535bde5a",
+    "semantic_hash": "59a33f746fc54a0cdf8a7367535bde5a"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/auth/callback/route.ts": {
+    "mtime": 1784288044.5797226,
+    "ast_hash": "829cc6f28ee2d82d6b7b4bb3745f36b5",
+    "semantic_hash": "829cc6f28ee2d82d6b7b4bb3745f36b5"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/layout.tsx": {
+    "mtime": 1784290855.5151424,
+    "ast_hash": "2153826b0591a4f3c442be7893d45252",
+    "semantic_hash": "2153826b0591a4f3c442be7893d45252"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/app/page.tsx": {
+    "mtime": 1784291296.8100696,
+    "ast_hash": "87aacf63db1306a54bb9bb35b18b7618",
+    "semantic_hash": "87aacf63db1306a54bb9bb35b18b7618"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/components/ui/alert.tsx": {
+    "mtime": 1784290026.5947993,
+    "ast_hash": "739c28799fae98b4fa01132494788e85",
+    "semantic_hash": "739c28799fae98b4fa01132494788e85"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/components/ui/badge.tsx": {
+    "mtime": 1784290026.5731614,
+    "ast_hash": "633c33997e6137921ae433dd2dd0cb31",
+    "semantic_hash": "633c33997e6137921ae433dd2dd0cb31"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/components/ui/button.tsx": {
+    "mtime": 1784290944.6119719,
+    "ast_hash": "5f68acfbac9d732c0231359639f2937d",
+    "semantic_hash": "5f68acfbac9d732c0231359639f2937d"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/components/ui/card.tsx": {
+    "mtime": 1784290026.4919636,
+    "ast_hash": "baac5330eb05de0cb1da0786f542ba9a",
+    "semantic_hash": "baac5330eb05de0cb1da0786f542ba9a"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/components/ui/checkbox.tsx": {
+    "mtime": 1784290953.1888936,
+    "ast_hash": "cc4b318f00413b68a52b135bd77c34bd",
+    "semantic_hash": "cc4b318f00413b68a52b135bd77c34bd"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/components/ui/input.tsx": {
+    "mtime": 1784290026.532235,
+    "ast_hash": "2b0e9e810580f227dd255d9b78a83835",
+    "semantic_hash": "2b0e9e810580f227dd255d9b78a83835"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/components/ui/label.tsx": {
+    "mtime": 1784290026.552326,
+    "ast_hash": "e7e0c4ad98f3485ecd3c0ca516d0a8bf",
+    "semantic_hash": "e7e0c4ad98f3485ecd3c0ca516d0a8bf"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/components/ui/select.tsx": {
+    "mtime": 1784291003.0911858,
+    "ast_hash": "56e86fb3678f617fe80c66c7b091329e",
+    "semantic_hash": "56e86fb3678f617fe80c66c7b091329e"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/components/ui/separator.tsx": {
+    "mtime": 1784290026.6167443,
+    "ast_hash": "f57449eae78fbd87d99e4edc45ab3c1e",
+    "semantic_hash": "f57449eae78fbd87d99e4edc45ab3c1e"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/components/ui/textarea.tsx": {
+    "mtime": 1784290026.704404,
+    "ast_hash": "d448d2a90e48542e51b93a1189127bf2",
+    "semantic_hash": "d448d2a90e48542e51b93a1189127bf2"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/core/auth/actions.ts": {
+    "mtime": 1784291232.160682,
+    "ast_hash": "d46c6bda3e578af3571ac4afa36eb0fb",
+    "semantic_hash": "d46c6bda3e578af3571ac4afa36eb0fb"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/core/auth/get-user.ts": {
+    "mtime": 1784291205.8280928,
+    "ast_hash": "d976304c79ee6a8c6441594c46b315b2",
+    "semantic_hash": "d976304c79ee6a8c6441594c46b315b2"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/core/auth/supabase/client.ts": {
+    "mtime": 1784288020.010123,
+    "ast_hash": "72963c72065fac587086e331550b4e70",
+    "semantic_hash": "72963c72065fac587086e331550b4e70"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/core/auth/supabase/middleware.ts": {
+    "mtime": 1784291213.5977473,
+    "ast_hash": "59b4a7fa0a00a70a169a2124980ca9ad",
+    "semantic_hash": "59b4a7fa0a00a70a169a2124980ca9ad"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/core/auth/supabase/server.ts": {
+    "mtime": 1784288022.6543996,
+    "ast_hash": "41f9083b84ff1d645a8c01123dae1179",
+    "semantic_hash": "41f9083b84ff1d645a8c01123dae1179"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/core/auth/types.ts": {
+    "mtime": 1784291189.8124175,
+    "ast_hash": "0549ca911f2b3bbed4cb8c19bdd3016d",
+    "semantic_hash": "0549ca911f2b3bbed4cb8c19bdd3016d"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/core/billing/index.ts": {
+    "mtime": 1784288034.1187463,
+    "ast_hash": "79ff187ee4cee2c824f47e7251d0e2de",
+    "semantic_hash": "79ff187ee4cee2c824f47e7251d0e2de"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/core/billing/mock-provider.ts": {
+    "mtime": 1784288313.8479414,
+    "ast_hash": "66755554434e2bebee5eab10d9fa8912",
+    "semantic_hash": "66755554434e2bebee5eab10d9fa8912"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/core/billing/types.ts": {
+    "mtime": 1784288027.1784642,
+    "ast_hash": "cc6b7535930b6b136e1d46e85dfd14ac",
+    "semantic_hash": "cc6b7535930b6b136e1d46e85dfd14ac"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/core/entitlements/index.ts": {
+    "mtime": 1784288026.8923528,
+    "ast_hash": "16fd5f00d8bfa5e170efc4390c9a0a08",
+    "semantic_hash": "16fd5f00d8bfa5e170efc4390c9a0a08"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/core/module-registry/index.ts": {
+    "mtime": 1784288026.1972325,
+    "ast_hash": "1c16e4262932188d4817295557a1e0fc",
+    "semantic_hash": "1c16e4262932188d4817295557a1e0fc"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/components/button.tsx": {
+    "mtime": 1784289808.3302984,
+    "ast_hash": "c8ddaa64678173e38661888484cac563",
+    "semantic_hash": "c8ddaa64678173e38661888484cac563"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/components/card.tsx": {
+    "mtime": 1784290041.5042727,
+    "ast_hash": "51c12919ca0e64d49162dfd5712fd03c",
+    "semantic_hash": "51c12919ca0e64d49162dfd5712fd03c"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/components/feedback.tsx": {
+    "mtime": 1784290046.3585677,
+    "ast_hash": "7e2c43185f59a5efdff4068344281cad",
+    "semantic_hash": "7e2c43185f59a5efdff4068344281cad"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/components/form-submit.tsx": {
+    "mtime": 1784289281.617272,
+    "ast_hash": "0368061b5e74c2e2b7fbc054d7180f72",
+    "semantic_hash": "0368061b5e74c2e2b7fbc054d7180f72"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/components/forms.tsx": {
+    "mtime": 1784290397.3991358,
+    "ast_hash": "4216630067c5f26f3778a0b3aa16b3d2",
+    "semantic_hash": "4216630067c5f26f3778a0b3aa16b3d2"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/components/layout.tsx": {
+    "mtime": 1784289148.4539146,
+    "ast_hash": "f606ed32e2ead5c655ee5929f00216c6",
+    "semantic_hash": "f606ed32e2ead5c655ee5929f00216c6"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/components/navigation-progress.tsx": {
+    "mtime": 1784290829.4841022,
+    "ast_hash": "c88e45783303d7a3b3c04395611017b4",
+    "semantic_hash": "c88e45783303d7a3b3c04395611017b4"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/components/navigation.tsx": {
+    "mtime": 1784290948.8057277,
+    "ast_hash": "8c4114a6235436bb8b2a89e306692293",
+    "semantic_hash": "8c4114a6235436bb8b2a89e306692293"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/components/page-skeleton.tsx": {
+    "mtime": 1784290849.1055906,
+    "ast_hash": "c408b3eebf0cfdb6144a766000174df9",
+    "semantic_hash": "c408b3eebf0cfdb6144a766000174df9"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/components/patterns.tsx": {
+    "mtime": 1784291003.023498,
+    "ast_hash": "1b5ec69eb8ace27c056fb3dadd7a3efa",
+    "semantic_hash": "1b5ec69eb8ace27c056fb3dadd7a3efa"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/components/primitives.tsx": {
+    "mtime": 1784291001.0436618,
+    "ast_hash": "17933b6ea78b68b5489b309c1c3493f1",
+    "semantic_hash": "17933b6ea78b68b5489b309c1c3493f1"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/components/settings.tsx": {
+    "mtime": 1784292594.474881,
+    "ast_hash": "bc0ad0801eba66c8844f6d1bd5959fe9",
+    "semantic_hash": "bc0ad0801eba66c8844f6d1bd5959fe9"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/components/shells.tsx": {
+    "mtime": 1784290257.4593127,
+    "ast_hash": "aa64bfac4f7653691780ecad8000edac",
+    "semantic_hash": "aa64bfac4f7653691780ecad8000edac"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/components/theme.tsx": {
+    "mtime": 1784290251.98033,
+    "ast_hash": "c4f0e58a9df016689d80103b506e3a9d",
+    "semantic_hash": "c4f0e58a9df016689d80103b506e3a9d"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/components/typography.tsx": {
+    "mtime": 1784289144.923862,
+    "ast_hash": "2e0e78aded16d8b382773574ca3fb714",
+    "semantic_hash": "2e0e78aded16d8b382773574ca3fb714"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/index.ts": {
+    "mtime": 1784291214.8679833,
+    "ast_hash": "dc7bce2579d340e6d8d3d0c130a8ef1e",
+    "semantic_hash": "dc7bce2579d340e6d8d3d0c130a8ef1e"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/lib/cn.ts": {
+    "mtime": 1784289805.5691526,
+    "ast_hash": "2edfc4fbeedd38e7ce15313c1beff880",
+    "semantic_hash": "2edfc4fbeedd38e7ce15313c1beff880"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/lib/validation.ts": {
+    "mtime": 1784291214.4842327,
+    "ast_hash": "aa18be6144acc26560ddbaea1111c98f",
+    "semantic_hash": "aa18be6144acc26560ddbaea1111c98f"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/lib/utils.ts": {
+    "mtime": 1784289463.2318997,
+    "ast_hash": "5a6fd53fdcf2be529e9cc0b718fde352",
+    "semantic_hash": "5a6fd53fdcf2be529e9cc0b718fde352"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/proxy.ts": {
+    "mtime": 1784288024.6314814,
+    "ast_hash": "f9720b7d5154f3c3e678bac5ce690e99",
+    "semantic_hash": "f9720b7d5154f3c3e678bac5ce690e99"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/shared/ui/app-shell.tsx": {
+    "mtime": 1784290257.857141,
+    "ast_hash": "805b3c0136c21f0495606ef2f5273a74",
+    "semantic_hash": "805b3c0136c21f0495606ef2f5273a74"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/shared/ui/auth-forms.tsx": {
+    "mtime": 1784291252.2018926,
+    "ast_hash": "6322f37700e659e44105479c1f550f85",
+    "semantic_hash": "6322f37700e659e44105479c1f550f85"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/shared/ui/index.tsx": {
+    "mtime": 1784289260.0520244,
+    "ast_hash": "458ae37032b9341fa02d2280a0728ea2",
+    "semantic_hash": "458ae37032b9341fa02d2280a0728ea2"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/shared/ui/pwa-register.tsx": {
+    "mtime": 1784288999.5992668,
+    "ast_hash": "789b10127ff841325e3dc455869b6255",
+    "semantic_hash": "789b10127ff841325e3dc455869b6255"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/shared/ui/settings-forms.tsx": {
+    "mtime": 1784291254.111083,
+    "ast_hash": "5b8922bd38c0204e9bc7c65384dfe033",
+    "semantic_hash": "5b8922bd38c0204e9bc7c65384dfe033"
+  },
+  "/Users/mohcinejemal/Desktop/hub/supabase/migrations/001_hub_phase1.sql": {
+    "mtime": 1784292431.3717575,
+    "ast_hash": "aa3ceaea4d413d7c8335177fbeed23dd",
+    "semantic_hash": "aa3ceaea4d413d7c8335177fbeed23dd"
+  },
+  "/Users/mohcinejemal/Desktop/hub/supabase/migrations/002_profile_names.sql": {
+    "mtime": 1784291189.7628274,
+    "ast_hash": "2d35d558f0a1cd513e83f339a0bf34ea",
+    "semantic_hash": "2d35d558f0a1cd513e83f339a0bf34ea"
+  },
+  "/Users/mohcinejemal/Desktop/hub/tsconfig.json": {
+    "mtime": 1784287908.8385499,
+    "ast_hash": "ee17fd1c97c735e9f3564e3f5251f125",
+    "semantic_hash": "ee17fd1c97c735e9f3564e3f5251f125"
+  },
+  "/Users/mohcinejemal/Desktop/hub/vercel.json": {
+    "mtime": 1784288140.8331223,
+    "ast_hash": "4188dd8d6b745cca5d443108639b1fe2",
+    "semantic_hash": "4188dd8d6b745cca5d443108639b1fe2"
+  },
+  "/Users/mohcinejemal/Desktop/hub/.github/workflows/supabase-migrate.yml": {
+    "mtime": 1784292431.3845222,
+    "ast_hash": "2d459c64ccf58393b259acbaff7fa826",
+    "semantic_hash": "2d459c64ccf58393b259acbaff7fa826"
+  },
+  "/Users/mohcinejemal/Desktop/hub/AGENTS.md": {
+    "mtime": 1784287932.3014686,
+    "ast_hash": "9e09241799026ac05be315a2f0b50055",
+    "semantic_hash": "9e09241799026ac05be315a2f0b50055"
+  },
+  "/Users/mohcinejemal/Desktop/hub/CLAUDE.md": {
+    "mtime": 1784287932.3015373,
+    "ast_hash": "5c27369b226fcf2be8a6cfe52224e767",
+    "semantic_hash": "5c27369b226fcf2be8a6cfe52224e767"
+  },
+  "/Users/mohcinejemal/Desktop/hub/DEPLOY.md": {
+    "mtime": 1784291299.7834399,
+    "ast_hash": "de0f4f612daf82ef1242d68bc51a230f",
+    "semantic_hash": "de0f4f612daf82ef1242d68bc51a230f"
+  },
+  "/Users/mohcinejemal/Desktop/hub/README.md": {
+    "mtime": 1784290137.3249907,
+    "ast_hash": "0baca73fee3e194363441f2530b7ed31",
+    "semantic_hash": "0baca73fee3e194363441f2530b7ed31"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/assets/styles/README.md": {
+    "mtime": 1784289783.0668752,
+    "ast_hash": "fa6a3e7a1a9ec539b70c23c1b4451503",
+    "semantic_hash": "fa6a3e7a1a9ec539b70c23c1b4451503"
+  },
+  "/Users/mohcinejemal/Desktop/hub/src/design-system/README.md": {
+    "mtime": 1784290046.5235066,
+    "ast_hash": "f7cb7eb278f16643b4596f53f48e6253",
+    "semantic_hash": "f7cb7eb278f16643b4596f53f48e6253"
+  },
+  "/Users/mohcinejemal/Desktop/hub/public/file.svg": {
+    "mtime": 1784287908.837819,
+    "ast_hash": "d09f95206c3fa0bb9bd9fefabfd0ea71",
+    "semantic_hash": "d09f95206c3fa0bb9bd9fefabfd0ea71"
+  },
+  "/Users/mohcinejemal/Desktop/hub/public/globe.svg": {
+    "mtime": 1784287908.837257,
+    "ast_hash": "2aaafa6a49b6563925fe440891e32717",
+    "semantic_hash": "2aaafa6a49b6563925fe440891e32717"
+  },
+  "/Users/mohcinejemal/Desktop/hub/public/icons/icon-192x192.png": {
+    "mtime": 1784287999.8679419,
+    "ast_hash": "20d4ba312db5635286bc272da464d30f",
+    "semantic_hash": "20d4ba312db5635286bc272da464d30f"
+  },
+  "/Users/mohcinejemal/Desktop/hub/public/icons/icon-192x192.svg": {
+    "mtime": 1784287993.2335937,
+    "ast_hash": "0f85324142b1e07d0a4586a08986fe62",
+    "semantic_hash": "0f85324142b1e07d0a4586a08986fe62"
+  },
+  "/Users/mohcinejemal/Desktop/hub/public/icons/icon-512x512.png": {
+    "mtime": 1784287999.8706782,
+    "ast_hash": "ecd5983790fa3ac1585a173bf5f3f4fb",
+    "semantic_hash": "ecd5983790fa3ac1585a173bf5f3f4fb"
+  },
+  "/Users/mohcinejemal/Desktop/hub/public/icons/icon-512x512.svg": {
+    "mtime": 1784287993.236772,
+    "ast_hash": "b02e18187ff79560bf8a50d3f546ddf1",
+    "semantic_hash": "b02e18187ff79560bf8a50d3f546ddf1"
+  },
+  "/Users/mohcinejemal/Desktop/hub/public/icons/icon.svg": {
+    "mtime": 1784287993.2393284,
+    "ast_hash": "b02e18187ff79560bf8a50d3f546ddf1",
+    "semantic_hash": "b02e18187ff79560bf8a50d3f546ddf1"
+  },
+  "/Users/mohcinejemal/Desktop/hub/public/next.svg": {
+    "mtime": 1784287908.8380036,
+    "ast_hash": "8e061864f388b47f33a1c3780831193e",
+    "semantic_hash": "8e061864f388b47f33a1c3780831193e"
+  },
+  "/Users/mohcinejemal/Desktop/hub/public/vercel.svg": {
+    "mtime": 1784287908.8379843,
+    "ast_hash": "c0af2f507b369b085b35ef4bbe3bcf1e",
+    "semantic_hash": "c0af2f507b369b085b35ef4bbe3bcf1e"
+  },
+  "/Users/mohcinejemal/Desktop/hub/public/window.svg": {
+    "mtime": 1784287908.8379884,
+    "ast_hash": "a2760511c65806022ad20adf74370ff3",
+    "semantic_hash": "a2760511c65806022ad20adf74370ff3"
+  }
+}
