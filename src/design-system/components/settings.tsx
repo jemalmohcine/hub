@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { useLinkStatus } from "next/link";
-import { ArrowLeft, Loader2, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Text, Heading } from "@/design-system/components/typography";
 import { Badge } from "@/design-system/components/feedback";
 import { Cluster, Stack } from "@/design-system/components/layout";
 import { Card } from "@/design-system/components/card";
-import { IconBox } from "@/design-system/components/primitives";
 
 function LinkPendingHint({ className }: { className?: string }) {
   const { pending } = useLinkStatus();
@@ -91,14 +90,15 @@ export function SettingsNavRow({
   href,
   title,
   description,
-  icon: Icon,
+  icon,
   trailing,
   badge,
 }: {
   href: string;
   title: string;
   description: string;
-  icon?: LucideIcon;
+  /** Pass rendered nodes (e.g. `<IconBox />`), not component refs — server → client safe. */
+  icon?: ReactNode;
   trailing?: ReactNode;
   badge?: ReactNode;
 }) {
@@ -111,7 +111,7 @@ export function SettingsNavRow({
           "hover:border-primary/35 hover:bg-muted/40 active:scale-[0.99]",
         )}
       >
-        {Icon ? <IconBox icon={Icon} size="md" /> : null}
+        {icon}
         <div className="min-w-0 flex-1">
           <Cluster gap={2}>
             <Text as="p" weight="medium">

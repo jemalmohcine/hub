@@ -10,6 +10,7 @@ import {
 import { getHubUser } from "@/core/auth/get-user";
 import { profileFullName } from "@/core/auth/types";
 import {
+  IconBox,
   PageHeader,
   SettingsAccountCard,
   SettingsNavRow,
@@ -89,7 +90,7 @@ export default async function SettingsPage() {
               href={section.href}
               title={section.title}
               description={section.description}
-              icon={section.icon}
+              icon={<IconBox icon={section.icon} size="md" />}
               trailing={
                 <ChevronRight
                   className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
