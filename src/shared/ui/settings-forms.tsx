@@ -1,111 +1,144 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTheme } from "next-themes";
 import {
   mockUpgradePlan,
   updatePreferences,
   updateProfile,
   type ActionResult,
 } from "@/core/auth/actions";
-import { Button, Input, Label } from "@/shared/ui";
-import type { HubUser } from "@/core/auth/types";
+import type { HubUser, ThemePreference } from "@/core/auth/types";
 import { PLAN_META } from "@/core/entitlements";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Field,
+  Form,
+  Grid,
+  Input,
+  PlanCard,
+  Select,
+  Stack,
+  Text,
+} from "@/design-system";
 
-function ResultBanner({ state }: { state: ActionResult | null }) {
+function ResultAlert({ state }: { state: ActionResult | null }) {
   if (!state) return null;
-  if (state.ok) {
-    return (
-      <p className="rounded-xl bg-emerald-500/10 px-3 py-2 text-sm text-success">
-        Enregistré.
-      </p>
-    );
-  }
-  return (
-    <p className="rounded-xl bg-danger/10 px-3 py-2 text-sm text-danger">
-      {state.error}
-    </p>
-  );
+  if (state.ok) return <Alert tone="success">Enregistré.</Alert>;
+  return <Alert tone="danger">{state.error}</Alert>;
 }
 
 export function ProfileForm({ user }: { user: HubUser }) {
   const [state, action, pending] = useActionState(updateProfile, null);
 
   return (
-    <form action={action} className="space-y-4">
-      <ResultBanner state={state} />
-      <div>
-        <Label htmlFor="display_name">Nom affiché</Label>
-        <Input
-          id="display_name"
-          name="display_name"
-          defaultValue={user.profile.display_name ?? ""}
-        />
-      </div>
-      <div>
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" value={user.email} disabled />
-      </div>
-      <Button type="submit" disabled={pending}>
-        {pending ? "Enregistrement…" : "Enregistrer"}
-      </Button>
-    </form>
+    <Form action={action}>
+      <Stack gap={4}>
+        <ResultAlert state={state} />
+        <Grid cols={2} gap={3}>
+          <Field label="Prénom" htmlFor="first_name">
+            <Input
+              id="first_name"
+              name="first_name"
+              defaultValue={user.profile.first_name ?? ""}
+              placeholder="Prénom"
+              autoComplete="given-name"
+            />
+          </Field>
+          <Field label="Nom" htmlFor="last_name">
+            <Input
+              id="last_name"
+              name="last_name"
+              defaultValue={user.profile.last_name ?? ""}
+              placeholder="Nom"
+              autoComplete="family-name"
+            />
+          </Field>
+        </Grid>
+        <Field
+          label="Email"
+          htmlFor="email"
+          hint="Géré par l’authentification — lecture seule."
+        >
+          <Input id="email" value={user.email} disabled />
+        </Field>
+        <div className="pt-1">
+          <Button type="submit" disabled={pending}>
+            {pending ? "Enregistrement…" : "Enregistrer"}
+          </Button>
+        </div>
+      </Stack>
+    </Form>
   );
 }
 
 export function PreferencesForm({ user }: { user: HubUser }) {
   const [state, action, pending] = useActionState(updatePreferences, null);
   const prefs = user.preferences;
+  const { setTheme } = useTheme();
 
   return (
-    <form action={action} className="space-y-4">
-      <ResultBanner state={state} />
-      <div>
-        <Label htmlFor="theme">Thème</Label>
-        <select
-          id="theme"
-          name="theme"
-          defaultValue={prefs?.theme ?? "system"}
-          className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm"
-        >
-          <option value="system">Système</option>
-          <option value="light">Clair</option>
-          <option value="dark">Sombre</option>
-        </select>
-      </div>
-      <div>
-        <Label htmlFor="locale">Langue</Label>
-        <select
-          id="locale"
-          name="locale"
-          defaultValue={prefs?.locale ?? "fr"}
-          className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm"
-        >
-          <option value="fr">Français</option>
-          <option value="en">English</option>
-        </select>
-      </div>
-      <label className="flex items-center gap-3 text-sm">
-        <input
-          type="checkbox"
-          name="email_notifications"
-          defaultChecked={prefs?.email_notifications ?? true}
-          className="h-4 w-4 rounded border-border"
-        />
-        Notifications email
-      </label>
-      <label className="flex items-center gap-3 text-sm">
-        <input
-          type="checkbox"
-          name="product_updates"
-          defaultChecked={prefs?.product_updates ?? true}
-          className="h-4 w-4 rounded border-border"
-        />
-        Product updates
-      </label>
-      <Button type="submit" disabled={pending}>
-        {pending ? "Enregistrement…" : "Enregistrer les préférences"}
-      </Button>
-    </form>
+    <Form action={action}>
+      <Stack gap={5}>
+        <ResultAlert state={state} />
+
+        <Stack gap={4}>
+          <Text weight="medium" size="sm">
+            Affichage
+          </Text>
+          <Field label="Thème" htmlFor="theme">
+            <Select
+              id="theme"
+              name="theme"
+              defaultValue={prefs?.theme ?? "system"}
+              onChange={(e) => {
+                setTheme(e.target.value as ThemePreference);
+              }}
+            >
+              <option value="system">Système</option>
+              <option value="light">Clair</option>
+              <option value="dark">Sombre</option>
+            </Select>
+          </Field>
+          <Field label="Langue" htmlFor="locale">
+            <Select
+              id="locale"
+              name="locale"
+              defaultValue={prefs?.locale ?? "fr"}
+            >
+              <option value="fr">Français</option>
+              <option value="en">English</option>
+            </Select>
+          </Field>
+        </Stack>
+
+        <div className="h-px bg-border" aria-hidden />
+
+        <Stack gap={3}>
+          <Text weight="medium" size="sm">
+            Notifications
+          </Text>
+          <Checkbox
+            name="email_notifications"
+            label="Notifications email"
+            defaultChecked={prefs?.email_notifications ?? true}
+          />
+          <Checkbox
+            name="product_updates"
+            label="Product updates"
+            defaultChecked={prefs?.product_updates ?? true}
+          />
+        </Stack>
+
+        <div className="pt-1">
+          <Button type="submit" disabled={pending}>
+            {pending ? "Enregistrement…" : "Enregistrer les préférences"}
+          </Button>
+        </div>
+      </Stack>
+    </Form>
   );
 }
 
@@ -114,50 +147,35 @@ export function BillingForm({ user }: { user: HubUser }) {
   const plan = user.subscription?.plan ?? "free";
 
   return (
-    <div className="space-y-4">
-      <ResultBanner state={state} />
-      <div className="grid gap-3 sm:grid-cols-2">
+    <Stack gap={4}>
+      <ResultAlert state={state} />
+      <Grid cols={2} gap={3}>
         {(["free", "pro"] as const).map((id) => {
           const meta = PLAN_META[id];
           const active = plan === id;
           return (
-            <div
+            <PlanCard
               key={id}
-              className={`rounded-2xl border p-4 ${
-                active ? "border-accent bg-accent-soft/40" : "border-border"
-              }`}
-            >
-              <div className="flex items-baseline justify-between gap-2">
-                <h3 className="font-semibold">{meta.label}</h3>
-                <span className="font-mono text-sm text-muted">
-                  {meta.priceLabel}
-                </span>
-              </div>
-              <p className="mt-2 text-sm text-muted">{meta.description}</p>
-              {active ? (
-                <p className="mt-4 text-sm font-medium text-accent">Plan actuel</p>
-              ) : (
-                <form action={action} className="mt-4">
+              title={meta.label}
+              price={meta.priceLabel}
+              description={meta.description}
+              active={active}
+              action={
+                <Form action={action}>
                   <input type="hidden" name="plan" value={id} />
                   <Button type="submit" variant="secondary" disabled={pending}>
                     {pending
                       ? "…"
                       : id === "pro"
-                        ? "Activer Pro (mock)"
-                        : "Repasser Free (mock)"}
+                        ? "Passer Pro"
+                        : "Repasser Free"}
                   </Button>
-                </form>
-              )}
-            </div>
+                </Form>
+              }
+            />
           );
         })}
-      </div>
-      <p className="text-xs text-muted">
-        Paiement abstrait — aucun Stripe branché. Le mock met à jour ta
-        subscription Supabase pour tester les entitlements. Remplace{" "}
-        <code className="font-mono">MockPaymentProvider</code> quand tu choisis
-        un PSP.
-      </p>
-    </div>
+      </Grid>
+    </Stack>
   );
 }

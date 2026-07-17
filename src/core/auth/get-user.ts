@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/core/auth/supabase/server";
 import { entitlementsForPlan } from "@/core/entitlements";
 import type {
@@ -15,7 +16,8 @@ export async function getSessionUser() {
   return user;
 }
 
-export async function getHubUser(): Promise<HubUser | null> {
+/** Deduped per request — layout + page share one fetch. */
+export const getHubUser = cache(async (): Promise<HubUser | null> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -41,6 +43,8 @@ export async function getHubUser(): Promise<HubUser | null> {
   const fallbackProfile: Profile = {
     id: user.id,
     email: user.email ?? "",
+    first_name: user.user_metadata?.first_name ?? null,
+    last_name: user.user_metadata?.last_name ?? null,
     display_name: user.user_metadata?.display_name ?? null,
     avatar_url: user.user_metadata?.avatar_url ?? null,
     role: "user",
@@ -60,7 +64,7 @@ export async function getHubUser(): Promise<HubUser | null> {
     preferences: preferences as UserPreferences | null,
     entitlements: entitlementsForPlan(plan),
   };
-}
+});
 
 export async function requireHubUser(): Promise<HubUser> {
   const hubUser = await getHubUser();

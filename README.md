@@ -4,10 +4,14 @@ Hub développeur modular (mobile-first PWA) : auth Supabase, rôles, shell modul
 
 ## Stack
 
-- **Next.js** (App Router) + Tailwind
+- **Next.js** (App Router) + **Tailwind CSS 4.3.3**
+- **shadcn/ui** (primitives dans `src/components/ui`)
+- **Design system** (`src/design-system`) — API produit unique
+- **Tokens** dans `src/assets/styles/` (primitives → semantic → `@theme`)
 - **Supabase** (Auth + Postgres + RLS)
-- **Vercel** (déploiement)
-- **PWA** via `@ducanh2912/next-pwa`
+- **Vercel** + **PWA**
+
+Voir `src/assets/styles/README.md` et `src/design-system/README.md`.
 
 ## Setup local
 
@@ -34,23 +38,21 @@ npm run dev
 ## Scripts
 
 - `npm run dev` — développement
-- `npm run build` — build production (+ service worker PWA)
+- `npm run build` — build production (Turbopack)
 - `npm run start` — serveur production
 
 ## Structure
 
 ```
 src/
-  app/               # routes (marketing, auth, app, admin, api)
-  core/
-    auth/            # Supabase clients, actions, getUser
-    billing/         # PaymentProvider + MockPaymentProvider
-    entitlements/    # plans → module access
-    module-registry/ # tabs modules
-  shared/ui/         # shell + composants
-supabase/migrations/ # SQL Phase 1
+  design-system/     # tokens + composants globaux (obligatoire pour l'UI)
+  app/               # routes — compose uniquement le design system
+  core/              # auth, billing, entitlements, module-registry
+  shared/ui/         # formulaires métier (auth/settings) basés sur le DS
+supabase/migrations/
 ```
 
+Voir `src/design-system/README.md` pour les tokens et composants.
 ## Billing
 
 `getPaymentProvider()` retourne `MockPaymentProvider`.  

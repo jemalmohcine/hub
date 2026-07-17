@@ -7,12 +7,22 @@ export type ModuleStatus = "active" | "coming_soon" | "disabled";
 export type Profile = {
   id: string;
   email: string;
+  first_name: string | null;
+  last_name: string | null;
   display_name: string | null;
   avatar_url: string | null;
   role: UserRole;
   created_at: string;
   updated_at: string;
 };
+
+export function profileFullName(profile: Pick<Profile, "first_name" | "last_name" | "display_name">) {
+  const composed = [profile.first_name, profile.last_name]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" ");
+  return composed || profile.display_name?.trim() || null;
+}
 
 export type UserPreferences = {
   user_id: string;

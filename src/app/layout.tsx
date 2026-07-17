@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { IBM_Plex_Mono, Sora } from "next/font/google";
+import { PwaRegister } from "@/shared/ui/pwa-register";
+import { NavigationProgress, ThemeProvider } from "@/design-system";
+import { cn } from "@/lib/utils";
 import "./globals.css";
 
 const sora = Sora({
@@ -43,7 +47,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0c1222",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f3f6fa" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b1220" },
+  ],
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -57,9 +64,18 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${sora.variable} ${ibmPlexMono.variable} h-full antialiased`}
+      suppressHydrationWarning
+      className={cn("h-full antialiased", sora.variable, ibmPlexMono.variable)}
     >
-      <body className="min-h-full font-sans">{children}</body>
+      <body className="min-h-full font-sans">
+        <ThemeProvider>
+          <Suspense fallback={null}>
+            <NavigationProgress />
+          </Suspense>
+          {children}
+          <PwaRegister />
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

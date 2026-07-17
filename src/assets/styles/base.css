@@ -1,0 +1,67 @@
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    box-sizing: border-box;
+  }
+
+  html {
+    @apply h-full font-sans;
+  }
+
+  body {
+    @apply min-h-full bg-background text-foreground antialiased;
+    font-size: var(--text-md);
+    line-height: var(--leading-normal);
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  /* Interactive affordance — all clickable controls use pointer */
+  a[href],
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="link"],
+  summary,
+  label[for],
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="file"]:not(:disabled),
+  input[type="submit"]:not(:disabled),
+  input[type="button"]:not(:disabled),
+  input[type="reset"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"],
+  select:disabled,
+  input:disabled,
+  .disabled {
+    cursor: not-allowed;
+  }
+
+  /* Kill native invalid glow; we use custom Field errors */
+  input:invalid,
+  select:invalid,
+  textarea:invalid {
+    box-shadow: none;
+  }
+
+  ::selection {
+    background: var(--brand-soft);
+    color: var(--foreground);
+  }
+}

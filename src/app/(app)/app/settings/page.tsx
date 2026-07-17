@@ -1,65 +1,112 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import {
+  ChevronRight,
+  CreditCard,
+  LayoutGrid,
+  Palette,
+  Shield,
+  UserRound,
+} from "lucide-react";
 import { getHubUser } from "@/core/auth/get-user";
-import { Card, PageHeader } from "@/shared/ui";
-import { ProfileForm, PreferencesForm } from "@/shared/ui/settings-forms";
-import { ChevronRight } from "lucide-react";
+import { profileFullName } from "@/core/auth/types";
+import {
+  PageHeader,
+  SettingsAccountCard,
+  SettingsNavRow,
+  SettingsSection,
+  Spacer,
+  Stack,
+  Text,
+} from "@/design-system";
 
 export const metadata = { title: "Settings" };
 
-const LINKS = [
+const SECTIONS = [
+  {
+    href: "/app/settings/account",
+    title: "Compte",
+    description: "Prénom, nom et informations personnelles",
+    icon: UserRound,
+  },
+  {
+    href: "/app/settings/appearance",
+    title: "Apparence",
+    description: "Thème, langue et notifications",
+    icon: Palette,
+  },
   {
     href: "/app/settings/security",
     title: "Sécurité",
-    description: "Sessions et compte",
+    description: "Mot de passe, session et déconnexion",
+    icon: Shield,
   },
   {
     href: "/app/settings/billing",
     title: "Abonnement",
-    description: "Plan et paiement (mock)",
+    description: "Plan Free / Pro et entitlements",
+    icon: CreditCard,
   },
   {
     href: "/app/settings/modules",
     title: "Modules",
-    description: "Accès et statut des modules",
+    description: "Accès et statut de chaque module",
+    icon: LayoutGrid,
   },
-];
+] as const;
 
 export default async function SettingsPage() {
   const user = await getHubUser();
   if (!user) redirect("/sign-in");
 
+  const plan = user.subscription?.plan ?? "free";
+  const name =
+    profileFullName(user.profile) || user.email.split("@")[0] || "Compte";
+
   return (
-    <div>
+    <>
       <PageHeader
         title="Settings"
-        description="Profil, préférences et accès à ton hub."
+        description="Gère ton compte et ton hub en un seul endroit."
       />
 
-      <div className="mb-4 grid gap-2">
-        {LINKS.map((link) => (
-          <Link key={link.href} href={link.href}>
-            <Card className="flex items-center justify-between gap-3 transition hover:border-accent/40">
-              <div>
-                <p className="font-medium">{link.title}</p>
-                <p className="text-sm text-muted">{link.description}</p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted" />
-            </Card>
-          </Link>
-        ))}
-      </div>
+      <SettingsAccountCard
+        name={name}
+        email={user.email}
+        plan={plan}
+        role={user.profile.role}
+      />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <h2 className="mb-4 font-semibold">Profil</h2>
-          <ProfileForm user={user} />
-        </Card>
-        <Card>
-          <h2 className="mb-4 font-semibold">Préférences</h2>
-          <PreferencesForm user={user} />
-        </Card>
-      </div>
-    </div>
+      <Spacer size={6} />
+
+      <SettingsSection
+        title="Paramètres"
+        description="Choisis une section pour modifier tes préférences."
+      >
+        <Stack gap={2}>
+          {SECTIONS.map((section) => (
+            <SettingsNavRow
+              key={section.href}
+              href={section.href}
+              title={section.title}
+              description={section.description}
+              icon={section.icon}
+              trailing={
+                <ChevronRight
+                  className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+                  aria-hidden
+                />
+              }
+            />
+          ))}
+        </Stack>
+      </SettingsSection>
+
+      <Spacer size={6} />
+
+      <Text size="xs" tone="muted" className="text-center sm:text-left">
+        Les changements de thème s’appliquent immédiatement. Le reste est
+        sauvegardé sur ton compte.
+      </Text>
+    </>
   );
 }

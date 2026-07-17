@@ -9,6 +9,14 @@ import type { PlanId, ThemePreference } from "@/core/auth/types";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
+function appUrl() {
+  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+}
+
+function composeDisplayName(firstName: string, lastName: string) {
+  return [firstName, lastName].map((p) => p.trim()).filter(Boolean).join(" ");
+}
+
 export async function signInWithPassword(
   _prev: ActionResult | null,
   formData: FormData,
@@ -37,13 +45,18 @@ export async function signUpWithPassword(
 ): Promise<ActionResult> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const displayName = String(formData.get("display_name") ?? "").trim();
+  const firstName = String(formData.get("first_name") ?? "").trim();
+  const lastName = String(formData.get("last_name") ?? "").trim();
+  const displayName = composeDisplayName(firstName, lastName);
 
   if (!email || !password) {
     return { ok: false, error: "Email et mot de passe requis." };
   }
   if (password.length < 8) {
-    return { ok: false, error: "Le mot de passe doit faire au moins 8 caractères." };
+    return {
+      ok: false,
+      error: "Le mot de passe doit faire au moins 8 caractères.",
+    };
   }
 
   const supabase = await createClient();
@@ -51,8 +64,12 @@ export async function signUpWithPassword(
     email,
     password,
     options: {
-      data: { display_name: displayName || undefined },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+      data: {
+        first_name: firstName || undefined,
+        last_name: lastName || undefined,
+        display_name: displayName || undefined,
+      },
+      emailRedirectTo: `${appUrl()}/auth/callback`,
     },
   });
 
@@ -69,6 +86,113 @@ export async function signOut() {
   redirect("/sign-in");
 }
 
+export async function requestPasswordReset(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) {
+    return { ok: false, error: "Email requis." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${appUrl()}/auth/callback?next=/reset-password`,
+  });
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
+}
+
+export async function resetPassword(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm_password") ?? "");
+
+  if (password.length < 8) {
+    return {
+      ok: false,
+      error: "Le mot de passe doit faire au moins 8 caractères.",
+    };
+  }
+  if (password !== confirm) {
+    return { ok: false, error: "Les mots de passe ne correspondent pas." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      ok: false,
+      error: "Lien expiré ou invalide. Demande un nouveau reset.",
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  redirect("/app/settings/security?password=updated");
+}
+
+export async function changePassword(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await getHubUser();
+  if (!user) return { ok: false, error: "Non authentifié." };
+
+  const currentPassword = String(formData.get("current_password") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm_password") ?? "");
+
+  if (!currentPassword) {
+    return { ok: false, error: "Mot de passe actuel requis." };
+  }
+  if (password.length < 8) {
+    return {
+      ok: false,
+      error: "Le nouveau mot de passe doit faire au moins 8 caractères.",
+    };
+  }
+  if (password !== confirm) {
+    return { ok: false, error: "Les mots de passe ne correspondent pas." };
+  }
+  if (password === currentPassword) {
+    return {
+      ok: false,
+      error: "Le nouveau mot de passe doit être différent de l’actuel.",
+    };
+  }
+
+  const supabase = await createClient();
+  const { error: reauthError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+
+  if (reauthError) {
+    return { ok: false, error: "Mot de passe actuel incorrect." };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  revalidatePath("/app/settings/security");
+  return { ok: true };
+}
+
 export async function updateProfile(
   _prev: ActionResult | null,
   formData: FormData,
@@ -76,16 +200,32 @@ export async function updateProfile(
   const user = await getHubUser();
   if (!user) return { ok: false, error: "Non authentifié." };
 
-  const displayName = String(formData.get("display_name") ?? "").trim();
+  const firstName = String(formData.get("first_name") ?? "").trim();
+  const lastName = String(formData.get("last_name") ?? "").trim();
+  const displayName = composeDisplayName(firstName, lastName);
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
-    .update({ display_name: displayName || null })
+    .update({
+      first_name: firstName || null,
+      last_name: lastName || null,
+      display_name: displayName || null,
+    })
     .eq("id", user.id);
 
   if (error) return { ok: false, error: error.message };
 
+  await supabase.auth.updateUser({
+    data: {
+      first_name: firstName || null,
+      last_name: lastName || null,
+      display_name: displayName || null,
+    },
+  });
+
   revalidatePath("/app/settings");
+  revalidatePath("/app/settings/account");
   return { ok: true };
 }
 
@@ -176,7 +316,11 @@ export async function toggleModuleFlag(
   const supabase = await createClient();
   const { error } = await supabase
     .from("module_flags")
-    .upsert({ module_id: moduleId, enabled, updated_at: new Date().toISOString() });
+    .upsert({
+      module_id: moduleId,
+      enabled,
+      updated_at: new Date().toISOString(),
+    });
 
   if (error) return { ok: false, error: error.message };
 

@@ -1,10 +1,17 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getHubUser } from "@/core/auth/get-user";
+import { profileFullName } from "@/core/auth/types";
 import { getSortedModules } from "@/core/module-registry";
 import { hasEntitlement, PLAN_META } from "@/core/entitlements";
-import { Badge, Card, PageHeader } from "@/shared/ui";
-import { ArrowRight, Lock } from "lucide-react";
-import { redirect } from "next/navigation";
+import {
+  Card,
+  Grid,
+  ModuleCard,
+  PageHeader,
+  PageSection,
+  Spacer,
+  Stat,
+} from "@/design-system";
 
 export const metadata = { title: "Overview" };
 
@@ -14,84 +21,68 @@ export default async function OverviewPage() {
 
   const plan = user.subscription?.plan ?? "free";
   const modules = getSortedModules();
+  const greeting = profileFullName(user.profile);
 
   return (
-    <div>
+    <>
       <PageHeader
-        title={`Bonjour${user.profile.display_name ? `, ${user.profile.display_name}` : ""}`}
+        title={`Bonjour${greeting ? `, ${greeting}` : ""}`}
         description="Ton hub est prêt. Explore les modules et configure ton compte."
       />
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+      <Grid cols={3} gap={3}>
         <Card>
-          <p className="text-xs uppercase tracking-wide text-muted">Plan</p>
-          <p className="mt-1 text-xl font-semibold capitalize">{plan}</p>
-          <p className="mt-1 text-sm text-muted">{PLAN_META[plan].description}</p>
+          <Stat
+            label="Plan"
+            value={plan}
+            hint={PLAN_META[plan].description}
+          />
         </Card>
         <Card>
-          <p className="text-xs uppercase tracking-wide text-muted">Rôle</p>
-          <p className="mt-1 text-xl font-semibold capitalize">
-            {user.profile.role}
-          </p>
-          <p className="mt-1 text-sm text-muted">{user.email}</p>
+          <Stat
+            label="Rôle"
+            value={user.profile.role}
+            hint={user.email}
+          />
         </Card>
         <Card>
-          <p className="text-xs uppercase tracking-wide text-muted">Entitlements</p>
-          <p className="mt-1 text-xl font-semibold">
-            {user.entitlements.length}
-          </p>
-          <p className="mt-1 text-sm text-muted">
-            {user.entitlements.length
-              ? user.entitlements.join(", ")
-              : "Aucun module payant débloqué"}
-          </p>
+          <Stat
+            label="Entitlements"
+            value={user.entitlements.length}
+            hint={
+              user.entitlements.length
+                ? user.entitlements.join(", ")
+                : "Aucun module payant débloqué"
+            }
+          />
         </Card>
-      </div>
+      </Grid>
 
-      <h2 className="mb-3 text-lg font-semibold">Modules</h2>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {modules.map((mod) => {
-          const Icon = mod.icon;
-          const entitled = hasEntitlement(
-            user.entitlements,
-            mod.requiredEntitlement,
-          );
-          const locked = mod.status === "coming_soon" || !entitled;
+      <Spacer size={6} />
 
-          return (
-            <Link key={mod.id} href={mod.href}>
-              <Card className="h-full transition hover:border-accent/40">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold">{mod.label}</h3>
-                      {mod.status === "coming_soon" ? (
-                        <Badge tone="warn">Coming soon</Badge>
-                      ) : null}
-                      {!entitled && mod.requiredEntitlement ? (
-                        <Badge>
-                          <Lock className="mr-1 inline h-3 w-3" />
-                          Pro
-                        </Badge>
-                      ) : (
-                        <Badge tone="success">Actif</Badge>
-                      )}
-                    </div>
-                    <p className="mt-1 text-sm text-muted">{mod.description}</p>
-                    <p className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-accent">
-                      {locked ? "Voir le statut" : "Ouvrir"}
-                      <ArrowRight className="h-4 w-4" />
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            </Link>
-          );
-        })}
-      </div>
-    </div>
+      <PageSection title="Modules">
+        <Grid cols={2} gap={3}>
+          {modules.map((mod) => {
+            const entitled = hasEntitlement(
+              user.entitlements,
+              mod.requiredEntitlement,
+            );
+            const locked = mod.status === "coming_soon" || !entitled;
+            return (
+              <ModuleCard
+                key={mod.id}
+                href={mod.href}
+                title={mod.label}
+                description={mod.description}
+                icon={mod.icon}
+                status={mod.status === "coming_soon" ? "coming_soon" : "active"}
+                locked={!entitled && !!mod.requiredEntitlement}
+                ctaLabel={locked ? "Voir le statut" : "Ouvrir"}
+              />
+            );
+          })}
+        </Grid>
+      </PageSection>
+    </>
   );
 }

@@ -1,7 +1,16 @@
 import { createClient } from "@/core/auth/supabase/server";
 import { getSortedModules } from "@/core/module-registry";
 import { toggleModuleFlag } from "@/core/auth/actions";
-import { Badge, Button, Card, PageHeader } from "@/shared/ui";
+import {
+  Badge,
+  Card,
+  FlagRow,
+  Grid,
+  PageHeader,
+  PageSection,
+  Spacer,
+  Stat,
+} from "@/design-system";
 
 export const metadata = { title: "Admin" };
 
@@ -20,55 +29,45 @@ export default async function AdminPage() {
   );
 
   return (
-    <div>
+    <>
       <PageHeader
         title="Admin"
         description="Flags modules et vue plateforme."
-        action={<Badge tone="accent">admin</Badge>}
+        action={<Badge tone="brand">admin</Badge>}
       />
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-2">
+      <Grid cols={2} gap={3}>
         <Card>
-          <p className="text-xs uppercase tracking-wide text-muted">Users</p>
-          <p className="mt-1 text-2xl font-semibold">{count ?? "—"}</p>
+          <Stat label="Users" value={count ?? "—"} />
         </Card>
         <Card>
-          <p className="text-xs uppercase tracking-wide text-muted">Modules</p>
-          <p className="mt-1 text-2xl font-semibold">
-            {getSortedModules().length}
-          </p>
+          <Stat label="Modules" value={getSortedModules().length} />
         </Card>
-      </div>
+      </Grid>
 
-      <h2 className="mb-3 font-semibold">Module flags</h2>
-      <div className="space-y-3">
-        {getSortedModules().map((mod) => {
-          const enabled = flagMap.get(mod.id) ?? true;
-          return (
-            <Card
-              key={mod.id}
-              className="flex flex-wrap items-center justify-between gap-3"
-            >
-              <div>
-                <p className="font-medium">{mod.label}</p>
-                <p className="text-sm text-muted">
-                  {enabled ? "Enabled globally" : "Disabled globally"}
-                </p>
-              </div>
-              <form
+      <Spacer size={6} />
+
+      <PageSection title="Module flags">
+        <div className="space-y-[var(--dh-space-3)]">
+          {getSortedModules().map((mod) => {
+            const enabled = flagMap.get(mod.id) ?? true;
+            return (
+              <FlagRow
+                key={mod.id}
+                title={mod.label}
+                description={
+                  enabled ? "Enabled globally" : "Disabled globally"
+                }
+                actionLabel={enabled ? "Disable" : "Enable"}
                 action={async () => {
                   "use server";
                   await toggleModuleFlag(mod.id, !enabled);
                 }}
-              >
-                <Button type="submit" variant="secondary">
-                  {enabled ? "Disable" : "Enable"}
-                </Button>
-              </form>
-            </Card>
-          );
-        })}
-      </div>
-    </div>
+              />
+            );
+          })}
+        </div>
+      </PageSection>
+    </>
   );
 }

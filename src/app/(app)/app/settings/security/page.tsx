@@ -1,39 +1,91 @@
 import { redirect } from "next/navigation";
 import { getHubUser } from "@/core/auth/get-user";
 import { signOut } from "@/core/auth/actions";
-import { Button, Card, PageHeader } from "@/shared/ui";
+import { ChangePasswordForm } from "@/shared/ui/auth-forms";
+import {
+  Alert,
+  Button,
+  Card,
+  Form,
+  PageHeader,
+  SettingsBackLink,
+  SettingsMetaRow,
+  SettingsSection,
+  Spacer,
+  Stack,
+  Text,
+} from "@/design-system";
 
 export const metadata = { title: "Sécurité" };
 
-export default async function SecuritySettingsPage() {
+export default async function SecuritySettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ password?: string }>;
+}) {
   const user = await getHubUser();
   if (!user) redirect("/sign-in");
 
+  const params = await searchParams;
+
   return (
-    <div>
+    <>
+      <SettingsBackLink />
       <PageHeader
         title="Sécurité"
-        description="Gère la session de ton compte DevHub."
+        description="Mot de passe, session et accès à ton compte."
       />
-      <Card className="space-y-4">
-        <div>
-          <p className="text-sm text-muted">Compte connecté</p>
-          <p className="font-medium">{user.email}</p>
-        </div>
-        <div>
-          <p className="text-sm text-muted">Rôle</p>
-          <p className="font-medium capitalize">{user.profile.role}</p>
-        </div>
-        <p className="text-sm text-muted">
-          Le changement de mot de passe et la gestion des sessions multi-appareils
-          passent par Supabase Auth (email reset / providers OAuth).
-        </p>
-        <form action={signOut}>
-          <Button type="submit" variant="danger">
-            Se déconnecter
-          </Button>
-        </form>
+
+      {params.password === "updated" ? (
+        <Alert tone="success" className="mb-4">
+          Mot de passe mis à jour.
+        </Alert>
+      ) : null}
+
+      <Card>
+        <SettingsSection title="Compte connecté">
+          <div className="-mt-1">
+            <SettingsMetaRow label="Email" value={user.email} />
+            <SettingsMetaRow
+              label="Rôle"
+              value={<span className="capitalize">{user.profile.role}</span>}
+            />
+          </div>
+        </SettingsSection>
       </Card>
-    </div>
+
+      <Spacer size={4} />
+
+      <Card>
+        <Stack gap={4}>
+          <div>
+            <Text weight="medium">Changer le mot de passe</Text>
+            <Text size="sm" tone="muted" className="mt-1">
+              Pour les comptes email/mot de passe. Les comptes OAuth se gèrent
+              chez le fournisseur.
+            </Text>
+          </div>
+          <ChangePasswordForm />
+        </Stack>
+      </Card>
+
+      <Spacer size={4} />
+
+      <Card>
+        <Stack gap={4}>
+          <div>
+            <Text weight="medium">Session</Text>
+            <Text size="sm" tone="muted" className="mt-1">
+              Déconnecte-toi de cet appareil.
+            </Text>
+          </div>
+          <Form action={signOut}>
+            <Button type="submit" variant="danger">
+              Se déconnecter
+            </Button>
+          </Form>
+        </Stack>
+      </Card>
+    </>
   );
 }

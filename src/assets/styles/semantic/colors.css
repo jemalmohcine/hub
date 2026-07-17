@@ -1,0 +1,173 @@
+/**
+ * Semantic color roles — map primitives → UI meaning.
+ * Dark mode overrides live here (not in @theme).
+ * Compatible with shadcn CSS variables.
+ */
+
+:root {
+  /* App surfaces */
+  --background: var(--primitive-neutral-50);
+  --foreground: var(--primitive-neutral-950);
+  --card: var(--primitive-neutral-0);
+  --card-foreground: var(--primitive-neutral-950);
+  --popover: var(--primitive-neutral-0);
+  --popover-foreground: var(--primitive-neutral-950);
+
+  /* Brand / primary (shadcn) */
+  --primary: var(--primitive-brand-700);
+  --primary-foreground: var(--primitive-neutral-0);
+  --secondary: var(--primitive-neutral-100);
+  --secondary-foreground: var(--primitive-neutral-900);
+  --muted: var(--primitive-neutral-100);
+  --muted-foreground: var(--primitive-neutral-500);
+  --accent: var(--primitive-brand-100);
+  --accent-foreground: var(--primitive-brand-800);
+
+  --destructive: var(--primitive-danger);
+  --border: var(--primitive-neutral-200);
+  --input: var(--primitive-neutral-200);
+  --ring: var(--primitive-brand-600);
+
+  /* Extended semantic */
+  --success: var(--primitive-success);
+  --success-foreground: var(--primitive-neutral-0);
+  --warning: var(--primitive-warning);
+  --warning-foreground: var(--primitive-neutral-950);
+  --info: var(--primitive-info);
+  --info-foreground: var(--primitive-neutral-0);
+
+  --brand-soft: var(--primitive-brand-100);
+  --surface: var(--primitive-neutral-0);
+  --surface-muted: var(--primitive-neutral-100);
+
+  /* Charts */
+  --chart-1: var(--primitive-brand-600);
+  --chart-2: var(--primitive-brand-400);
+  --chart-3: var(--primitive-neutral-500);
+  --chart-4: var(--primitive-info);
+  --chart-5: var(--primitive-success);
+
+  /* Sidebar */
+  --sidebar: var(--primitive-neutral-0);
+  --sidebar-foreground: var(--primitive-neutral-950);
+  --sidebar-primary: var(--primitive-brand-700);
+  --sidebar-primary-foreground: var(--primitive-neutral-0);
+  --sidebar-accent: var(--primitive-brand-100);
+  --sidebar-accent-foreground: var(--primitive-brand-800);
+  --sidebar-border: var(--primitive-neutral-200);
+  --sidebar-ring: var(--primitive-brand-600);
+
+  /* Legacy dh-* aliases (until DS fully on semantic names) */
+  --dh-brand: var(--primary);
+  --dh-brand-hover: var(--primitive-brand-600);
+  --dh-brand-foreground: var(--primary-foreground);
+  --dh-brand-soft: var(--brand-soft);
+  --dh-brand-muted: var(--primitive-brand-800);
+  --dh-bg: var(--background);
+  --dh-bg-elevated: var(--card);
+  --dh-bg-muted: var(--muted);
+  --dh-bg-inverse: var(--primitive-neutral-950);
+  --dh-fg: var(--foreground);
+  --dh-fg-muted: var(--muted-foreground);
+  --dh-fg-subtle: var(--primitive-neutral-400);
+  --dh-fg-inverse: var(--primitive-neutral-50);
+  --dh-border: var(--border);
+  --dh-border-strong: var(--primitive-neutral-300);
+  --dh-success: var(--success);
+  --dh-success-soft: color-mix(in oklch, var(--success) 15%, transparent);
+  --dh-warning: var(--warning);
+  --dh-warning-soft: color-mix(in oklch, var(--warning) 15%, transparent);
+  --dh-danger: var(--destructive);
+  --dh-danger-soft: color-mix(in oklch, var(--destructive) 12%, transparent);
+  --dh-info: var(--info);
+  --dh-info-soft: color-mix(in oklch, var(--info) 12%, transparent);
+  --dh-glow: var(--glow);
+  --dh-glow-strong: var(--glow-strong);
+  --dh-space-0: var(--spacing-0);
+  --dh-space-1: var(--spacing-1);
+  --dh-space-2: var(--spacing-2);
+  --dh-space-3: var(--spacing-3);
+  --dh-space-4: var(--spacing-4);
+  --dh-space-5: var(--spacing-5);
+  --dh-space-6: var(--spacing-6);
+  --dh-space-8: var(--spacing-8);
+  --dh-space-10: var(--spacing-10);
+  --dh-space-12: var(--spacing-12);
+  --dh-space-16: var(--spacing-16);
+  --dh-radius-sm: var(--radius-sm);
+  --dh-radius-md: var(--radius-md);
+  --dh-radius-lg: var(--radius-lg);
+  --dh-radius-xl: var(--radius-xl);
+  --dh-radius-2xl: var(--radius-2xl);
+  --dh-radius-full: var(--radius-full);
+  --dh-text-xs: var(--text-xs);
+  --dh-text-sm: var(--text-sm);
+  --dh-text-md: var(--text-md);
+  --dh-text-lg: var(--text-lg);
+  --dh-text-xl: var(--text-xl);
+  --dh-text-2xl: var(--text-2xl);
+  --dh-text-3xl: var(--text-3xl);
+  --dh-text-4xl: var(--text-4xl);
+  --dh-text-5xl: var(--text-5xl);
+  --dh-leading-tight: var(--leading-tight);
+  --dh-leading-snug: var(--leading-snug);
+  --dh-leading-normal: var(--leading-normal);
+  --dh-tracking-tight: var(--tracking-tight);
+  --dh-tracking-wide: var(--tracking-wide);
+  --dh-tracking-wider: var(--tracking-wider);
+  --dh-shadow-sm: var(--shadow-sm);
+  --dh-shadow-md: var(--shadow-md);
+  --dh-shadow-lg: var(--shadow-lg);
+  --dh-sidebar-w: var(--sidebar-w);
+  --dh-topbar-h: var(--topbar-h);
+  --dh-bottom-nav-h: var(--bottom-nav-h);
+  --dh-content-max: var(--content-max);
+  --dh-auth-max: var(--auth-max);
+  --dh-safe-bottom: var(--safe-bottom);
+  --dh-ease: var(--ease-out);
+  --dh-duration-fast: var(--duration-fast);
+  --dh-duration: var(--duration);
+}
+
+.dark {
+  --background: var(--primitive-neutral-950);
+  --foreground: var(--primitive-neutral-50);
+  --card: var(--primitive-neutral-900);
+  --card-foreground: var(--primitive-neutral-50);
+  --popover: var(--primitive-neutral-900);
+  --popover-foreground: var(--primitive-neutral-50);
+
+  --primary: var(--primitive-brand-400);
+  --primary-foreground: var(--primitive-neutral-950);
+  --secondary: var(--primitive-neutral-800);
+  --secondary-foreground: var(--primitive-neutral-50);
+  --muted: var(--primitive-neutral-800);
+  --muted-foreground: var(--primitive-neutral-400);
+  --accent: var(--primitive-brand-900);
+  --accent-foreground: var(--primitive-brand-200);
+
+  --destructive: oklch(0.7 0.16 25);
+  --border: var(--primitive-neutral-800);
+  --input: var(--primitive-neutral-800);
+  --ring: var(--primitive-brand-400);
+
+  --success: oklch(0.75 0.14 155);
+  --warning: oklch(0.8 0.14 70);
+  --info: oklch(0.75 0.1 230);
+  --brand-soft: var(--primitive-brand-900);
+  --surface: var(--primitive-neutral-900);
+  --surface-muted: var(--primitive-neutral-800);
+
+  --sidebar: var(--primitive-neutral-900);
+  --sidebar-foreground: var(--primitive-neutral-50);
+  --sidebar-primary: var(--primitive-brand-400);
+  --sidebar-primary-foreground: var(--primitive-neutral-950);
+  --sidebar-accent: var(--primitive-brand-900);
+  --sidebar-accent-foreground: var(--primitive-brand-200);
+  --sidebar-border: var(--primitive-neutral-800);
+  --sidebar-ring: var(--primitive-brand-400);
+
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.35);
+  --shadow-md: 0 8px 24px oklch(0 0 0 / 0.35);
+  --shadow-lg: 0 16px 40px oklch(0 0 0 / 0.45);
+}

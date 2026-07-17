@@ -1,0 +1,11 @@
+:root {
+  --sidebar-w: 16rem;
+  --topbar-h: 3.5rem;
+  --bottom-nav-h: 4.25rem;
+  --content-max: 64rem;
+  --auth-max: 28rem;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  --glow: color-mix(in oklch, var(--primitive-brand-600) 18%, transparent);
+  --glow-strong: color-mix(in oklch, var(--primitive-brand-400) 28%, transparent);
+}

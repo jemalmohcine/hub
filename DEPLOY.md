@@ -7,7 +7,7 @@ Repo : https://github.com/jemalmohcine/hub
 1. Va sur [vercel.com/new](https://vercel.com/new)
 2. Import **jemalmohcine/hub**
 3. Framework : Next.js (auto)
-4. Build command : `npm run build` (déjà `next build --webpack` pour la PWA)
+4. Build command : `npm run build` (Turbopack)
 
 ## 2. Variables d'environnement
 
@@ -26,11 +26,20 @@ Ajoute (Production + Preview) :
 Dans Supabase → Authentication → URL Configuration :
 
 - Site URL : `https://<ton-domaine>.vercel.app`
-- Redirect URLs : `https://<ton-domaine>.vercel.app/auth/callback`
+- Redirect URLs :
+  - `https://<ton-domaine>.vercel.app/auth/callback`
+  - `http://localhost:3000/auth/callback` (dev)
+
+Le reset password utilise le callback avec `?next=/reset-password`.
 
 ## 4. SQL
 
-Exécute `supabase/migrations/001_hub_phase1.sql` dans le SQL Editor Supabase.
+Exécute dans le SQL Editor Supabase, dans l’ordre :
+
+1. `supabase/migrations/001_hub_phase1.sql`
+2. `supabase/migrations/002_profile_names.sql` (prénom / nom)
+
+Si `001` a déjà été appliqué, lance seulement `002`.
 
 ## CLI (optionnel)
 

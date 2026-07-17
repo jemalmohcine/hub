@@ -31,7 +31,10 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const isAuthRoute =
-    pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up");
+    pathname.startsWith("/sign-in") ||
+    pathname.startsWith("/sign-up") ||
+    pathname.startsWith("/forgot-password");
+  const isResetPassword = pathname.startsWith("/reset-password");
   const isProtected =
     pathname.startsWith("/app") || pathname.startsWith("/admin");
   const isPwaAsset =
@@ -49,6 +52,13 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/sign-in";
     url.searchParams.set("next", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  if (!user && isResetPassword) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/forgot-password";
+    url.searchParams.set("error", "expired");
     return NextResponse.redirect(url);
   }
 
