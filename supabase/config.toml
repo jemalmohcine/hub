@@ -1,8 +1,5 @@
-# Minimal Supabase CLI config — project is linked in CI via `supabase link`.
-# https://supabase.com/docs/guides/cli/config
-
-[project]
-id = "hub"
+# https://supabase.com/docs/guides/local-development/cli/config
+project_id = "hub"
 
 [api]
 enabled = true
