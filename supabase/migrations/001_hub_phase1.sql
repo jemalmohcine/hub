@@ -1,4 +1,5 @@
 -- Hub Phase 1 schema: profiles, preferences, subscriptions, module flags
+-- Idempotent: safe to re-run if already applied manually in the SQL editor.
 
 create extension if not exists "pgcrypto";
 
@@ -101,14 +102,17 @@ begin
 end;
 $$;
 
+drop trigger if exists profiles_updated_at on public.profiles;
 create trigger profiles_updated_at
   before update on public.profiles
   for each row execute function public.set_updated_at();
 
+drop trigger if exists user_preferences_updated_at on public.user_preferences;
 create trigger user_preferences_updated_at
   before update on public.user_preferences
   for each row execute function public.set_updated_at();
 
+drop trigger if exists subscriptions_updated_at on public.subscriptions;
 create trigger subscriptions_updated_at
   before update on public.subscriptions
   for each row execute function public.set_updated_at();
@@ -120,15 +124,18 @@ alter table public.subscriptions enable row level security;
 alter table public.module_flags enable row level security;
 
 -- Profiles policies
+drop policy if exists "Users can view own profile" on public.profiles;
 create policy "Users can view own profile"
   on public.profiles for select
   using (auth.uid() = id);
 
+drop policy if exists "Users can update own profile" on public.profiles;
 create policy "Users can update own profile"
   on public.profiles for update
   using (auth.uid() = id)
   with check (auth.uid() = id and role = (select role from public.profiles where id = auth.uid()));
 
+drop policy if exists "Admins can view all profiles" on public.profiles;
 create policy "Admins can view all profiles"
   on public.profiles for select
   using (exists (
@@ -136,31 +143,37 @@ create policy "Admins can view all profiles"
   ));
 
 -- Preferences policies
+drop policy if exists "Users manage own preferences" on public.user_preferences;
 create policy "Users manage own preferences"
   on public.user_preferences for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
 -- Subscriptions policies
+drop policy if exists "Users can view own subscription" on public.subscriptions;
 create policy "Users can view own subscription"
   on public.subscriptions for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can update own subscription (mock billing)" on public.subscriptions;
 create policy "Users can update own subscription (mock billing)"
   on public.subscriptions for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "Users can insert own subscription" on public.subscriptions;
 create policy "Users can insert own subscription"
   on public.subscriptions for insert
   with check (auth.uid() = user_id);
 
 -- Module flags: readable by authenticated, writable by admin
+drop policy if exists "Authenticated can read module flags" on public.module_flags;
 create policy "Authenticated can read module flags"
   on public.module_flags for select
   to authenticated
   using (true);
 
+drop policy if exists "Admins can update module flags" on public.module_flags;
 create policy "Admins can update module flags"
   on public.module_flags for update
   using (exists (
