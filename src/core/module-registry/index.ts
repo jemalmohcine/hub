@@ -31,7 +31,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     href: "/app/ai",
     order: 10,
     requiredEntitlement: "module:ai",
-    status: "coming_soon",
+    status: "active",
     icon: Bot,
   },
 ];

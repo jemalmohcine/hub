@@ -76,6 +76,17 @@ update public.profiles set role = 'admin' where email = 'toi@example.com';
 4. `NEXT_PUBLIC_APP_URL` = URL Vercel
 5. Ajoute l'URL de callback OAuth Supabase
 
-## Phase 2
+## Phase 2 — AI Intelligence
 
-Module AI Intelligence (feed, modèles, prix, repos) — placeholder `/app/ai`.
+Module Pro `/app/ai` : digest nocturne multi-sources (4 piliers), merge cross-sites, saves + filtres.
+
+1. Applique `supabase/migrations/003_ai_intelligence.sql` (SQL Editor ou `supabase db push`)
+2. Ajoute dans `.env.local` / Vercel :
+   - `CRON_SECRET` (obligatoire pour le cron)
+   - `TAVILY_API_KEY` (optionnel — découverte de nouveaux sites)
+3. Cron Vercel : `0 1 * * *` UTC → `GET/POST /api/cron/ai-intel`
+4. Test local :
+   ```bash
+   curl -X POST http://localhost:3000/api/cron/ai-intel \
+     -H "Authorization: Bearer $CRON_SECRET"
+   ```

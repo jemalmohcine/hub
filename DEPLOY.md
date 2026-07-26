@@ -38,6 +38,7 @@ Exécute dans le SQL Editor Supabase, dans l’ordre :
 
 1. `supabase/migrations/001_hub_phase1.sql`
 2. `supabase/migrations/002_profile_names.sql` (prénom / nom)
+3. `supabase/migrations/003_ai_intelligence.sql` (AI Intelligence feed)
 
 Si `001` a déjà été appliqué, lance seulement `002`.
 
