@@ -24,6 +24,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/modules/notifications/actions";
+import { PushEnableBanner } from "@/modules/notifications/ui/push-enable";
 import {
   NOTIFICATION_CATEGORY_LABELS,
   type HubNotification,
@@ -255,6 +256,8 @@ export function NotificationBell({
                 })}
               </div>
             </div>
+
+            <PushEnableBanner />
 
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
               {filtered.length === 0 ? (

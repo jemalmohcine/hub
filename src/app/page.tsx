@@ -74,7 +74,10 @@ export default function LandingPage() {
         aria-hidden
       />
 
-      <header className="relative z-10 py-5">
+      <header
+        className="relative z-10 py-5"
+        style={{ paddingTop: "calc(1.25rem + var(--dh-safe-top))" }}
+      >
         <Container size="content">
           <Cluster className="justify-between">
             <BrandMark withWordmark />

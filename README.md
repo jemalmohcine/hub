@@ -86,10 +86,17 @@ Module Pro `/app/ai` : digest multi-sources (4 piliers), merge cross-sites, save
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `TAVILY_API_KEY` (optionnel — découverte de nouveaux sites)
    - `CRON_SECRET` (optionnel — trigger manuel local via `/api/cron/ai-intel`)
+   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` (+ `VAPID_SUBJECT`) pour les push PWA
+   - `NEXT_PUBLIC_APP_URL` (URL prod, utilisée aussi pour les push)
 3. Scrape quotidien : **GitHub Actions** (`.github/workflows/ai-intel-ingest.yml`)
    - Schedule : `0 1 * * *` UTC
    - Manual : Actions → « AI Intel Ingest » → Run workflow (`full` ou `i18n`)
-4. Test local :
+4. Notifications téléphone (PWA) :
+   - Applique `supabase/migrations/007_push_subscriptions.sql`
+   - Sur le téléphone : installer DevHub (Ajouter à l’écran d’accueil)
+   - Settings → Langue & apparence → **Activer les alertes**
+   - Après chaque scrape, s’il y a une alerte AI, une notif système est envoyée aux appareils Pro abonnés
+5. Test local :
    ```bash
    npm run ai-intel:ingest
    # ou
@@ -97,4 +104,4 @@ Module Pro `/app/ai` : digest multi-sources (4 piliers), merge cross-sites, save
      -H "Authorization: Bearer $CRON_SECRET"
    ```
 
-Secrets GitHub requis pour le workflow : `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (et `TAVILY_API_KEY` si tu l’utilises).
+Secrets GitHub requis pour le workflow : `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (et `TAVILY_API_KEY` / `NEXT_PUBLIC_APP_URL` si tu les utilises).

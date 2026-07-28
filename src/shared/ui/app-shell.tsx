@@ -97,13 +97,18 @@ export function AppShell({
         </div>
       </aside>
 
-      <header className="sticky top-0 z-20 flex h-[var(--dh-topbar-h)] items-center justify-between border-b border-border bg-card/90 px-[var(--dh-space-4)] backdrop-blur lg:hidden">
-        <BrandMark withWordmark href="/app/overview" size="sm" />
-        <div className="flex items-center gap-1">
-          <NotificationBell initialNotifications={notifications} />
-          <Badge tone="neutral" className="capitalize">
-            {plan}
-          </Badge>
+      <header
+        className="sticky top-0 z-20 border-b border-border bg-card/90 px-[var(--dh-space-4)] backdrop-blur lg:hidden"
+        style={{ paddingTop: "var(--dh-safe-top)" }}
+      >
+        <div className="flex h-[var(--dh-topbar-h)] items-center justify-between">
+          <BrandMark withWordmark href="/app/overview" size="sm" />
+          <div className="flex items-center gap-1">
+            <NotificationBell initialNotifications={notifications} />
+            <Badge tone="neutral" className="capitalize">
+              {plan}
+            </Badge>
+          </div>
         </div>
       </header>
 

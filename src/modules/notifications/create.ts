@@ -50,5 +50,27 @@ export async function createNotification(input: {
     if (error.code === "23505") return null;
     throw new Error(error.message);
   }
+
+  // Fan-out to installed PWAs (best-effort)
+  try {
+    const { sendPushBroadcast, sendPushToUser } = await import(
+      "@/modules/notifications/push"
+    );
+    const payload = {
+      title: input.title,
+      body: input.body ?? "",
+      href: input.href ?? "/app/overview",
+      tag: dedupeKey,
+      severity: input.severity ?? "info",
+    };
+    if (userId) {
+      await sendPushToUser(userId, payload);
+    } else {
+      await sendPushBroadcast(payload, { category: input.category });
+    }
+  } catch {
+    // push optional until VAPID + migration applied
+  }
+
   return data.id as string;
 }

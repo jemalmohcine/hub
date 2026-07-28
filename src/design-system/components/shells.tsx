@@ -16,8 +16,17 @@ export function AuthShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="relative flex min-h-dvh items-center justify-center bg-background py-[var(--dh-space-10)]">
-      <div className="absolute top-[var(--dh-space-4)] right-[var(--dh-space-4)]">
+    <div
+      className="relative flex min-h-dvh items-center justify-center bg-background py-[var(--dh-space-10)]"
+      style={{
+        paddingTop: "calc(var(--dh-space-10) + var(--dh-safe-top))",
+        paddingBottom: "calc(var(--dh-space-10) + var(--dh-safe-bottom))",
+      }}
+    >
+      <div
+        className="absolute right-[var(--dh-space-4)]"
+        style={{ top: "calc(var(--dh-space-4) + var(--dh-safe-top))" }}
+      >
         <ThemeToggle />
       </div>
       <Container size="auth">

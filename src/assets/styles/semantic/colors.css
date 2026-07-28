@@ -123,6 +123,7 @@
   --dh-bottom-nav-h: var(--bottom-nav-h);
   --dh-content-max: var(--content-max);
   --dh-auth-max: var(--auth-max);
+  --dh-safe-top: var(--safe-top);
   --dh-safe-bottom: var(--safe-bottom);
   --dh-ease: var(--ease-out);
   --dh-duration-fast: var(--duration-fast);

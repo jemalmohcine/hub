@@ -4,6 +4,7 @@
   --bottom-nav-h: 4.25rem;
   --content-max: 64rem;
   --auth-max: 28rem;
+  --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 
   --glow: color-mix(in oklch, var(--primitive-brand-600) 18%, transparent);
