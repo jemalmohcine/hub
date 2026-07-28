@@ -94,6 +94,13 @@ export function urgencyFromScore(input: {
 }): AiUrgency {
   const { base, verdict, score, category, kind, starsToday = 0 } = input;
 
+  // Repos are never "urgent": they trend or look useful, they don't force an action.
+  if (kind === "repo") {
+    if (verdict === "use_it") return "medium";
+    if (verdict === "watch" && starsToday >= 150) return "medium";
+    return "light";
+  }
+
   if (
     category === "deprecation" ||
     category === "pricing" ||
@@ -103,14 +110,7 @@ export function urgencyFromScore(input: {
     return verdict === "skip" ? "medium" : "urgent";
   }
 
-  if (kind === "repo") {
-    if (verdict === "use_it" && (score >= 75 || starsToday >= 400)) return "urgent";
-    if (verdict === "use_it") return "medium";
-    if (verdict === "watch") return "medium";
-    return "light";
-  }
-
-  if (verdict === "use_it" && score >= 72) return kind === "news" ? "urgent" : "medium";
+  if (verdict === "use_it" && score >= 78 && kind === "news") return "urgent";
   if (verdict === "use_it") return "medium";
   if (verdict === "watch") return "light";
   return "light";

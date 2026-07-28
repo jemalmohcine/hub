@@ -18,7 +18,7 @@ export default async function AppearanceSettingsPage() {
       <SettingsBackLink />
       <PageHeader
         title="Langue & apparence"
-        description="Langue (auto / FR / EN), thème et notifications."
+        description="Langue, thème et préférences de notification."
       />
       <Card>
         <PreferencesForm user={user} />

@@ -201,7 +201,7 @@ export function NotificationBell({
                     className="h-9 gap-1.5 px-2.5 text-xs"
                   >
                     <CheckCheck className="h-4 w-4" />
-                    Tout lu
+                    Tout marquer comme lu
                   </Button>
                 ) : null}
                 <Button
@@ -263,10 +263,11 @@ export function NotificationBell({
                     <Bell className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <Text size="sm" weight="medium">
-                    Rien ici
+                    Aucune notification
                   </Text>
                   <Text size="sm" tone="muted">
-                    Les alertes AI, paiement et compte apparaîtront ici.
+                    Les alertes liées à l’AI, à la facturation et au compte
+                    apparaîtront ici.
                   </Text>
                 </div>
               ) : (

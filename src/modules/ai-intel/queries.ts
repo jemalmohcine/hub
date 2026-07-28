@@ -58,10 +58,24 @@ export async function getAiIntelFeed(
 
   const savedIds = new Set((saves ?? []).map((s) => s.item_id as string));
 
+  let readIds = new Set<string>();
+  try {
+    const { data: reads, error: readsError } = await supabase
+      .from("ai_intel_reads")
+      .select("item_id")
+      .eq("user_id", userId);
+    if (!readsError) {
+      readIds = new Set((reads ?? []).map((r) => r.item_id as string));
+    }
+  } catch {
+    // Migration 006 may not be applied yet
+  }
+
   let withSaved = list.map((item) => ({
     ...item,
     source_refs: Array.isArray(item.source_refs) ? item.source_refs : [],
     saved: savedIds.has(item.id),
+    read: readIds.has(item.id),
   }));
 
   if (filters.savedOnly) {

@@ -91,7 +91,7 @@ export function scoreGithubRepo(input: {
   const todayPts = logPoints(starsToday, hasDevSignal ? 36 : 14, 350);
   score += todayPts;
   if (starsToday >= 150 && hasDevSignal) {
-    reasons.push(`+${starsToday.toLocaleString("fr-FR")} stars aujourd'hui`);
+    reasons.push(`+${starsToday.toLocaleString("fr-FR")} stars aujourd’hui`);
   }
 
   score += logPoints(stars, hasDevSignal ? 22 : 10, 6000);
@@ -107,15 +107,15 @@ export function scoreGithubRepo(input: {
 
   if (hasDevSignal) {
     score += 22;
-    reasons.push("Fit stack / AI / DX");
+    reasons.push("Pertinent pour le développement et l’IA");
   } else {
     score -= 18;
-    reasons.push("Peu lié à un flow de build");
+    reasons.push("Peu lié au développement logiciel");
   }
 
   if (isNonDev) {
     score -= 25;
-    reasons.push("Hors sujet pour un dev");
+    reasons.push("Hors périmètre technique");
   }
 
   if (["typescript", "python", "rust", "go", "javascript"].includes(lang)) {
@@ -135,15 +135,15 @@ export function scoreGithubRepo(input: {
     score,
     reasons,
     {
-      use: "À tester",
-      watch: "Watchlist",
-      skip: "Pas pour toi",
+      use: "À essayer",
+      watch: "À suivre",
+      skip: "Peu pertinent",
       useTake:
-        "Repo utile pour un builder. Clone-le et teste sur un cas réel cette semaine.",
+        "Dépôt prometteur. Un essai sur un cas réel est recommandé.",
       watchTake:
-        "Momentum ok, fit moyen. Garde-le si le sujet touche déjà ton stack.",
+        "Activité correcte. À suivre si le sujet correspond à vos besoins.",
       skipTake:
-        "Peu de bénéfice pour un flow de code. Ignore et gagne du temps.",
+        "Intérêt limité pour le développement. Priorité faible.",
     },
     { use: 66, watch: 48 },
   );
@@ -169,7 +169,7 @@ export function scoreAiTool(input: {
 
   if (input.mattsPick && hasDevSignal) {
     score += 14;
-    reasons.push("Pick éditorial");
+    reasons.push("Sélection éditoriale");
   }
 
   const upvotes = Number(input.upvotes) || 0;
@@ -178,7 +178,7 @@ export function scoreAiTool(input: {
   const pricing = (input.pricing || "").toLowerCase();
   if (/free|freemium|open/.test(pricing)) {
     score += hasDevSignal ? 12 : 4;
-    if (hasDevSignal) reasons.push(`Prix: ${input.pricing}`);
+    if (hasDevSignal) reasons.push(`Tarif: ${input.pricing}`);
   } else if (/paid|subscription/.test(pricing)) {
     score += hasDevSignal ? 4 : 0;
   }
@@ -195,16 +195,16 @@ export function scoreAiTool(input: {
 
   if (/\b(mcp|cli|sdk|ide|cursor|copilot|agent|rag|devtools?)\b/i.test(text)) {
     score += 24;
-    reasons.push("Directement utile en DX / coding");
+    reasons.push("Utile pour le développement et les outils");
   } else if (hasDevSignal) {
     score += 14;
-    reasons.push("Signal builder");
+    reasons.push("Pertinent pour les équipes techniques");
   } else if (isNonDev) {
     score -= 22;
-    reasons.push("Outil grand public / marketing");
+    reasons.push("Orienté grand public ou marketing");
   } else {
     score -= 8;
-    reasons.push("Fit DX faible");
+    reasons.push("Pertinence technique limitée");
   }
 
   if ((input.about || "").length > 120 && hasDevSignal) score += 4;
@@ -215,15 +215,14 @@ export function scoreAiTool(input: {
     score,
     reasons,
     {
-      use: "Bénéfique",
+      use: "Recommandé",
       watch: "À évaluer",
       skip: "Peu utile",
       useTake:
-        "Ça peut te faire gagner du temps. Teste sur un vrai ticket cette semaine.",
+        "Peut améliorer votre productivité. Un essai sur un cas concret est recommandé.",
       watchTake:
-        "Intéressant, pas prioritaire. Compare à ce que tu utilises déjà.",
-      skipTake:
-        "Faible ROI pour un builder. Skip sauf besoin métier précis.",
+        "Intéressant, sans urgence. Comparez-le à vos outils actuels.",
+      skipTake: "Valeur limitée sauf besoin métier précis.",
     },
     { use: 64, watch: 46 },
   );
@@ -240,15 +239,15 @@ export function scoreGenericNews(input: {
 
   if (IMPACT_RE.test(text)) {
     score += 42;
-    reasons.push("Impact possible sur ton stack / coûts / prod");
+    reasons.push("Impact possible sur outils, coûts ou production");
   } else if (
     /\b(launch|release|new model|gpt|claude|gemini|sdk|api|mcp)\b/i.test(text)
   ) {
     score += DEV_SIGNAL_RE.test(text) ? 24 : 10;
     reasons.push(
       DEV_SIGNAL_RE.test(text)
-        ? "Nouveauté produit / modèle"
-        : "Nouveauté faible signal",
+        ? "Nouvelle offre produit ou modèle"
+        : "Nouveauté à faible signal",
     );
   } else if (
     /\b(regulat|policy|government|election|trump|china|geopolit|court)\b/i.test(
@@ -256,7 +255,7 @@ export function scoreGenericNews(input: {
     )
   ) {
     score -= 6;
-    reasons.push("Contexte monde, peu actionnable aujourd'hui");
+    reasons.push("Contexte général, peu actionnable immédiatement");
   } else {
     score += 4;
   }
@@ -272,12 +271,13 @@ export function scoreGenericNews(input: {
     reasons,
     {
       use: "À traiter",
-      watch: "À lire vite",
-      skip: "Bruit",
+      watch: "À parcourir",
+      skip: "Secondaire",
       useTake:
-        "Peut changer ton stack, tes coûts ou ta prod. Lis et décide aujourd'hui.",
-      watchTake: "Bon à savoir. Agis seulement si ça touche ton setup.",
-      skipTake: "Contexte seulement. Skip si tu es focus.",
+        "Peut affecter vos outils, coûts ou environnements. À examiner rapidement.",
+      watchTake:
+        "Utile à connaître. Agissez seulement si cela vous concerne.",
+      skipTake: "Contexte général. Priorité faible.",
     },
     { use: 68, watch: 48 },
   );

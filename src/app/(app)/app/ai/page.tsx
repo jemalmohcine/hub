@@ -19,10 +19,10 @@ import {
   getLatestAiIntelRun,
 } from "@/modules/ai-intel/queries";
 import { AiIntelWorkspace } from "@/modules/ai-intel/ui/ai-intel-workspace";
-import { resolveLocale } from "@/modules/ai-intel/i18n/locale";
+import { resolveLocale, t } from "@/modules/ai-intel/i18n/locale";
 import { headers } from "next/headers";
 
-export const metadata = { title: "AI" };
+export const metadata = { title: "Intelligence AI" };
 
 export default async function AiModulePage() {
   const user = await getHubUser();
@@ -34,8 +34,8 @@ export default async function AiModulePage() {
     return (
       <>
         <PageHeader
-          title="AI Intelligence"
-          description="Toute la veille AI pour rester à jour."
+          title="Intelligence AI"
+          description="Veille AI sélectionnée pour votre activité."
           action={<Badge tone="warning">Pro</Badge>}
         />
         <Card>
@@ -44,15 +44,14 @@ export default async function AiModulePage() {
             <IconBox icon={Bot} size="lg" />
             <Stack gap={4} className="flex-1">
               <div>
-                <Heading level={3}>Réservé aux comptes Pro</Heading>
+                <Heading level={3}>Disponible avec Pro</Heading>
                 <Text size="sm" tone="muted" className="mt-[var(--dh-space-2)]">
-                  Passe en Pro pour accéder au feed, aux sauvegardes et aux
-                  alertes.
+                  Accédez au fil d’actualités, aux favoris et aux alertes.
                 </Text>
               </div>
               <LinkButton href="/app/settings/billing">
                 <Lock className="h-4 w-4" />
-                Débloquer avec Pro
+                Passer à Pro
               </LinkButton>
             </Stack>
           </Cluster>
@@ -84,20 +83,18 @@ export default async function AiModulePage() {
       )
     : null;
 
-  const pageCopy = {
-    title: "AI",
-    desc:
-      locale === "en"
-        ? "Read the title. You get it. Tap for the brief."
-        : "Lis le titre. Tu comprends. Touche pour le brief.",
-  };
+  const copy = t(locale);
 
   return (
     <>
-      <PageHeader title={pageCopy.title} description={pageCopy.desc} />
+      <PageHeader title={copy.pageTitle} description={copy.pageDesc} />
       <AiIntelWorkspace
         initialItems={items}
-        digestLabel={digestLabel}
+        digestLabel={
+          digestLabel
+            ? `${copy.digestPrefix} · ${digestLabel}`
+            : null
+        }
         initialLocale={locale}
       />
     </>

@@ -1,11 +1,17 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
+import type { ReactNode } from "react";
+import { Check, ChevronRight } from "lucide-react";
 import { Text } from "@/design-system";
 import { resolveBrief } from "@/modules/ai-intel/brief";
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
 import { t } from "@/modules/ai-intel/i18n/locale";
-import { isBeneficial, itemScore } from "@/modules/ai-intel/ui/rank";
+import {
+  isHotAlert,
+  isTrending,
+  itemKind,
+  pricingKind,
+} from "@/modules/ai-intel/ui/rank";
 import { readMetaString } from "@/modules/ai-intel/ui/verdict";
 import type { AiIntelItem } from "@/modules/ai-intel/types";
 import { cn } from "@/lib/utils";
@@ -17,11 +23,46 @@ function prettyCount(value: string | null): string | null {
   return Number.isFinite(n) && n > 0 ? formatStars(n) : value;
 }
 
+function formatCardDate(iso: string | null | undefined, locale: AiLocale): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function Chip({
+  children,
+  tone = "muted",
+}: {
+  children: ReactNode;
+  tone?: "muted" | "urgent" | "ok" | "warn";
+}) {
+  return (
+    <span
+      className={cn(
+        "rounded-md px-1.5 py-0.5 text-[11px] font-semibold tracking-wide",
+        tone === "urgent" &&
+          "bg-[var(--dh-danger-soft)] text-[var(--dh-danger)]",
+        tone === "ok" && "bg-[var(--dh-brand-soft)] text-[var(--dh-brand)]",
+        tone === "warn" &&
+          "bg-[var(--dh-warning-soft)] text-[var(--dh-warning)]",
+        tone === "muted" && "bg-background/70 text-muted-foreground",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 /**
  * Scan-first row:
- * type · signal
- * Name: what it is
- * What to do · key metric
+ * Type · Free · Trending · Date · Lu
+ * Title
+ * Real summary · metrics
  */
 export function FeedItemRow({
   item,
@@ -37,71 +78,129 @@ export function FeedItemRow({
   const brief = resolveBrief(item, locale);
   const stars = prettyCount(readMetaString(meta, "stars"));
   const starsToday = prettyCount(readMetaString(meta, "starsToday"));
-  const pricing = readMetaString(meta, "pricing");
-  const score = itemScore(item);
-  const beneficial = isBeneficial(item);
-  const isRepo = item.pillar === "opensource" || meta.kind === "repo";
+  const kind = itemKind(item);
+  const pricing = pricingKind(item);
+  const hot = isHotAlert(item);
+  const trending = isTrending(item);
+  const isRead = Boolean(item.read);
+  const publishedLabel = formatCardDate(item.published_at, locale);
+  const addedLabel = formatCardDate(item.ingested_at, locale);
+  const publishedDay = item.published_at
+    ? new Date(item.published_at).toDateString()
+    : "";
+  const addedDay = item.ingested_at
+    ? new Date(item.ingested_at).toDateString()
+    : "";
+  const showAdded =
+    Boolean(addedLabel) &&
+    Boolean(publishedLabel) &&
+    publishedDay !== addedDay;
 
-  const signal =
-    item.urgency === "urgent"
-      ? copy.impact
-      : beneficial
-        ? copy.useful
-        : null;
+  const typeLabel =
+    kind === "repo"
+      ? copy.typeRepo
+      : kind === "tool"
+        ? copy.typeTool
+        : copy.typeNews;
 
-  const metric = isRepo
-    ? starsToday
-      ? `+${starsToday}${locale === "fr" ? "/j" : "/day"}`
-      : stars
-        ? `${stars}★`
-        : null
-    : pricing || (score > 0 ? `${score}/100` : null);
+  const metricParts: string[] = [];
+  if (kind === "repo") {
+    if (stars) metricParts.push(`${stars}★`);
+    if (starsToday) metricParts.push(`+${starsToday}${copy.starsToday}`);
+  } else if (pricing) {
+    metricParts.push(
+      pricing === "free"
+        ? copy.free
+        : pricing === "freemium"
+          ? copy.freemium
+          : copy.paid,
+    );
+  }
+
+  const subtitle = [brief.tldr, ...metricParts]
+    .filter(Boolean)
+    .filter((part, idx, arr) => arr.indexOf(part) === idx)
+    .join(" · ");
 
   return (
     <button
       type="button"
       onClick={() => onOpen(item)}
+      aria-label={`${brief.title}. ${isRead ? copy.read : copy.unread}`}
       className={cn(
         "flex w-full items-start gap-3 rounded-2xl px-3.5 py-3.5 text-left transition-colors",
         "active:scale-[0.995]",
-        item.urgency === "urgent"
+        hot && !isRead
           ? "bg-[var(--dh-danger-soft)]/40"
-          : beneficial
-            ? "bg-[var(--dh-brand-soft)]/30"
-            : "bg-muted/30 hover:bg-muted/50",
+          : isRead
+            ? "bg-muted/20 opacity-75 hover:opacity-100"
+            : "bg-muted/35 hover:bg-muted/50",
       )}
     >
+      <span
+        className={cn(
+          "mt-1.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
+          isRead
+            ? "border-[var(--dh-brand)] bg-[var(--dh-brand)] text-[var(--dh-brand-foreground)]"
+            : hot
+              ? "border-[var(--dh-danger)]/50 bg-transparent"
+              : "border-muted-foreground/35 bg-transparent",
+        )}
+        aria-hidden
+      >
+        {isRead ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
+      </span>
       <span className="min-w-0 flex-1">
-        <span className="mb-1.5 flex flex-wrap items-center gap-2">
-          <span className="rounded-md bg-background/60 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            {brief.typeLabel}
-          </span>
-          {signal ? (
-            <span
-              className={cn(
-                "text-[11px] font-semibold uppercase tracking-wide",
-                item.urgency === "urgent"
-                  ? "text-[var(--dh-danger)]"
-                  : "text-[var(--dh-brand)]",
-              )}
-            >
-              {signal}
-            </span>
+        <span className="mb-1.5 flex flex-wrap items-center gap-1.5">
+          <Chip>{typeLabel}</Chip>
+          {publishedLabel ? (
+            <Chip>
+              {copy.published} {publishedLabel}
+            </Chip>
+          ) : addedLabel ? (
+            <Chip>
+              {copy.added} {addedLabel}
+            </Chip>
           ) : null}
+          {showAdded ? (
+            <Chip>
+              {copy.added} {addedLabel}
+            </Chip>
+          ) : null}
+          {kind === "repo" ? <Chip tone="ok">{copy.free}</Chip> : null}
+          {kind !== "repo" && pricing === "free" ? (
+            <Chip tone="ok">{copy.free}</Chip>
+          ) : null}
+          {kind !== "repo" && pricing === "freemium" ? (
+            <Chip>{copy.freemium}</Chip>
+          ) : null}
+          {kind !== "repo" && pricing === "paid" ? (
+            <Chip tone="warn">{copy.paid}</Chip>
+          ) : null}
+          {trending ? <Chip tone="ok">{copy.trending}</Chip> : null}
+          {hot ? <Chip tone="urgent">{copy.urgent}</Chip> : null}
+          {isRead ? <Chip>{copy.read}</Chip> : null}
         </span>
 
-        <Text weight="medium" className="line-clamp-2 text-[15px] leading-snug">
+        <Text
+          weight="medium"
+          className={cn(
+            "line-clamp-2 text-[15px] leading-snug",
+            isRead && "text-muted-foreground",
+          )}
+        >
           {brief.title}
         </Text>
 
-        <Text
-          size="sm"
-          tone="muted"
-          className="mt-1.5 line-clamp-1 leading-relaxed"
-        >
-          {brief.action}
-          {metric ? ` · ${metric}` : ""}
-        </Text>
+        {subtitle ? (
+          <Text
+            size="sm"
+            tone="muted"
+            className="mt-1.5 line-clamp-2 leading-relaxed"
+          >
+            {subtitle}
+          </Text>
+        ) : null}
       </span>
       <ChevronRight className="mt-3 h-4 w-4 shrink-0 text-muted-foreground/55" />
     </button>

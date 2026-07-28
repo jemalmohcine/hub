@@ -25,11 +25,9 @@ import {
 } from "@/modules/ai-intel/brief";
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
 import { t } from "@/modules/ai-intel/i18n/locale";
+import { isHotAlert } from "@/modules/ai-intel/ui/rank";
 import { readMetaString, verdictTone } from "@/modules/ai-intel/ui/verdict";
-import {
-  URGENCY_LABELS,
-  type AiIntelItem,
-} from "@/modules/ai-intel/types";
+import { type AiIntelItem } from "@/modules/ai-intel/types";
 import { cn } from "@/lib/utils";
 
 function websiteHref(website: string | null): string | null {
@@ -100,9 +98,10 @@ export function ItemDetailModal({
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <Cluster gap={2} className="mb-2 flex-wrap">
-            {localItem.urgency === "urgent" ? (
-              <Badge tone="danger">{URGENCY_LABELS.urgent}</Badge>
+            {isHotAlert(localItem) ? (
+              <Badge tone="danger">{copy.urgent}</Badge>
             ) : null}
+            <Badge tone="neutral">{brief.typeLabel}</Badge>
             {verdictLabel ? (
               <Badge tone={verdictTone(meta.verdict)}>{verdictLabel}</Badge>
             ) : null}
@@ -140,12 +139,14 @@ export function ItemDetailModal({
         </DialogHeader>
 
         <Stack gap={4}>
-          <section className="rounded-2xl border border-[var(--dh-brand)]/20 bg-[var(--dh-brand-soft)]/35 px-4 py-3">
-            <Text size="sm" weight="medium" className="uppercase tracking-wide text-muted-foreground">
-              {copy.tldr}
-            </Text>
-            <Text className="mt-1.5 leading-relaxed">{brief.tldr}</Text>
-          </section>
+          {brief.tldr ? (
+            <section className="rounded-2xl border border-[var(--dh-brand)]/20 bg-[var(--dh-brand-soft)]/35 px-4 py-3">
+              <Text size="sm" weight="medium" className="uppercase tracking-wide text-muted-foreground">
+                {copy.tldr}
+              </Text>
+              <Text className="mt-1.5 leading-relaxed">{brief.tldr}</Text>
+            </section>
+          ) : null}
 
           {image ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -156,29 +157,6 @@ export function ItemDetailModal({
             />
           ) : null}
 
-          <section>
-            <Text size="sm" weight="medium" className="mb-2 uppercase tracking-wide text-muted-foreground">
-              {copy.why}
-            </Text>
-            <ul className="space-y-2">
-              {brief.why.map((line) => (
-                <li
-                  key={line}
-                  className="rounded-xl bg-muted/40 px-3 py-2 text-sm leading-relaxed"
-                >
-                  {line}
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section className="rounded-2xl border border-border px-4 py-3">
-            <Text size="sm" weight="medium" className="uppercase tracking-wide text-muted-foreground">
-              {copy.action}
-            </Text>
-            <Text className="mt-1.5 leading-relaxed">{brief.action}</Text>
-          </section>
-
           {brief.facts.length > 0 ? (
             <section>
               <Text size="sm" weight="medium" className="mb-2 uppercase tracking-wide text-muted-foreground">
@@ -187,7 +165,7 @@ export function ItemDetailModal({
               <div className="grid grid-cols-2 gap-2">
                 {brief.facts.map((f) => (
                   <div
-                    key={f.label}
+                    key={`${f.label}-${f.value}`}
                     className="rounded-xl bg-muted/35 px-3 py-2.5"
                   >
                     <Text size="sm" tone="muted">
@@ -202,10 +180,28 @@ export function ItemDetailModal({
             </section>
           ) : null}
 
+          {brief.why.length > 0 ? (
+            <section>
+              <Text size="sm" weight="medium" className="mb-2 uppercase tracking-wide text-muted-foreground">
+                {copy.why}
+              </Text>
+              <ul className="space-y-2">
+                {brief.why.map((line) => (
+                  <li
+                    key={line}
+                    className="rounded-xl bg-muted/40 px-3 py-2 text-sm leading-relaxed"
+                  >
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
           {about && about !== brief.tldr ? (
             <section>
               <Text size="sm" weight="medium" className="mb-2 uppercase tracking-wide text-muted-foreground">
-                {locale === "fr" ? "Détail" : "Detail"}
+                {copy.detail}
               </Text>
               <Text size="sm" tone="muted" className="leading-relaxed whitespace-pre-wrap">
                 {about.slice(0, 900)}
@@ -231,19 +227,33 @@ export function ItemDetailModal({
             <Text size="sm" tone="muted" className="mt-2">
               {copy.published}{" "}
               {localItem.published_at
-                ? new Date(localItem.published_at).toLocaleString(dateLocale)
-                : locale === "fr"
-                  ? "Date inconnue"
-                  : "Unknown date"}
+                ? new Date(localItem.published_at).toLocaleString(dateLocale, {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : copy.unknownDate}
               {" · "}
               {copy.added}{" "}
-              {new Date(localItem.ingested_at).toLocaleString(dateLocale)}
+              {new Date(localItem.ingested_at).toLocaleString(dateLocale, {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </Text>
           </section>
         </Stack>
 
         <DialogFooter className="gap-2 sm:justify-between">
-          <SaveButton itemId={localItem.id} saved={Boolean(localItem.saved)} />
+          <SaveButton
+            itemId={localItem.id}
+            saved={Boolean(localItem.saved)}
+            locale={locale}
+          />
           <Button
             size="sm"
             onClick={() =>

@@ -37,3 +37,28 @@ export async function toggleAiIntelSave(itemId: string) {
 
   revalidatePath("/app/ai");
 }
+
+export async function markAiIntelRead(itemId: string) {
+  const user = await getHubUser();
+  if (!user) throw new Error("Unauthorized");
+  if (!hasEntitlement(user.entitlements, "module:ai")) {
+    throw new Error("Pro entitlement required");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("ai_intel_reads").upsert(
+    {
+      user_id: user.id,
+      item_id: itemId,
+      read_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,item_id" },
+  );
+
+  // Table may not exist yet before migration 006
+  if (error && !/ai_intel_reads|schema cache|does not exist/i.test(error.message)) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/app/ai");
+}

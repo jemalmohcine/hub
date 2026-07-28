@@ -98,7 +98,7 @@ export function PreferencesForm({ user }: { user: HubUser }) {
               Langue
             </Text>
             <Text size="sm" tone="muted" className="mt-1">
-              Par défaut: langue du navigateur. Tu peux forcer FR ou EN.
+              Suit la langue du navigateur, ou forcez le français / l’anglais.
             </Text>
           </div>
           <input type="hidden" name="locale" value={locale} />

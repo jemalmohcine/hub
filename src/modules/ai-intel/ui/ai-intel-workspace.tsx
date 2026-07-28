@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { Bookmark, Search } from "lucide-react";
 import {
   Card,
@@ -18,20 +18,20 @@ import {
   itemInRange,
   type DateRangeValue,
 } from "@/modules/ai-intel/ui/date-range-picker";
+import { markAiIntelRead } from "@/modules/ai-intel/actions";
 import {
-  isBeneficial,
+  isHotAlert,
   isNoise,
   sortForDeveloper,
 } from "@/modules/ai-intel/ui/rank";
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
 import { t } from "@/modules/ai-intel/i18n/locale";
-import type { AiIntelItem, AiPillar } from "@/modules/ai-intel/types";
+import type { AiIntelItem } from "@/modules/ai-intel/types";
 import { cn } from "@/lib/utils";
 
-type TabId = "focus" | AiPillar | "saved";
+type TabId = "urgent" | "github" | "tools" | "news" | "saved";
 
-function itemDay(item: AiIntelItem): string {
-  const raw = item.ingested_at || item.published_at;
+function toLocalIsoDay(raw: string | null | undefined): string {
   if (!raw) return "";
   const d = new Date(raw);
   if (Number.isNaN(d.getTime())) return "";
@@ -41,47 +41,18 @@ function itemDay(item: AiIntelItem): string {
   return `${y}-${m}-${day}`;
 }
 
-function Section({
-  label,
-  hint,
-  items,
-  locale,
-  onOpen,
-}: {
-  label: string;
-  hint?: string;
-  items: AiIntelItem[];
-  locale: AiLocale;
-  onOpen: (item: AiIntelItem) => void;
-}) {
-  if (items.length === 0) return null;
-  return (
-    <Stack gap={2}>
-      <div className="px-1">
-        <Text size="sm" weight="medium">
-          {label}
-          <span className="ml-1.5 tabular-nums text-muted-foreground">
-            {items.length}
-          </span>
-        </Text>
-        {hint ? (
-          <Text size="sm" tone="muted" className="mt-0.5">
-            {hint}
-          </Text>
-        ) : null}
-      </div>
-      <Stack gap={1}>
-        {items.map((item) => (
-          <FeedItemRow
-            key={item.id}
-            item={item}
-            locale={locale}
-            onOpen={onOpen}
-          />
-        ))}
-      </Stack>
-    </Stack>
-  );
+/** Date used by the period filter: when it entered the hub. */
+function itemDay(item: AiIntelItem): string {
+  return toLocalIsoDay(item.ingested_at) || toLocalIsoDay(item.published_at);
+}
+
+function matchesTab(item: AiIntelItem, tab: TabId): boolean {
+  if (tab === "urgent") return isHotAlert(item);
+  if (tab === "github") return item.pillar === "opensource";
+  if (tab === "tools") return item.pillar === "tools";
+  if (tab === "news") return item.pillar === "models" || item.pillar === "world";
+  if (tab === "saved") return Boolean(item.saved);
+  return false;
 }
 
 export function AiIntelWorkspace({
@@ -95,23 +66,24 @@ export function AiIntelWorkspace({
 }) {
   const locale = initialLocale;
   const copy = t(locale);
-  const [tab, setTab] = useState<TabId>("focus");
+  const [tab, setTab] = useState<TabId>("urgent");
   const [q, setQ] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRangeValue>(defaultDateRange);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [items, setItems] = useState(initialItems);
+  const [, startTransition] = useTransition();
 
   useEffect(() => {
     setItems(initialItems);
   }, [initialItems]);
 
   const tabs: { id: TabId; label: string }[] = [
-    { id: "focus", label: copy.essential },
-    { id: "opensource", label: copy.repos },
-    { id: "tools", label: copy.tools },
-    { id: "models", label: copy.models },
-    { id: "saved", label: copy.saved },
+    { id: "urgent", label: copy.tabUrgent },
+    { id: "github", label: copy.tabGithub },
+    { id: "tools", label: copy.tabTools },
+    { id: "news", label: copy.tabNews },
+    { id: "saved", label: copy.tabSaved },
   ];
 
   const datedItems = useMemo(() => {
@@ -120,50 +92,33 @@ export function AiIntelWorkspace({
 
   const visiblePool = useMemo(() => {
     const pool = datedItems.filter(
-      (i) => !isNoise(i) || i.urgency === "urgent" || i.saved,
+      (i) => !isNoise(i) || isHotAlert(i) || i.saved,
     );
     return [...pool].sort(sortForDeveloper);
   }, [datedItems]);
 
   const counts = useMemo(() => {
     const base: Record<TabId, number> = {
-      focus: 0,
-      models: 0,
+      urgent: 0,
+      github: 0,
       tools: 0,
-      opensource: 0,
-      world: 0,
+      news: 0,
       saved: 0,
     };
-    const focusIds = new Set<string>();
     for (const item of visiblePool) {
-      base[item.pillar] += 1;
+      if (isHotAlert(item)) base.urgent += 1;
+      if (item.pillar === "opensource") base.github += 1;
+      if (item.pillar === "tools") base.tools += 1;
+      if (item.pillar === "models" || item.pillar === "world") base.news += 1;
       if (item.saved) base.saved += 1;
-      if (
-        item.urgency === "urgent" ||
-        isBeneficial(item) ||
-        (item.pillar === "opensource" && !isNoise(item))
-      ) {
-        focusIds.add(item.id);
-      }
     }
-    base.focus = focusIds.size;
     return base;
   }, [visiblePool]);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
     return visiblePool.filter((item) => {
-      if (tab === "focus") {
-        const keep =
-          item.urgency === "urgent" ||
-          isBeneficial(item) ||
-          (item.pillar === "opensource" && !isNoise(item));
-        if (!keep) return false;
-      } else if (tab === "saved") {
-        if (!item.saved) return false;
-      } else if (item.pillar !== tab) {
-        return false;
-      }
+      if (!matchesTab(item, tab)) return false;
       if (
         query &&
         !`${item.title} ${item.summary}`.toLowerCase().includes(query)
@@ -174,37 +129,31 @@ export function AiIntelWorkspace({
     });
   }, [visiblePool, tab, q]);
 
-  const focusSections = useMemo(() => {
-    if (tab !== "focus") return null;
-    const impact = filtered.filter((i) => i.urgency === "urgent").slice(0, 8);
-    const impactIds = new Set(impact.map((i) => i.id));
-    const repos = filtered
-      .filter(
-        (i) =>
-          !impactIds.has(i.id) &&
-          i.pillar === "opensource" &&
-          (isBeneficial(i) || !isNoise(i)),
-      )
-      .slice(0, 12);
-    const repoIds = new Set(repos.map((i) => i.id));
-    const useful = filtered
-      .filter(
-        (i) => !impactIds.has(i.id) && !repoIds.has(i.id) && isBeneficial(i),
-      )
-      .slice(0, 10);
-    return { impact, repos, useful };
-  }, [filtered, tab]);
-
   const selected =
     selectedId != null
       ? (items.find((i) => i.id === selectedId) ?? null)
       : null;
 
+  function openItem(item: AiIntelItem) {
+    setSelectedId(item.id);
+    if (item.read) return;
+    setItems((prev) =>
+      prev.map((x) => (x.id === item.id ? { ...x, read: true } : x)),
+    );
+    startTransition(async () => {
+      try {
+        await markAiIntelRead(item.id);
+      } catch {
+        // Migration may not be applied yet; optimistic UI still marks as read
+      }
+    });
+  }
+
   return (
     <Stack gap={4}>
       <Cluster gap={2} className="w-full items-center justify-between">
         <Text size="sm" tone="muted" className="min-w-0 truncate">
-          {digestLabel || (locale === "fr" ? "Pas encore de digest" : "No digest yet")}
+          {digestLabel || copy.digestEmpty}
         </Text>
         <Cluster gap={1} className="shrink-0">
           <button
@@ -242,6 +191,9 @@ export function AiIntelWorkspace({
       <div className="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map((tabItem) => {
           const active = tab === tabItem.id;
+          const unreadInTab = visiblePool.filter(
+            (i) => matchesTab(i, tabItem.id) && !i.read,
+          ).length;
           return (
             <button
               key={tabItem.id}
@@ -266,59 +218,27 @@ export function AiIntelWorkspace({
               >
                 {counts[tabItem.id]}
               </span>
+              {unreadInTab > 0 && tabItem.id !== "saved" ? (
+                <span
+                  className={cn(
+                    "h-1.5 w-1.5 rounded-full",
+                    active ? "bg-background/80" : "bg-[var(--dh-brand)]",
+                  )}
+                />
+              ) : null}
             </button>
           );
         })}
       </div>
 
-      {tab === "focus" ? (
-        filtered.length === 0 ? (
-          <Card className="p-6">
-            <Heading level={3}>{copy.empty}</Heading>
-            <Text size="sm" tone="muted" className="mt-1">
-              {copy.emptyHint}
-            </Text>
-          </Card>
-        ) : (
-          <Stack gap={5}>
-            <Section
-              label={copy.sectionImpact}
-              hint={
-                locale === "fr"
-                  ? "Peut casser ton stack, tes coûts ou ta prod."
-                  : "May break your stack, costs, or prod."
-              }
-              items={focusSections?.impact ?? []}
-              locale={locale}
-              onOpen={(it) => setSelectedId(it.id)}
-            />
-            <Section
-              label={copy.sectionRepos}
-              hint={
-                locale === "fr"
-                  ? "Nouveaux repos utiles. Le titre dit ce que c’est."
-                  : "Useful new repos. The title says what it is."
-              }
-              items={focusSections?.repos ?? []}
-              locale={locale}
-              onOpen={(it) => setSelectedId(it.id)}
-            />
-            <Section
-              label={copy.sectionUseful}
-              hint={
-                locale === "fr"
-                  ? "Outils et news avec un vrai bénéfice."
-                  : "Tools and news with real upside."
-              }
-              items={focusSections?.useful ?? []}
-              locale={locale}
-              onOpen={(it) => setSelectedId(it.id)}
-            />
-          </Stack>
-        )
-      ) : filtered.length === 0 ? (
+      {filtered.length === 0 ? (
         <Card className="p-6">
-          <Heading level={3}>{copy.noData}</Heading>
+          <Heading level={3}>
+            {tab === "urgent" ? copy.emptyUrgent : copy.noData}
+          </Heading>
+          <Text size="sm" tone="muted" className="mt-1">
+            {tab === "urgent" ? copy.emptyUrgentHint : copy.emptyHint}
+          </Text>
         </Card>
       ) : (
         <Stack gap={1}>
@@ -327,7 +247,7 @@ export function AiIntelWorkspace({
               key={item.id}
               item={item}
               locale={locale}
-              onOpen={(it) => setSelectedId(it.id)}
+              onOpen={openItem}
             />
           ))}
         </Stack>

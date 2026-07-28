@@ -86,6 +86,7 @@ export type AiIntelItem = {
   ingested_at: string;
   updated_at: string;
   saved?: boolean;
+  read?: boolean;
 };
 
 export type AiIntelRun = {
@@ -109,13 +110,13 @@ export type FeedFilters = {
 
 export const PILLAR_LABELS: Record<AiPillar, string> = {
   models: "Models & APIs",
-  tools: "Tools & DX",
+  tools: "Tools",
   opensource: "Open Source",
-  world: "World & Rules",
+  world: "World",
 };
 
 export const URGENCY_LABELS: Record<AiUrgency, string> = {
-  urgent: "Impact",
-  medium: "Utile",
-  light: "Secondaire",
+  urgent: "Priority",
+  medium: "Recommended",
+  light: "Secondary",
 };

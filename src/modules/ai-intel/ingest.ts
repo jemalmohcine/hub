@@ -145,7 +145,7 @@ export async function runAiIntelIngest() {
         await createNotification({
           userId: null,
           category: "ai",
-          title: `${urgentTitles.length} info${urgentTitles.length > 1 ? "s" : ""} AI urgente${urgentTitles.length > 1 ? "s" : ""}`,
+          title: `${urgentTitles.length} alerte${urgentTitles.length > 1 ? "s" : ""} AI`,
           body: urgentTitles.slice(0, 3).join(" · "),
           href: "/app/ai",
           severity: "urgent",

@@ -11,8 +11,11 @@ export type LocalizedBrief = {
   name: string;
   /** Repo | Outil | Alerte | … */
   typeLabel: string;
+  /** Real summary / description — never coach fluff */
   tldr: string;
+  /** Concrete relevance points (facts), empty if none */
   why: string[];
+  /** Optional concrete next step; empty if none */
   action: string;
   facts: Array<{ label: string; value: string }>;
 };
@@ -44,41 +47,63 @@ function pickLocalized(
 
 const VERDICT = {
   fr: {
-    use_it_repo: "À tester",
-    watch_repo: "Watchlist",
-    skip_repo: "Pas pour toi",
-    use_it_tool: "Bénéfique",
-    watch_tool: "À évaluer",
+    use_it_repo: "Utile",
+    watch_repo: "À suivre",
+    skip_repo: "Peu pertinent",
+    use_it_tool: "Utile",
+    watch_tool: "À comparer",
     skip_tool: "Peu utile",
-    use_it_news: "À traiter",
-    watch_news: "À lire vite",
-    skip_news: "Bruit",
+    use_it_news: "Impact",
+    watch_news: "Contexte",
+    skip_news: "Secondaire",
   },
   en: {
-    use_it_repo: "Try it",
-    watch_repo: "Watchlist",
-    skip_repo: "Skip",
-    use_it_tool: "Worth it",
-    watch_tool: "Evaluate",
+    use_it_repo: "Useful",
+    watch_repo: "Watch",
+    skip_repo: "Low relevance",
+    use_it_tool: "Useful",
+    watch_tool: "Compare",
     skip_tool: "Low value",
-    use_it_news: "Act on it",
-    watch_news: "Skim",
-    skip_news: "Noise",
+    use_it_news: "Impact",
+    watch_news: "Context",
+    skip_news: "Secondary",
   },
 } as const;
 
 const ACTION = {
   fr: {
-    use_it: "Teste-le sur un vrai cas cette semaine.",
-    watch: "Mets de côté. Reviens seulement si ça touche ton stack.",
-    skip: "Ignore et reste focus.",
+    use_it_repo: "Ouvrir le dépôt GitHub",
+    use_it_tool: "Essayer l’outil",
+    use_it_news: "Lire la source",
+    watch_repo: "Voir le dépôt",
+    watch_tool: "Voir la fiche",
+    watch_news: "Lire l’article",
+    skip_repo: "",
+    skip_tool: "",
+    skip_news: "",
   },
   en: {
-    use_it: "Test it on a real task this week.",
-    watch: "Park it. Revisit only if it touches your stack.",
-    skip: "Ignore and stay focused.",
+    use_it_repo: "Open the GitHub repo",
+    use_it_tool: "Try the tool",
+    use_it_news: "Read the source",
+    watch_repo: "View repository",
+    watch_tool: "View details",
+    watch_news: "Read the article",
+    skip_repo: "",
+    skip_tool: "",
+    skip_news: "",
   },
 } as const;
+
+const FLUFF_RE =
+  /bon à savoir|agis seulement|touche (ton|votre) setup|conservez-le en veille|si le sujet vous concerne|safe to ignore|keep it on your radar|good to know|act only if|utile à connaître|planifiez un essai|schedule a trial|interesting, not urgent|contexte général|priorité faible|low priority|general context|signal de pertinence|relevance signal|à parcourir|watchlist|dépôt prometteur|promising repository|activit[eé] modérée|moderate activity/i;
+
+function isFluff(text: string): boolean {
+  const value = text.trim();
+  if (!value) return true;
+  if (value.length < 18 && /^(à |a )/i.test(value)) return true;
+  return FLUFF_RE.test(value);
+}
 
 function itemKind(meta: Record<string, unknown>): "repo" | "tool" | "news" {
   if (meta.kind === "repo") return "repo";
@@ -93,64 +118,41 @@ function verdictKey(verdict: string): "use_it" | "watch" | "skip" {
   return "watch";
 }
 
-/** Pure FR or pure EN takeaway — never mixed. */
+/** Factual one-liner from real metadata — never coach fluff. */
 export function cleanTakeaway(
   meta: Record<string, unknown>,
   locale: AiLocale,
 ): string {
   const kind = itemKind(meta);
-  const verdict = verdictKey(String(meta.verdict ?? "watch"));
   const stars = Number(meta.stars) || 0;
   const starsToday = Number(meta.starsToday) || 0;
+  const pricing = readMeta(meta, "pricing");
+  const language = readMeta(meta, "language");
+  const tagline = readMeta(meta, "tagline") || readMeta(meta, "description");
 
   if (kind === "repo") {
-    const momentum =
-      stars || starsToday
-        ? locale === "fr"
-          ? ` (${formatStars(stars)}${starsToday ? `, +${formatStars(starsToday)}/j` : ""})`
-          : ` (${formatStars(stars)}${starsToday ? `, +${formatStars(starsToday)}/day` : ""})`
-        : "";
-    if (locale === "fr") {
-      if (verdict === "use_it")
-        return `Repo utile${momentum}. Clone-le et teste sur un cas réel cette semaine.`;
-      if (verdict === "watch")
-        return `Momentum moyen${momentum}. Garde-le si le sujet touche déjà ton stack.`;
-      return `Peu de bénéfice pour un flow de code${momentum}. Ignore et gagne du temps.`;
+    const parts: string[] = [];
+    if (tagline) parts.push(firstClause(tagline, 120));
+    if (stars) parts.push(`${formatStars(stars)}★`);
+    if (starsToday) {
+      parts.push(
+        locale === "fr"
+          ? `+${formatStars(starsToday)}/j`
+          : `+${formatStars(starsToday)}/day`,
+      );
     }
-    if (verdict === "use_it")
-      return `Useful repo${momentum}. Clone it and try on a real case this week.`;
-    if (verdict === "watch")
-      return `Average momentum${momentum}. Keep only if it already touches your stack.`;
-    return `Low value for a coding workflow${momentum}. Skip and save time.`;
+    if (language) parts.push(language);
+    return parts.join(" · ");
   }
 
   if (kind === "tool") {
-    if (locale === "fr") {
-      if (verdict === "use_it")
-        return "Ça peut te faire gagner du temps. Teste sur un vrai ticket cette semaine.";
-      if (verdict === "watch")
-        return "Intéressant, pas prioritaire. Compare à ce que tu utilises déjà.";
-      return "Faible ROI pour un builder. Skip sauf besoin métier précis.";
-    }
-    if (verdict === "use_it")
-      return "This can save you time. Try it on a real ticket this week.";
-    if (verdict === "watch")
-      return "Interesting, not urgent. Compare with what you already use.";
-    return "Low ROI for a builder. Skip unless you have a precise need.";
+    const parts: string[] = [];
+    if (tagline) parts.push(firstClause(tagline, 140));
+    if (pricing) parts.push(pricing);
+    return parts.join(" · ");
   }
 
-  if (locale === "fr") {
-    if (verdict === "use_it")
-      return "Peut changer ton stack, tes coûts ou ta prod. Lis et décide aujourd’hui.";
-    if (verdict === "watch")
-      return "Bon à savoir. Agis seulement si ça touche ton setup.";
-    return "Contexte seulement. Skip si tu es focus.";
-  }
-  if (verdict === "use_it")
-    return "May change your stack, costs, or prod. Read and decide today.";
-  if (verdict === "watch")
-    return "Good to know. Act only if it touches your setup.";
-  return "Context only. Skip if you are focused.";
+  return tagline ? firstClause(tagline, 180) : "";
 }
 
 export function cleanVerdictLabel(
@@ -169,11 +171,11 @@ function typeLabelFor(
   locale: AiLocale,
 ): string {
   if (locale === "fr") {
-    if (kind === "repo") return "Repo";
+    if (kind === "repo") return "GitHub";
     if (kind === "tool") return "Outil";
-    return urgency === "urgent" ? "Alerte" : "News";
+    return urgency === "urgent" ? "Alerte" : "Actu";
   }
-  if (kind === "repo") return "Repo";
+  if (kind === "repo") return "GitHub";
   if (kind === "tool") return "Tool";
   return urgency === "urgent" ? "Alert" : "News";
 }
@@ -238,8 +240,8 @@ export function explainTitle(
     return {
       title:
         locale === "fr"
-          ? `${short}: repo open source`
-          : `${short}: open-source repo`,
+          ? `${short}: dépôt open source`
+          : `${short}: open-source repository`,
       name,
       typeLabel,
     };
@@ -250,7 +252,7 @@ export function explainTitle(
       return { title: `${name}: ${what}`, name, typeLabel };
     }
     return {
-      title: locale === "fr" ? `${name}: outil AI` : `${name}: AI tool`,
+      title: locale === "fr" ? `${name}: outil d’IA` : `${name}: AI tool`,
       name,
       typeLabel,
     };
@@ -339,41 +341,86 @@ export function getItemI18n(meta: Record<string, unknown>): ItemI18n | null {
 export function resolveBrief(
   item: Pick<
     AiIntelItem,
-    "title" | "summary" | "urgency" | "metadata" | "pillar"
+    | "title"
+    | "summary"
+    | "urgency"
+    | "metadata"
+    | "pillar"
+    | "category"
+    | "published_at"
+    | "ingested_at"
+    | "primary_source"
   >,
   locale: AiLocale,
 ): LocalizedBrief {
   const meta = (item.metadata ?? {}) as Record<string, unknown>;
   const i18n = getItemI18n(meta);
   const verdict = verdictKey(String(meta.verdict ?? "watch"));
-  const verdictLabel = cleanVerdictLabel(meta, locale);
-  const reasonsRaw = Array.isArray(meta.scoreReasons)
-    ? (meta.scoreReasons as string[]).filter(
-        (r) => !/worth a look|repo chaud/i.test(r),
-      )
-    : [];
-
+  const kind = itemKind(
+    item.pillar === "opensource"
+      ? { ...meta, kind: meta.kind ?? "repo" }
+      : item.pillar === "tools"
+        ? { ...meta, kind: meta.kind ?? "tool" }
+        : meta,
+  );
   const explained = explainTitle(item, locale);
-  const tldr =
-    pickLocalized(i18n?.takeaway, locale, "") || cleanTakeaway(meta, locale);
 
-  const why =
-    (locale === "fr" ? i18n?.reasons?.fr : i18n?.reasons?.en)?.slice(0, 3) ||
-    reasonsRaw.slice(0, 3);
+  const summary =
+    pickLocalized(i18n?.summary, locale, "") ||
+    (item.summary || "").trim() ||
+    pickLocalized(i18n?.about, locale, "") ||
+    readMeta(meta, "tagline") ||
+    readMeta(meta, "description") ||
+    readMeta(meta, "about") ||
+    "";
+
+  const storedTakeaway = pickLocalized(i18n?.takeaway, locale, "");
+  const tldrCandidate = !isFluff(storedTakeaway)
+    ? storedTakeaway
+    : firstClause(summary, 280) || cleanTakeaway(meta, locale);
+  const tldr = (tldrCandidate || firstClause(item.title, 160)).slice(0, 320);
+
+  const reasonsI18n =
+    (locale === "fr" ? i18n?.reasons?.fr : i18n?.reasons?.en) || [];
+  const reasonsRaw = Array.isArray(meta.scoreReasons)
+    ? (meta.scoreReasons as string[])
+    : [];
+  const why = [...reasonsI18n, ...reasonsRaw]
+    .map((r) => String(r).trim())
+    .filter((r) => r && !isFluff(r))
+    .filter(
+      (r) =>
+        !/worth a look|repo chaud|signal builder|fit stack|flow de (build|code)|builder/i.test(
+          r,
+        ),
+    )
+    .slice(0, 4);
+
+  const actionKey = `${verdict}_${kind}` as keyof (typeof ACTION)["fr"];
+  const action = ACTION[locale][actionKey] || "";
+
+  const facts = buildFacts(meta, locale);
+  if (item.category) {
+    facts.unshift({
+      label: locale === "fr" ? "Catégorie" : "Category",
+      value: item.category.replace(/_/g, " "),
+    });
+  }
+  if (item.primary_source) {
+    facts.push({
+      label: locale === "fr" ? "Source" : "Source",
+      value: item.primary_source,
+    });
+  }
 
   return {
     title: explained.title,
     name: explained.name,
     typeLabel: explained.typeLabel,
-    tldr: tldr.slice(0, 220),
-    why: why.length
-      ? why
-      : [
-          verdictLabel ||
-            (locale === "fr" ? "Signal builder" : "Builder signal"),
-        ],
-    action: ACTION[locale][verdict],
-    facts: buildFacts(meta, locale),
+    tldr,
+    why,
+    action,
+    facts,
   };
 }
 

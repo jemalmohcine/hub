@@ -232,7 +232,7 @@ export async function updateProfile(
       userId: user.id,
       category: "account",
       title: "Profil mis à jour",
-      body: "Tes infos de compte ont bien été enregistrées.",
+      body: "Vos informations de compte ont été enregistrées.",
       href: "/app/settings/account",
       severity: "success",
       dedupeKey: `account:profile:${user.id}:${new Date().toISOString().slice(0, 10)}`,
@@ -333,8 +333,8 @@ export async function mockUpgradePlan(
       title: plan === "pro" ? "Plan Pro activé" : "Retour au plan Free",
       body:
         plan === "pro"
-          ? "Le module AI Intelligence est maintenant débloqué."
-          : "Ton abonnement est passé en Free.",
+          ? "Le module Intelligence AI est maintenant disponible."
+          : "Votre abonnement est passé au plan Free.",
       href: "/app/settings/billing",
       severity: plan === "pro" ? "success" : "info",
       dedupeKey: `billing:plan:${user.id}:${plan}:${new Date().toISOString().slice(0, 10)}`,
