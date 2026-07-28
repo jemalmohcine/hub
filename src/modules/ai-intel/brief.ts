@@ -394,6 +394,7 @@ export function resolveBrief(
           r,
         ),
     )
+    .filter((r, i, arr) => arr.indexOf(r) === i)
     .slice(0, 4);
 
   const actionKey = `${verdict}_${kind}` as keyof (typeof ACTION)["fr"];

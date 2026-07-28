@@ -186,9 +186,9 @@ export function ItemDetailModal({
                 {copy.why}
               </Text>
               <ul className="space-y-2">
-                {brief.why.map((line) => (
+                {brief.why.map((line, index) => (
                   <li
-                    key={line}
+                    key={`${index}-${line}`}
                     className="rounded-xl bg-muted/40 px-3 py-2 text-sm leading-relaxed"
                   >
                     {line}
