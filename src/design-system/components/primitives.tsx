@@ -18,21 +18,25 @@ export function BrandMark({
   href?: string;
 }) {
   const box = {
-    sm: "h-8 w-8 rounded-[var(--dh-radius-md)] text-[length:var(--dh-text-xs)]",
-    md: "h-9 w-9 rounded-[var(--dh-radius-lg)] text-[length:var(--dh-text-sm)]",
-    lg: "h-11 w-11 rounded-[var(--dh-radius-lg)] text-[length:var(--dh-text-md)]",
+    sm: "h-8 w-8",
+    md: "h-9 w-9",
+    lg: "h-11 w-11",
   }[size];
 
   const content = (
     <>
-      <span
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/icons/icon.svg"
+        alt=""
+        width={44}
+        height={44}
         className={cn(
-          "inline-flex items-center justify-center bg-[var(--dh-brand)] font-bold text-[var(--dh-brand-foreground)]",
+          "shrink-0 rounded-[var(--dh-radius-lg)] shadow-[var(--dh-shadow-sm)]",
           box,
         )}
-      >
-        H
-      </span>
+        decoding="async"
+      />
       {withWordmark ? (
         <span className="text-[length:var(--dh-text-lg)] font-semibold tracking-[var(--dh-tracking-tight)] text-[var(--dh-fg)]">
           DevHub
@@ -42,7 +46,11 @@ export function BrandMark({
   );
 
   return (
-    <Link href={href} className="inline-flex cursor-pointer items-center gap-[var(--dh-space-2)]">
+    <Link
+      href={href}
+      className="inline-flex cursor-pointer items-center gap-[var(--dh-space-2)]"
+      aria-label="DevHub"
+    >
       {content}
     </Link>
   );

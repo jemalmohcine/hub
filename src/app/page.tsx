@@ -36,7 +36,7 @@ const PILLARS = [
     icon: WalletCards,
     title: "Billing abstrait",
     description:
-      "Free / Pro côté produit, sans coller Stripe dans le code. Branche le PSP que tu veux plus tard — le hub reste le même.",
+      "Free / Pro côté produit, sans coller Stripe dans le code. Branche le PSP que tu veux plus tard. Le hub reste le même.",
   },
 ] as const;
 
@@ -54,7 +54,7 @@ const STEPS = [
   {
     step: "03",
     title: "Tu actives des modules",
-    text: "Chaque module vit dans le même shell — PWA mobile-first incluse.",
+    text: "Chaque module vit dans le même shell, PWA mobile-first incluse.",
   },
 ] as const;
 
@@ -90,7 +90,7 @@ export default function LandingPage() {
       </header>
 
       <main className="relative z-10">
-        {/* Hero — one composition */}
+        {/* Hero */}
         <section className="flex min-h-[calc(100dvh-5.5rem)] flex-col justify-center pb-16 pt-8 sm:pt-12">
           <Container size="content">
             <Stack gap={5} className="max-w-3xl animate-landing-rise">
@@ -107,7 +107,7 @@ export default function LandingPage() {
                 className="max-w-xl !text-base sm:!text-lg"
               >
                 Le hub développeur qui regroupe auth, modules et settings en un
-                seul endroit — prêt pour brancher tes outils (AI en phase 2).
+                seul endroit. Prêt pour brancher tes outils, dont AI.
               </Text>
               <Cluster gap={3} className="pt-1">
                 <LinkButton href="/sign-up" className="min-w-[10rem]">
@@ -132,7 +132,7 @@ export default function LandingPage() {
               <Stack gap={3} className="animate-landing-rise [animation-delay:80ms]">
                 <Eyebrow>C’est quoi</Eyebrow>
                 <Heading level={2} className="!text-3xl sm:!text-4xl">
-                  Pas un outil de plus — une base commune.
+                  Pas un outil de plus. Une base commune.
                 </Heading>
               </Stack>
               <Stack gap={4} className="animate-landing-rise [animation-delay:160ms]">
@@ -194,7 +194,7 @@ export default function LandingPage() {
                   Trois étapes. Un hub.
                 </Heading>
                 <Text tone="muted">
-                  Mobile-first, installable en PWA — le même shell sur téléphone
+                  Mobile-first, installable en PWA. Le même shell sur téléphone
                   et desktop.
                 </Text>
               </Stack>
@@ -227,7 +227,7 @@ export default function LandingPage() {
             <Stack gap={3} className="mb-10 max-w-2xl">
               <Eyebrow>Modules</Eyebrow>
               <Heading level={2} className="!text-3xl sm:!text-4xl">
-                Un registre vivant — Overview aujourd’hui, AI demain.
+                Overview aujourd’hui. AI demain.
               </Heading>
             </Stack>
             <div className="grid gap-6 sm:grid-cols-2">
@@ -256,16 +256,16 @@ export default function LandingPage() {
                   </span>
                 </Cluster>
                 <Text size="sm" tone="muted">
-                  Module AI branché sur le même shell, gated par le plan Pro —
-                  placeholder prêt, produit à venir.
+                  Module AI branché sur le même shell, réservé au plan Pro.
+                  Placeholder prêt, produit à venir.
                 </Text>
               </div>
             </div>
             <Cluster gap={2} className="mt-8 text-muted-foreground">
               <ShieldCheck className="size-4 shrink-0" aria-hidden />
               <Text size="sm" tone="muted">
-                Accès contrôlé par rôles et entitlements — admin pour le
-                pilotage global des flags modules.
+                Accès contrôlé par rôles et entitlements. L’admin pilote les
+                flags modules.
               </Text>
             </Cluster>
           </Container>

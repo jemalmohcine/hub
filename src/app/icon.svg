@@ -9,39 +9,22 @@
       <stop offset="0.55" stop-color="#14b8a6"/>
       <stop offset="1" stop-color="#0f766e"/>
     </linearGradient>
-    <filter id="dh-glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="8" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
   </defs>
-
-  <!-- App tile -->
   <rect width="512" height="512" rx="112" fill="url(#dh-bg)"/>
-
-  <!-- Soft brand wash -->
   <circle cx="256" cy="256" r="168" fill="#14b8a6" opacity="0.12"/>
-
-  <!-- Connection arms (hub) -->
-  <g stroke="url(#dh-mark)" stroke-width="28" stroke-linecap="round" opacity="0.95">
+  <g stroke="url(#dh-mark)" stroke-width="28" stroke-linecap="round">
     <path d="M256 148 V364"/>
     <path d="M168 208 H344"/>
     <path d="M168 304 H344"/>
   </g>
-
-  <!-- Satellite nodes -->
-  <g filter="url(#dh-glow)" fill="url(#dh-mark)">
+  <g fill="url(#dh-mark)">
     <circle cx="256" cy="148" r="34"/>
     <circle cx="168" cy="208" r="28"/>
     <circle cx="344" cy="208" r="28"/>
     <circle cx="168" cy="304" r="28"/>
     <circle cx="344" cy="304" r="28"/>
     <circle cx="256" cy="364" r="34"/>
+    <circle cx="256" cy="256" r="46"/>
   </g>
-
-  <!-- Center hub core -->
-  <circle cx="256" cy="256" r="46" fill="url(#dh-mark)"/>
   <circle cx="256" cy="256" r="18" fill="#0b1220"/>
 </svg>
