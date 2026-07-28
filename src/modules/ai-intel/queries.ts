@@ -68,6 +68,19 @@ export async function getAiIntelFeed(
     withSaved = withSaved.filter((i) => i.saved);
   }
 
+  // Prefer impact + score when metadata is present (client re-sorts too)
+  withSaved.sort((a, b) => {
+    const ua = a.urgency === "urgent" ? 0 : a.urgency === "medium" ? 1 : 2;
+    const ub = b.urgency === "urgent" ? 0 : b.urgency === "medium" ? 1 : 2;
+    if (ua !== ub) return ua - ub;
+    const sa = Number(a.metadata?.score) || 0;
+    const sb = Number(b.metadata?.score) || 0;
+    if (sa !== sb) return sb - sa;
+    return (
+      new Date(b.ingested_at).getTime() - new Date(a.ingested_at).getTime()
+    );
+  });
+
   return withSaved;
 }
 

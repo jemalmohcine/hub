@@ -1,6 +1,7 @@
 "use client";
 
-import { ExternalLink, Globe } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
+import { ExternalLink, Languages } from "lucide-react";
 import {
   Badge,
   Button,
@@ -17,26 +18,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SaveButton } from "@/modules/ai-intel/ui/save-button";
-import { formatStars } from "@/modules/ai-intel/score";
-import { urgencyTone } from "@/modules/ai-intel/ui/urgency";
+import { ensureItemTranslation } from "@/modules/ai-intel/actions-i18n";
+import {
+  getItemI18n,
+  resolveBrief,
+} from "@/modules/ai-intel/brief";
+import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
+import { t } from "@/modules/ai-intel/i18n/locale";
 import { readMetaString, verdictTone } from "@/modules/ai-intel/ui/verdict";
 import {
-  PILLAR_LABELS,
   URGENCY_LABELS,
   type AiIntelItem,
 } from "@/modules/ai-intel/types";
-
-function metaTags(meta: Record<string, unknown>): string[] {
-  const tags = meta.tags;
-  if (!Array.isArray(tags)) return [];
-  return tags.filter((t): t is string => typeof t === "string" && t.length > 0);
-}
-
-function metaReasons(meta: Record<string, unknown>): string[] {
-  const reasons = meta.scoreReasons;
-  if (!Array.isArray(reasons)) return [];
-  return reasons.filter((t): t is string => typeof t === "string" && t.length > 0);
-}
+import { cn } from "@/lib/utils";
 
 function websiteHref(website: string | null): string | null {
   if (!website) return null;
@@ -46,224 +40,210 @@ function websiteHref(website: string | null): string | null {
 export function ItemDetailModal({
   item,
   open,
+  locale,
   onOpenChange,
+  onMetadataUpdate,
 }: {
   item: AiIntelItem | null;
   open: boolean;
+  locale: AiLocale;
   onOpenChange: (open: boolean) => void;
+  onMetadataUpdate?: (itemId: string, metadata: Record<string, unknown>) => void;
 }) {
-  if (!item) return null;
+  const copy = t(locale);
+  const [pending, startTransition] = useTransition();
+  const [localItem, setLocalItem] = useState(item);
 
-  const refs = Array.isArray(item.source_refs) ? item.source_refs : [];
-  const confirmations = refs.length + 1;
-  const meta = (item.metadata ?? {}) as Record<string, unknown>;
-  const about = readMetaString(meta, "about") || readMetaString(meta, "description");
-  const tagline = readMetaString(meta, "tagline");
-  const pricing = readMetaString(meta, "pricing");
-  const upvotes = readMetaString(meta, "upvotes");
+  useEffect(() => {
+    setLocalItem(item);
+  }, [item]);
+
+  useEffect(() => {
+    if (!open || !localItem) return;
+    const i18n = getItemI18n((localItem.metadata ?? {}) as Record<string, unknown>);
+    if (i18n?.translatedAt) return;
+
+    startTransition(async () => {
+      try {
+        const meta = await ensureItemTranslation(localItem.id);
+        setLocalItem((prev) =>
+          prev ? { ...prev, metadata: meta as Record<string, unknown> } : prev,
+        );
+        onMetadataUpdate?.(localItem.id, meta as Record<string, unknown>);
+      } catch {
+        // keep original language if translation fails
+      }
+    });
+  }, [open, localItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!localItem) return null;
+
+  const meta = (localItem.metadata ?? {}) as Record<string, unknown>;
+  const brief = resolveBrief(localItem, locale);
+  const i18n = getItemI18n(meta);
+  const about =
+    (locale === "fr" ? i18n?.about?.fr : i18n?.about?.en) ||
+    readMetaString(meta, "about") ||
+    readMetaString(meta, "description");
   const website = readMetaString(meta, "website");
-  const listed = readMetaString(meta, "listed");
-  const api = readMetaString(meta, "api");
-  const openSource = readMetaString(meta, "openSource");
   const image = readMetaString(meta, "image");
-  const language = readMetaString(meta, "language");
-  const categoryLabel = readMetaString(meta, "categoryLabel");
-  const starsRaw = readMetaString(meta, "stars");
-  const starsTodayRaw = readMetaString(meta, "starsToday");
-  const forksRaw = readMetaString(meta, "forks");
   const score = readMetaString(meta, "score");
-  const verdictLabel = readMetaString(meta, "verdictLabel");
-  const takeaway = readMetaString(meta, "takeaway");
-  const mattsPick = meta.mattsPick === true;
-  const tags = metaTags(meta);
-  const reasons = metaReasons(meta);
-  const visitUrl = websiteHref(website) || item.url;
-  const isToolish =
-    item.pillar === "tools" ||
-    meta.provider === "futuretools" ||
-    Boolean(website || pricing || upvotes);
-
-  const stars =
-    starsRaw && Number(starsRaw)
-      ? formatStars(Number(starsRaw))
-      : starsRaw;
-  const starsToday =
-    starsTodayRaw && Number(starsTodayRaw)
-      ? formatStars(Number(starsTodayRaw))
-      : starsTodayRaw;
-  const forks =
-    forksRaw && Number(forksRaw) ? formatStars(Number(forksRaw)) : forksRaw;
-
-  const glanceEntries = [
-    stars ? { label: "Stars", value: stars } : null,
-    starsToday ? { label: "Stars today", value: `+${starsToday}` } : null,
-    forks ? { label: "Forks", value: forks } : null,
-    language ? { label: "Langage", value: language } : null,
-    pricing ? { label: "Prix", value: pricing } : null,
-    upvotes ? { label: "Upvotes", value: upvotes } : null,
-    categoryLabel ? { label: "Catégorie", value: categoryLabel } : null,
-    listed ? { label: "Listé depuis", value: listed } : null,
-    api ? { label: "API", value: api } : null,
-    openSource ? { label: "Open source", value: openSource } : null,
-  ].filter(Boolean) as Array<{ label: string; value: string }>;
+  const verdictLabel =
+    (locale === "fr" ? i18n?.verdictLabel?.fr : i18n?.verdictLabel?.en) ||
+    readMetaString(meta, "verdictLabel");
+  const visitUrl = websiteHref(website) || localItem.url;
+  const translated = Boolean(i18n?.translatedAt);
+  const dateLocale = locale === "fr" ? "fr-FR" : "en-US";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <Cluster gap={2} className="mb-2 flex-wrap">
+            {localItem.urgency === "urgent" ? (
+              <Badge tone="danger">{URGENCY_LABELS.urgent}</Badge>
+            ) : null}
             {verdictLabel ? (
               <Badge tone={verdictTone(meta.verdict)}>{verdictLabel}</Badge>
             ) : null}
-            {score ? <Badge tone="brand">Score {score}/100</Badge> : null}
-            <Badge tone="brand">{PILLAR_LABELS[item.pillar]}</Badge>
-            <Badge tone={urgencyTone[item.urgency]}>
-              {URGENCY_LABELS[item.urgency]}
-            </Badge>
-            {mattsPick ? <Badge tone="warning">Matt&apos;s Pick</Badge> : null}
-            {confirmations > 1 ? (
-              <Badge tone="success">Confirmé · {confirmations} sources</Badge>
+            {score ? (
+              <Badge tone="brand">
+                {copy.score} {score}
+              </Badge>
+            ) : null}
+            {translated ? (
+              <Badge tone="neutral">
+                <span className="inline-flex items-center gap-1">
+                  <Languages className="h-3 w-3" />
+                  {copy.translated}
+                </span>
+              </Badge>
+            ) : pending ? (
+              <Badge tone="neutral">…</Badge>
             ) : null}
           </Cluster>
-          <DialogTitle className="text-balance text-xl sm:text-2xl">
-            {item.title}
+          <DialogTitle className="text-balance text-xl leading-snug">
+            {brief.title}
           </DialogTitle>
-          <DialogDescription className="mt-2 text-base leading-relaxed">
-            {takeaway || tagline || about?.slice(0, 280) || item.summary}
+          {brief.name && brief.name !== brief.title ? (
+            <Text size="sm" tone="muted" className="mt-1">
+              {brief.typeLabel} · {brief.name}
+            </Text>
+          ) : (
+            <Text size="sm" tone="muted" className="mt-1">
+              {brief.typeLabel}
+            </Text>
+          )}
+          <DialogDescription className="sr-only">
+            {brief.tldr}
           </DialogDescription>
         </DialogHeader>
 
         <Stack gap={4}>
+          <section className="rounded-2xl border border-[var(--dh-brand)]/20 bg-[var(--dh-brand-soft)]/35 px-4 py-3">
+            <Text size="sm" weight="medium" className="uppercase tracking-wide text-muted-foreground">
+              {copy.tldr}
+            </Text>
+            <Text className="mt-1.5 leading-relaxed">{brief.tldr}</Text>
+          </section>
+
           {image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={image}
               alt=""
-              className="aspect-[16/7] w-full rounded-2xl border border-border object-cover"
+              className="aspect-[16/8] w-full rounded-2xl border border-border object-cover"
             />
           ) : null}
 
-          {reasons.length > 0 ? (
-            <div className="rounded-2xl border border-[var(--dh-brand)]/25 bg-[var(--dh-brand-soft)]/40 px-4 py-3">
-              <Text size="sm" weight="medium">
-                Pourquoi ce score
-              </Text>
-              <ul className="mt-2 list-disc space-y-1.5 pl-4">
-                {reasons.map((reason) => (
-                  <li key={reason}>
-                    <Text size="sm" tone="muted">
-                      {reason}
-                    </Text>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {about && about !== takeaway && about !== tagline ? (
-            <div>
-              <Text size="sm" weight="medium" className="mb-2">
-                {isToolish ? "À propos" : "Détail"}
-              </Text>
-              <Text size="sm" tone="muted" className="leading-relaxed whitespace-pre-wrap">
-                {about}
-              </Text>
-            </div>
-          ) : null}
-
-          {glanceEntries.length > 0 ? (
-            <div>
-              <Text size="sm" weight="medium" className="mb-2">
-                {isToolish ? "En un coup d’œil" : "Infos clés"}
-              </Text>
-              <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-muted/35 px-4 py-3 sm:grid-cols-3">
-                {glanceEntries.map((entry) => (
-                  <div key={entry.label}>
-                    <Text size="sm" tone="muted">
-                      {entry.label}
-                    </Text>
-                    <Text size="sm" weight="medium" className="mt-0.5">
-                      {entry.value}
-                    </Text>
-                  </div>
-                ))}
-                {website ? (
-                  <div className="col-span-2 sm:col-span-3">
-                    <Text size="sm" tone="muted">
-                      Site officiel
-                    </Text>
-                    <a
-                      href={websiteHref(website)!}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-0.5 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--dh-brand)] hover:underline"
-                    >
-                      <Globe className="h-3.5 w-3.5" />
-                      {website.replace(/^https?:\/\//, "")}
-                    </a>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-
-          {tags.length > 0 ? (
-            <Cluster gap={2} className="flex-wrap">
-              {tags.map((tag) => (
-                <Badge key={tag} tone="neutral">
-                  {tag}
-                </Badge>
-              ))}
-            </Cluster>
-          ) : null}
-
-          <div className="rounded-2xl border border-border bg-muted/40 px-4 py-3">
-            <Text size="sm" weight="medium">
-              Sources
+          <section>
+            <Text size="sm" weight="medium" className="mb-2 uppercase tracking-wide text-muted-foreground">
+              {copy.why}
             </Text>
-            <ul className="mt-2 space-y-1.5">
-              <li>
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-sm font-medium text-[var(--dh-brand)] hover:underline"
+            <ul className="space-y-2">
+              {brief.why.map((line) => (
+                <li
+                  key={line}
+                  className="rounded-xl bg-muted/40 px-3 py-2 text-sm leading-relaxed"
                 >
-                  {item.primary_source}
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </li>
-              {refs.map((ref) => (
-                <li key={`${ref.sourceId}-${ref.url}`}>
-                  <a
-                    href={ref.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline"
-                  >
-                    {ref.sourceId}
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
+                  {line}
                 </li>
               ))}
             </ul>
-          </div>
+          </section>
 
-          <Cluster gap={3} className="flex-wrap">
-            <Text size="sm" tone="muted">
-              Publié{" "}
-              {item.published_at
-                ? new Date(item.published_at).toLocaleString("fr-FR")
-                : "date inconnue"}
+          <section className="rounded-2xl border border-border px-4 py-3">
+            <Text size="sm" weight="medium" className="uppercase tracking-wide text-muted-foreground">
+              {copy.action}
             </Text>
-            <Text size="sm" tone="muted">
-              Ajouté {new Date(item.ingested_at).toLocaleString("fr-FR")}
+            <Text className="mt-1.5 leading-relaxed">{brief.action}</Text>
+          </section>
+
+          {brief.facts.length > 0 ? (
+            <section>
+              <Text size="sm" weight="medium" className="mb-2 uppercase tracking-wide text-muted-foreground">
+                {copy.facts}
+              </Text>
+              <div className="grid grid-cols-2 gap-2">
+                {brief.facts.map((f) => (
+                  <div
+                    key={f.label}
+                    className="rounded-xl bg-muted/35 px-3 py-2.5"
+                  >
+                    <Text size="sm" tone="muted">
+                      {f.label}
+                    </Text>
+                    <Text size="sm" weight="medium" className="mt-0.5">
+                      {f.value}
+                    </Text>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {about && about !== brief.tldr ? (
+            <section>
+              <Text size="sm" weight="medium" className="mb-2 uppercase tracking-wide text-muted-foreground">
+                {locale === "fr" ? "Détail" : "Detail"}
+              </Text>
+              <Text size="sm" tone="muted" className="leading-relaxed whitespace-pre-wrap">
+                {about.slice(0, 900)}
+              </Text>
+            </section>
+          ) : null}
+
+          <section className="rounded-2xl border border-border bg-muted/30 px-4 py-3">
+            <Text size="sm" weight="medium" className="uppercase tracking-wide text-muted-foreground">
+              {copy.sources}
             </Text>
-          </Cluster>
+            <a
+              href={localItem.url}
+              target="_blank"
+              rel="noreferrer"
+              className={cn(
+                "mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--dh-brand)] hover:underline",
+              )}
+            >
+              {localItem.primary_source}
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+            <Text size="sm" tone="muted" className="mt-2">
+              {copy.published}{" "}
+              {localItem.published_at
+                ? new Date(localItem.published_at).toLocaleString(dateLocale)
+                : locale === "fr"
+                  ? "Date inconnue"
+                  : "Unknown date"}
+              {" · "}
+              {copy.added}{" "}
+              {new Date(localItem.ingested_at).toLocaleString(dateLocale)}
+            </Text>
+          </section>
         </Stack>
 
         <DialogFooter className="gap-2 sm:justify-between">
-          <SaveButton itemId={item.id} saved={Boolean(item.saved)} />
+          <SaveButton itemId={localItem.id} saved={Boolean(localItem.saved)} />
           <Button
             size="sm"
             onClick={() =>
@@ -271,7 +251,7 @@ export function ItemDetailModal({
             }
           >
             <ExternalLink className="h-4 w-4" />
-            {website ? "Visiter le site" : "Ouvrir la source"}
+            {website ? copy.visitSite : copy.visit}
           </Button>
         </DialogFooter>
       </DialogContent>

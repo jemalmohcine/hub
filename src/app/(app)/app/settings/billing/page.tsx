@@ -69,7 +69,7 @@ export default async function BillingSettingsPage() {
       <Card>
         <SettingsSection
           title="Changer de plan"
-          description="Mock billing — aucun paiement réel pour l’instant."
+          description="Mock billing. Aucun paiement réel pour l’instant."
         >
           <BillingForm user={user} />
         </SettingsSection>

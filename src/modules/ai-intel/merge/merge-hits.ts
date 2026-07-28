@@ -1,6 +1,6 @@
-import { classifyHit } from "@/modules/ai-intel/classify";
+import { classifyHit, urgencyFromScore } from "@/modules/ai-intel/classify";
 import { buildCanonicalKey } from "@/modules/ai-intel/merge/canonical-key";
-import { attachScoreToRaw } from "@/modules/ai-intel/score";
+import { attachScoreToRaw, isWorthKeeping } from "@/modules/ai-intel/score";
 import type {
   AiCategory,
   AiIntelSource,
@@ -13,7 +13,10 @@ import type {
 export function mergeHits(
   hits: RawHit[],
   sourcesById: Map<string, AiIntelSource>,
-): { items: ClassifiedItem[]; stats: { raw: number; merged: number } } {
+): {
+  items: ClassifiedItem[];
+  stats: { raw: number; merged: number; kept: number; dropped: number };
+} {
   const buckets = new Map<string, { hits: RawHit[]; key: string }>();
 
   for (const hit of hits) {
@@ -24,6 +27,7 @@ export function mergeHits(
   }
 
   const items: ClassifiedItem[] = [];
+  let dropped = 0;
 
   for (const bucket of buckets.values()) {
     const ranked = [...bucket.hits].sort((a, b) => {
@@ -48,14 +52,18 @@ export function mergeHits(
 
     if (richest.raw?.kind === "tool") {
       pillar = "tools" satisfies AiPillar;
-      category = "software" satisfies AiCategory;
-      urgency = urgency === "urgent" ? urgency : "medium";
+      if (/\bmcp\b/i.test(`${richest.title} ${richest.summary}`)) {
+        category = "mcp" satisfies AiCategory;
+      } else if (/\bcli\b/i.test(`${richest.title} ${richest.summary}`)) {
+        category = "cli" satisfies AiCategory;
+      } else if (/\bsdk\b/i.test(`${richest.title} ${richest.summary}`)) {
+        category = "sdk" satisfies AiCategory;
+      } else {
+        category = "software" satisfies AiCategory;
+      }
     } else if (richest.raw?.kind === "repo") {
       pillar = "opensource" satisfies AiPillar;
       category = "trending_repo" satisfies AiCategory;
-      const starsToday = Number(richest.raw.starsToday) || 0;
-      urgency =
-        starsToday >= 800 ? "urgent" : starsToday >= 150 ? "medium" : urgency;
     }
 
     const sourceRefs: SourceRef[] = [];
@@ -82,7 +90,20 @@ export function mergeHits(
       urgency,
     });
 
-    // Prefer takeaway as the short card summary when available
+    urgency = urgencyFromScore({
+      base: urgency,
+      verdict: String(scoredMeta.verdict ?? "skip"),
+      score: Number(scoredMeta.score) || 0,
+      category,
+      kind,
+      starsToday: Number(scoredMeta.starsToday) || 0,
+    });
+
+    if (!isWorthKeeping(scoredMeta, ranked.length)) {
+      dropped += 1;
+      continue;
+    }
+
     const takeaway =
       typeof scoredMeta.takeaway === "string" ? scoredMeta.takeaway : "";
     const shortSummary = takeaway || richest.summary.trim();
@@ -107,8 +128,30 @@ export function mergeHits(
     });
   }
 
+  // Prefer beneficial / urgent first in DB order bias
+  items.sort((a, b) => rankScore(b) - rankScore(a));
+
   return {
     items,
-    stats: { raw: hits.length, merged: items.length },
+    stats: {
+      raw: hits.length,
+      merged: buckets.size,
+      kept: items.length,
+      dropped,
+    },
   };
+}
+
+function rankScore(item: ClassifiedItem): number {
+  const score = Number(item.metadata.score) || 0;
+  const urgencyBoost =
+    item.urgency === "urgent" ? 120 : item.urgency === "medium" ? 40 : 0;
+  const verdictBoost =
+    item.metadata.verdict === "use_it"
+      ? 80
+      : item.metadata.verdict === "watch"
+        ? 20
+        : 0;
+  const repoBoost = item.pillar === "opensource" && item.metadata.beneficial ? 25 : 0;
+  return score + urgencyBoost + verdictBoost + repoBoost;
 }

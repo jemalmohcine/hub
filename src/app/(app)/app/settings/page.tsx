@@ -31,8 +31,8 @@ const SECTIONS = [
   },
   {
     href: "/app/settings/appearance",
-    title: "Apparence",
-    description: "Thème, langue et notifications",
+    title: "Langue & apparence",
+    description: "Français / English, thème et notifications",
     icon: Palette,
   },
   {

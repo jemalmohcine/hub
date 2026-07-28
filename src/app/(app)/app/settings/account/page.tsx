@@ -28,7 +28,7 @@ export default async function AccountSettingsPage() {
       <Text size="xs" tone="muted" className="mt-4">
         Affiché comme{" "}
         <span className="font-medium text-foreground">
-          {profileFullName(user.profile) || "—"}
+          {profileFullName(user.profile) || "Non renseigné"}
         </span>
         . L’email est géré par Supabase Auth.
       </Text>

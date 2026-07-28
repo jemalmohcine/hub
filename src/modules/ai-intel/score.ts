@@ -6,6 +6,7 @@ export type ScoreResult = {
   verdictLabel: string;
   takeaway: string;
   reasons: string[];
+  beneficial: boolean;
 };
 
 function clamp(n: number, min = 0, max = 100) {
@@ -14,12 +15,54 @@ function clamp(n: number, min = 0, max = 100) {
 
 function logPoints(value: number, maxPoints: number, midValue: number): number {
   if (!value || value <= 0) return 0;
-  // ~half points at midValue, approaches maxPoints asymptotically
   return maxPoints * (1 - Math.exp(-value / midValue));
 }
 
-const DEV_SIGNAL_RE =
-  /\b(ai|llm|agent|rag|mcp|sdk|cli|ide|typescript|python|rust|golang|devops|infra|eval|benchmark|coding|developer|framework|orchestrat|workflow|cursor|copilot)\b/i;
+/** Signals that a working builder should care about. */
+export const DEV_SIGNAL_RE =
+  /\b(ai|llm|agent|rag|mcp|sdk|cli|ide|api|typescript|python|rust|golang|go\b|devops|infra|eval|benchmark|coding|code|developer|devtools?|framework|orchestrat|workflow|cursor|copilot|windsurf|langchain|llamaindex|vercel|next\.?js|react|node|docker|kubernetes|observability|auth|postgres|redis|vector|embedding|transformer|inference|fine[\s-]?tun)\b/i;
+
+const NON_DEV_RE =
+  /\b(marketing|seo|social media|instagram|tiktok|influencer|canva|logo|wallpaper|coloring|recipe|fitness|dating|horoscope|nft art|stock photo|voice changer|anime|waifu|essay writer for students)\b/i;
+
+const IMPACT_RE =
+  /\b(deprecat|sunset|retir|breaking|security|cve|vulnerab|outage|rate\s*limit|price\s*cut|pricing|cost increase|ban(ned)?|shutdown|removed|migration required|api change)\b/i;
+
+function finalize(
+  score: number,
+  reasons: string[],
+  labels: {
+    use: string;
+    watch: string;
+    skip: string;
+    useTake: string;
+    watchTake: string;
+    skipTake: string;
+  },
+  thresholds = { use: 68, watch: 46 },
+): ScoreResult {
+  const s = clamp(score);
+  const verdict: DevVerdict =
+    s >= thresholds.use ? "use_it" : s >= thresholds.watch ? "watch" : "skip";
+  return {
+    score: s,
+    verdict,
+    verdictLabel:
+      verdict === "use_it"
+        ? labels.use
+        : verdict === "watch"
+          ? labels.watch
+          : labels.skip,
+    takeaway:
+      verdict === "use_it"
+        ? labels.useTake
+        : verdict === "watch"
+          ? labels.watchTake
+          : labels.skipTake,
+    reasons: reasons.slice(0, 4),
+    beneficial: verdict === "use_it",
+  };
+}
 
 export function scoreGithubRepo(input: {
   stars: number;
@@ -29,6 +72,7 @@ export function scoreGithubRepo(input: {
   language?: string | null;
   rank?: number | null;
   topics?: string[];
+  title?: string;
 }): ScoreResult {
   const stars = input.stars || 0;
   const starsToday = input.starsToday || 0;
@@ -36,59 +80,73 @@ export function scoreGithubRepo(input: {
   const desc = (input.description || "").trim();
   const lang = (input.language || "").toLowerCase();
   const topics = (input.topics || []).join(" ");
-  const blob = `${desc} ${topics} ${lang}`;
-
+  const blob = `${input.title ?? ""} ${desc} ${topics} ${lang}`;
   const reasons: string[] = [];
-  let score = 0;
+  let score = 8;
 
-  const todayPts = logPoints(starsToday, 40, 400);
+  const hasDevSignal = DEV_SIGNAL_RE.test(blob);
+  const isNonDev = NON_DEV_RE.test(blob);
+
+  // Momentum matters only if the repo is relevant to a builder
+  const todayPts = logPoints(starsToday, hasDevSignal ? 36 : 14, 350);
   score += todayPts;
-  if (starsToday >= 200) reasons.push(`+${starsToday.toLocaleString("fr-FR")} stars aujourd'hui`);
-
-  const starsPts = logPoints(stars, 25, 8000);
-  score += starsPts;
-  if (stars >= 1000) reasons.push(`${formatStars(stars)} stars au total`);
-
-  const forkPts = logPoints(forks, 8, 1500);
-  score += forkPts;
-
-  let descPts = 0;
-  if (desc.length >= 20) descPts += 8;
-  if (desc.length >= 60) descPts += 4;
-  if (DEV_SIGNAL_RE.test(blob)) descPts += 8;
-  score += descPts;
-  if (desc) reasons.push(desc.length > 90 ? `${desc.slice(0, 87)}…` : desc);
-
-  if (["typescript", "python", "rust", "go", "javascript"].includes(lang)) {
-    score += 5;
-    reasons.push(`Langage ${input.language}`);
+  if (starsToday >= 150 && hasDevSignal) {
+    reasons.push(`+${starsToday.toLocaleString("fr-FR")} stars aujourd'hui`);
   }
 
-  if (input.rank != null && input.rank > 0) {
-    const rankPts = Math.max(0, 12 - (input.rank - 1));
-    score += rankPts;
+  score += logPoints(stars, hasDevSignal ? 22 : 10, 6000);
+  if (stars >= 2000 && hasDevSignal) {
+    reasons.push(`${formatStars(stars)} stars`);
+  }
+
+  score += logPoints(forks, 6, 1200);
+
+  if (desc.length >= 24) score += 6;
+  if (desc.length >= 80) score += 4;
+  if (desc) reasons.push(desc.length > 90 ? `${desc.slice(0, 87)}…` : desc);
+
+  if (hasDevSignal) {
+    score += 22;
+    reasons.push("Fit stack / AI / DX");
+  } else {
+    score -= 18;
+    reasons.push("Peu lié à un flow de build");
+  }
+
+  if (isNonDev) {
+    score -= 25;
+    reasons.push("Hors sujet pour un dev");
+  }
+
+  if (["typescript", "python", "rust", "go", "javascript"].includes(lang)) {
+    score += 6;
+    if (hasDevSignal) reasons.push(`Langage ${input.language}`);
+  }
+
+  if (input.rank != null && input.rank > 0 && hasDevSignal) {
+    score += Math.max(0, 10 - (input.rank - 1) * 1.5);
     if (input.rank <= 5) reasons.push(`Top ${input.rank} trending`);
   }
 
-  score = clamp(score);
-  const verdict: DevVerdict =
-    score >= 72 ? "use_it" : score >= 48 ? "watch" : "skip";
+  // Cap noise repos even if viral
+  if (!hasDevSignal) score = Math.min(score, 44);
 
-  const verdictLabel =
-    verdict === "use_it"
-      ? "À tester"
-      : verdict === "watch"
-        ? "Surveiller"
-        : "Pas prioritaire";
-
-  const takeaway =
-    verdict === "use_it"
-      ? `Repo chaud (${formatStars(stars)}${starsToday ? `, +${formatStars(starsToday)}/j` : ""}). Worth a look si ça touche ton stack.`
-      : verdict === "watch"
-        ? `Momentum moyen. Garde-le en watchlist si le sujet te concerne.`
-        : `Bruit relatif. Skip sauf besoin très précis.`;
-
-  return { score, verdict, verdictLabel, takeaway, reasons: reasons.slice(0, 4) };
+  return finalize(
+    score,
+    reasons,
+    {
+      use: "À tester",
+      watch: "Watchlist",
+      skip: "Pas pour toi",
+      useTake:
+        "Repo utile pour un builder. Clone-le et teste sur un cas réel cette semaine.",
+      watchTake:
+        "Momentum ok, fit moyen. Garde-le si le sujet touche déjà ton stack.",
+      skipTake:
+        "Peu de bénéfice pour un flow de code. Ignore et gagne du temps.",
+    },
+    { use: 66, watch: 48 },
+  );
 }
 
 export function scoreAiTool(input: {
@@ -104,69 +162,71 @@ export function scoreAiTool(input: {
 }): ScoreResult {
   const text = `${input.title} ${input.tagline ?? ""} ${input.about ?? ""} ${(input.tags ?? []).join(" ")}`;
   const reasons: string[] = [];
-  let score = 18; // baseline for curated tools
+  let score = 12;
 
-  if (input.mattsPick) {
-    score += 22;
-    reasons.push("Matt's Pick");
+  const hasDevSignal = DEV_SIGNAL_RE.test(text);
+  const isNonDev = NON_DEV_RE.test(text);
+
+  if (input.mattsPick && hasDevSignal) {
+    score += 14;
+    reasons.push("Pick éditorial");
   }
 
   const upvotes = Number(input.upvotes) || 0;
-  score += logPoints(upvotes, 18, 40);
-  if (upvotes >= 20) reasons.push(`${upvotes} upvotes`);
+  score += logPoints(upvotes, hasDevSignal ? 14 : 6, 35);
 
   const pricing = (input.pricing || "").toLowerCase();
   if (/free|freemium|open/.test(pricing)) {
-    score += 14;
-    reasons.push(`Prix: ${input.pricing}`);
+    score += hasDevSignal ? 12 : 4;
+    if (hasDevSignal) reasons.push(`Prix: ${input.pricing}`);
   } else if (/paid|subscription/.test(pricing)) {
-    score += 6;
-    reasons.push(`Prix: ${input.pricing}`);
+    score += hasDevSignal ? 4 : 0;
   }
 
   if (/^yes|oui|true/i.test(input.openSource || "")) {
-    score += 10;
-    reasons.push("Open source");
+    score += hasDevSignal ? 12 : 3;
+    if (hasDevSignal) reasons.push("Open source");
   }
 
   if (input.api && !/not listed|none|no\b/i.test(input.api)) {
-    score += 8;
-    reasons.push(`API: ${input.api}`);
+    score += hasDevSignal ? 10 : 2;
+    if (hasDevSignal) reasons.push(`API: ${input.api}`);
   }
 
-  let fit = 0;
-  if (/\b(ide|cursor|copilot|coding|code|sdk|cli|mcp|agent|rag|developer|devtools?|api|typescript|python)\b/i.test(text)) {
-    fit += 16;
-    reasons.push("Utile côté DX / coding");
-  } else if (/\b(design|image|video|music|marketing|seo|social)\b/i.test(text)) {
-    fit += 4;
-    reasons.push("Moins central pour un flow de code");
+  if (/\b(mcp|cli|sdk|ide|cursor|copilot|agent|rag|devtools?)\b/i.test(text)) {
+    score += 24;
+    reasons.push("Directement utile en DX / coding");
+  } else if (hasDevSignal) {
+    score += 14;
+    reasons.push("Signal builder");
+  } else if (isNonDev) {
+    score -= 22;
+    reasons.push("Outil grand public / marketing");
   } else {
-    fit += 8;
+    score -= 8;
+    reasons.push("Fit DX faible");
   }
-  score += fit;
 
-  if ((input.about || "").length > 120) score += 6;
+  if ((input.about || "").length > 120 && hasDevSignal) score += 4;
 
-  score = clamp(score);
-  const verdict: DevVerdict =
-    score >= 70 ? "use_it" : score >= 45 ? "watch" : "skip";
+  if (!hasDevSignal) score = Math.min(score, 42);
 
-  const verdictLabel =
-    verdict === "use_it"
-      ? "Utile pour un dev"
-      : verdict === "watch"
-        ? "À évaluer"
-        : "Peu prioritaire";
-
-  const takeaway =
-    verdict === "use_it"
-      ? "Bon signal pour un workflow de build. Teste sur un cas concret cette semaine."
-      : verdict === "watch"
-        ? "Intéressant mais pas urgent. Compare à ce que tu utilises déjà."
-        : "Faible fit DX. Ignore sauf besoin métier très précis.";
-
-  return { score, verdict, verdictLabel, takeaway, reasons: reasons.slice(0, 4) };
+  return finalize(
+    score,
+    reasons,
+    {
+      use: "Bénéfique",
+      watch: "À évaluer",
+      skip: "Peu utile",
+      useTake:
+        "Ça peut te faire gagner du temps. Teste sur un vrai ticket cette semaine.",
+      watchTake:
+        "Intéressant, pas prioritaire. Compare à ce que tu utilises déjà.",
+      skipTake:
+        "Faible ROI pour un builder. Skip sauf besoin métier précis.",
+    },
+    { use: 64, watch: 46 },
+  );
 }
 
 export function scoreGenericNews(input: {
@@ -175,39 +235,52 @@ export function scoreGenericNews(input: {
   urgency?: string;
 }): ScoreResult {
   const text = `${input.title} ${input.summary ?? ""}`;
-  let score = 30;
   const reasons: string[] = [];
+  let score = 18;
 
-  if (/\b(deprecat|breaking|ban|security|pricing|price cut|rate limit)\b/i.test(text)) {
-    score += 35;
-    reasons.push("Impact possible en prod");
-  } else if (/\b(launch|release|new model|upgrade|sdk|api)\b/i.test(text)) {
-    score += 20;
-    reasons.push("Nouveauté produit / modèle");
+  if (IMPACT_RE.test(text)) {
+    score += 42;
+    reasons.push("Impact possible sur ton stack / coûts / prod");
+  } else if (
+    /\b(launch|release|new model|gpt|claude|gemini|sdk|api|mcp)\b/i.test(text)
+  ) {
+    score += DEV_SIGNAL_RE.test(text) ? 24 : 10;
+    reasons.push(
+      DEV_SIGNAL_RE.test(text)
+        ? "Nouveauté produit / modèle"
+        : "Nouveauté faible signal",
+    );
+  } else if (
+    /\b(regulat|policy|government|election|trump|china|geopolit|court)\b/i.test(
+      text,
+    )
+  ) {
+    score -= 6;
+    reasons.push("Contexte monde, peu actionnable aujourd'hui");
   } else {
-    score += 8;
+    score += 4;
   }
 
-  if (input.urgency === "urgent") score += 20;
-  if (input.urgency === "medium") score += 10;
+  if (DEV_SIGNAL_RE.test(text)) score += 10;
+  if (NON_DEV_RE.test(text)) score -= 20;
 
-  score = clamp(score);
-  const verdict: DevVerdict =
-    score >= 70 ? "use_it" : score >= 45 ? "watch" : "skip";
-  const verdictLabel =
-    verdict === "use_it"
-      ? "À traiter"
-      : verdict === "watch"
-        ? "À lire vite"
-        : "Bruit";
-  const takeaway =
-    verdict === "use_it"
-      ? "Peut changer ton stack ou tes coûts. Lis et décide aujourd'hui."
-      : verdict === "watch"
-        ? "Bon à savoir. Pas besoin d'agir tout de suite."
-        : "Contexte seulement. Skip si tu es focus.";
+  if (input.urgency === "urgent") score += 12;
+  if (input.urgency === "medium") score += 4;
 
-  return { score, verdict, verdictLabel, takeaway, reasons: reasons.slice(0, 3) };
+  return finalize(
+    score,
+    reasons,
+    {
+      use: "À traiter",
+      watch: "À lire vite",
+      skip: "Bruit",
+      useTake:
+        "Peut changer ton stack, tes coûts ou ta prod. Lis et décide aujourd'hui.",
+      watchTake: "Bon à savoir. Agis seulement si ça touche ton setup.",
+      skipTake: "Contexte seulement. Skip si tu es focus.",
+    },
+    { use: 68, watch: 48 },
+  );
 }
 
 export function formatStars(n: number): string {
@@ -228,6 +301,7 @@ export function attachScoreToRaw(
   const scored =
     kind === "repo"
       ? scoreGithubRepo({
+          title: extras.title,
           stars: Number(raw.stars) || 0,
           starsToday: Number(raw.starsToday) || 0,
           forks: Number(raw.forks) || 0,
@@ -260,6 +334,21 @@ export function attachScoreToRaw(
     verdict: scored.verdict,
     verdictLabel: scored.verdictLabel,
     takeaway: scored.takeaway,
+    takeawayFr: scored.takeaway,
+    // English twin filled at enrich / brief cleanTakeaway
     scoreReasons: scored.reasons,
+    beneficial: scored.beneficial,
   };
+}
+
+/** Keep only items worth a developer's time (or multi-confirmed). */
+export function isWorthKeeping(meta: Record<string, unknown>, confirmations = 1): boolean {
+  const score = Number(meta.score) || 0;
+  const verdict = meta.verdict;
+  if (verdict === "use_it") return true;
+  if (verdict === "watch" && score >= 48) return true;
+  if (confirmations >= 2 && score >= 40) return true;
+  // Drop clear noise
+  if (verdict === "skip" && score < 42) return false;
+  return score >= 40;
 }

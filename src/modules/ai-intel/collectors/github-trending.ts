@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import { fetchJson, fetchText } from "@/modules/ai-intel/collectors/fetch";
-import { formatStars } from "@/modules/ai-intel/score";
+import { DEV_SIGNAL_RE, formatStars } from "@/modules/ai-intel/score";
 import type { RawHit } from "@/modules/ai-intel/types";
 
 type GhRepo = {
@@ -54,7 +54,7 @@ export async function collectGithubTrending(
   }[] = [];
 
   $("article.Box-row").each((idx, el) => {
-    if (rows.length >= 15) return;
+    if (rows.length >= 25) return;
     const href =
       $(el).find("h2 a").attr("href") ||
       $(el).find("a[href^='/']").first().attr("href") ||
@@ -135,5 +135,12 @@ export async function collectGithubTrending(
     hits.push(...enriched);
   }
 
-  return hits;
+  // Prefer repos a builder would actually open; keep a few high-momentum outliers
+  const useful = hits.filter((h) => {
+    const blob = `${h.title} ${h.summary} ${JSON.stringify(h.raw?.topics ?? [])}`;
+    const starsToday = Number(h.raw?.starsToday) || 0;
+    return DEV_SIGNAL_RE.test(blob) || starsToday >= 1200;
+  });
+
+  return (useful.length >= 5 ? useful : hits).slice(0, 18);
 }

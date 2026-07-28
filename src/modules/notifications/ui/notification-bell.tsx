@@ -4,20 +4,22 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   Bell,
   CheckCheck,
+  ChevronRight,
   CreditCard,
   Sparkles,
   UserRound,
   Shield,
+  X,
 } from "lucide-react";
+import { Button, Text } from "@/design-system";
 import {
-  Badge,
-  Button,
-  Card,
-  Cluster,
-  Heading,
-  Stack,
-  Text,
-} from "@/design-system";
+  Dialog,
+  DialogDescription,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Dialog as DialogPrimitive } from "radix-ui";
 import {
   markAllNotificationsRead,
   markNotificationRead,
@@ -28,7 +30,6 @@ import {
   type NotificationCategory,
 } from "@/modules/notifications/types";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const CATEGORIES: Array<NotificationCategory | "all"> = [
@@ -39,21 +40,40 @@ const CATEGORIES: Array<NotificationCategory | "all"> = [
   "system",
 ];
 
-function severityTone(
-  severity: HubNotification["severity"],
-): "danger" | "warning" | "success" | "info" | "neutral" {
-  if (severity === "urgent") return "danger";
-  if (severity === "warning") return "warning";
-  if (severity === "success") return "success";
-  if (severity === "info") return "info";
-  return "neutral";
+function CategoryIcon({
+  category,
+  className,
+}: {
+  category: NotificationCategory;
+  className?: string;
+}) {
+  const cls = cn("h-4 w-4", className);
+  if (category === "ai") return <Sparkles className={cls} />;
+  if (category === "billing") return <CreditCard className={cls} />;
+  if (category === "account") return <UserRound className={cls} />;
+  return <Shield className={cls} />;
 }
 
-function CategoryIcon({ category }: { category: NotificationCategory }) {
-  if (category === "ai") return <Sparkles className="h-3.5 w-3.5" />;
-  if (category === "billing") return <CreditCard className="h-3.5 w-3.5" />;
-  if (category === "account") return <UserRound className="h-3.5 w-3.5" />;
-  return <Shield className="h-3.5 w-3.5" />;
+function categoryAccent(category: NotificationCategory) {
+  if (category === "ai") return "bg-[var(--dh-brand-soft)] text-[var(--dh-brand)]";
+  if (category === "billing") return "bg-[var(--dh-warning-soft)] text-[var(--dh-warning)]";
+  if (category === "account") return "bg-[var(--dh-info-soft)] text-[var(--dh-info)]";
+  return "bg-muted text-muted-foreground";
+}
+
+function relativeTime(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diff / 60_000);
+  if (min < 1) return "À l’instant";
+  if (min < 60) return `Il y a ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `Il y a ${h} h`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `Il y a ${d} j`;
+  return new Date(iso).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+  });
 }
 
 export function NotificationBell({
@@ -101,175 +121,207 @@ export function NotificationBell({
     });
   }
 
+  function markAll() {
+    const ids = unread.map((n) => n.id);
+    if (ids.length === 0) return;
+    startTransition(async () => {
+      await markAllNotificationsRead(ids);
+      setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    });
+  }
+
   return (
-    <div className="relative">
+    <>
       <Button
         type="button"
         variant={unread.length > 0 ? "secondary" : "ghost"}
         size="sm"
-        aria-label={`${unread.length} notifications`}
+        aria-label={
+          unread.length > 0
+            ? `${unread.length} notifications non lues`
+            : "Notifications"
+        }
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="relative"
+        onClick={() => setOpen(true)}
+        className="relative h-10 w-10 shrink-0 rounded-xl p-0"
       >
         <Bell
           className={cn(
-            "h-4 w-4",
+            "h-5 w-5",
             unread.length > 0 && "text-[var(--dh-brand)]",
           )}
         />
         {unread.length > 0 ? (
-          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--dh-danger)] px-1 text-[10px] font-semibold text-white">
+          <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--dh-danger)] px-1 text-[10px] font-semibold leading-none text-white">
             {unread.length > 9 ? "9+" : unread.length}
           </span>
         ) : null}
       </Button>
 
-      {open ? (
-        <>
-          <button
-            type="button"
-            aria-label="Fermer"
-            className="fixed inset-0 z-40 cursor-default"
-            onClick={() => setOpen(false)}
-          />
-          <Card
-            className="absolute right-0 z-50 mt-2 w-[min(100vw-1.5rem,26rem)] overflow-hidden border-[var(--dh-brand)]/15 shadow-2xl"
-            padding="none"
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogPortal>
+          <DialogOverlay className="bg-black/55 backdrop-blur-[2px]" />
+          <DialogPrimitive.Content
+            aria-describedby={undefined}
+            className={cn(
+              "fixed z-50 flex flex-col bg-card shadow-2xl outline-none",
+              "duration-300 data-[state=closed]:animate-out data-[state=open]:animate-in",
+              // Mobile-first: bottom sheet
+              "inset-x-0 bottom-0 max-h-[min(92dvh,40rem)] w-full rounded-t-[1.5rem] border border-border border-b-0",
+              "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+              "pb-[calc(var(--dh-safe-bottom)+0.75rem)]",
+              // Desktop: floating panel
+              "lg:inset-auto lg:top-20 lg:right-6 lg:bottom-auto lg:max-h-[min(80dvh,36rem)] lg:w-[24rem] lg:rounded-2xl lg:border-b",
+              "lg:data-[state=closed]:fade-out-0 lg:data-[state=closed]:zoom-out-95 lg:data-[state=open]:fade-in-0 lg:data-[state=open]:zoom-in-95 lg:data-[state=closed]:slide-out-to-bottom-0 lg:data-[state=open]:slide-in-from-bottom-0",
+            )}
           >
-            <div className="border-b border-border bg-gradient-to-br from-[var(--dh-brand-soft)]/50 to-transparent px-3 py-3">
-              <Cluster gap={2} className="w-full justify-between">
-                <div>
-                  <Heading level={4}>Notifications</Heading>
-                  <Text size="sm" tone="muted">
-                    AI · billing · compte · système
-                  </Text>
-                </div>
+            <div className="flex justify-center pt-2.5 lg:hidden">
+              <div className="h-1 w-10 rounded-full bg-muted-foreground/35" />
+            </div>
+
+            <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-2 lg:pt-4">
+              <div className="min-w-0">
+                <DialogTitle className="text-lg font-semibold tracking-tight">
+                  Notifications
+                </DialogTitle>
+                <DialogDescription className="mt-0.5 text-sm text-muted-foreground">
+                  {unread.length > 0
+                    ? `${unread.length} non lue${unread.length > 1 ? "s" : ""}`
+                    : "Tout est à jour"}
+                </DialogDescription>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
                 {unread.length > 0 ? (
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     disabled={pending}
-                    onClick={() => {
-                      const ids = unread.map((n) => n.id);
-                      startTransition(async () => {
-                        await markAllNotificationsRead(ids);
-                        setItems((prev) =>
-                          prev.map((n) => ({ ...n, read: true })),
-                        );
-                      });
-                    }}
+                    onClick={markAll}
+                    className="h-9 gap-1.5 px-2.5 text-xs"
                   >
                     <CheckCheck className="h-4 w-4" />
                     Tout lu
                   </Button>
                 ) : null}
-              </Cluster>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Fermer"
+                  onClick={() => setOpen(false)}
+                  className="h-9 w-9 rounded-xl p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
-            <Stack gap={3} className="p-3">
-              <Cluster gap={1} className="flex-wrap">
-                {CATEGORIES.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setCategory(c)}
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
-                      category === c
-                        ? "bg-[var(--dh-brand)] text-[var(--dh-brand-foreground)]"
-                        : "bg-muted text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {c !== "all" ? <CategoryIcon category={c} /> : null}
-                    {c === "all" ? "Tous" : NOTIFICATION_CATEGORY_LABELS[c]}
-                    {counts[c] ? ` · ${counts[c]}` : ""}
-                  </button>
-                ))}
-              </Cluster>
-
-              <Stack gap={2} className="max-h-[22rem] overflow-y-auto">
-                {filtered.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-border px-3 py-8 text-center">
-                    <Text size="sm" tone="muted">
-                      Aucune notification ici
-                    </Text>
-                  </div>
-                ) : (
-                  filtered.map((n) => (
+            <div className="-mx-0 border-b border-border px-4 pb-3">
+              <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {CATEGORIES.map((c) => {
+                  const active = category === c;
+                  const count = counts[c] ?? 0;
+                  return (
                     <button
-                      key={n.id}
+                      key={c}
                       type="button"
-                      onClick={() => openAndMark(n)}
+                      onClick={() => setCategory(c)}
                       className={cn(
-                        "rounded-xl border px-3 py-2.5 text-left transition-colors",
-                        n.read
-                          ? "border-border bg-background hover:bg-muted/40"
-                          : "border-[var(--dh-brand)]/35 bg-[var(--dh-brand-soft)]/35 hover:bg-[var(--dh-brand-soft)]/55",
+                        "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium transition-colors",
+                        active
+                          ? "bg-foreground text-background"
+                          : "bg-muted/80 text-muted-foreground active:bg-muted",
                       )}
                     >
-                      <Cluster gap={2} className="mb-1 flex-wrap">
-                        <Badge tone="neutral">
-                          <span className="inline-flex items-center gap-1">
-                            <CategoryIcon category={n.category} />
-                            {NOTIFICATION_CATEGORY_LABELS[n.category]}
-                          </span>
-                        </Badge>
-                        <Badge tone={severityTone(n.severity)}>
-                          {n.severity}
-                        </Badge>
-                        {!n.read ? <Badge tone="brand">Nouveau</Badge> : null}
-                      </Cluster>
-                      <Text size="sm" weight="medium" className="line-clamp-2">
-                        {n.title}
-                      </Text>
-                      {n.body ? (
-                        <Text
-                          size="sm"
-                          tone="muted"
-                          className="mt-1 line-clamp-2"
-                        >
-                          {n.body}
-                        </Text>
+                      {c !== "all" ? (
+                        <CategoryIcon category={c} className="h-3.5 w-3.5" />
                       ) : null}
-                      <Text size="sm" tone="muted" className="mt-1.5">
-                        {new Date(n.created_at).toLocaleString("fr-FR")}
-                      </Text>
+                      {c === "all" ? "Tous" : NOTIFICATION_CATEGORY_LABELS[c]}
+                      {count > 0 ? (
+                        <span
+                          className={cn(
+                            "rounded-full px-1.5 text-[11px] tabular-nums",
+                            active
+                              ? "bg-background/20 text-background"
+                              : "bg-background/60 text-foreground",
+                          )}
+                        >
+                          {count}
+                        </span>
+                      ) : null}
                     </button>
-                  ))
-                )}
-              </Stack>
+                  );
+                })}
+              </div>
+            </div>
 
-              <Text size="sm" tone="muted" className="text-center">
-                <Link
-                  href="/app/ai"
-                  className="text-[var(--dh-brand)] hover:underline"
-                  onClick={() => setOpen(false)}
-                >
-                  AI
-                </Link>
-                {" · "}
-                <Link
-                  href="/app/settings/billing"
-                  className="text-[var(--dh-brand)] hover:underline"
-                  onClick={() => setOpen(false)}
-                >
-                  Billing
-                </Link>
-                {" · "}
-                <Link
-                  href="/app/settings/account"
-                  className="text-[var(--dh-brand)] hover:underline"
-                  onClick={() => setOpen(false)}
-                >
-                  Compte
-                </Link>
-              </Text>
-            </Stack>
-          </Card>
-        </>
-      ) : null}
-    </div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
+              {filtered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-2 px-4 py-14 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+                    <Bell className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <Text size="sm" weight="medium">
+                    Rien ici
+                  </Text>
+                  <Text size="sm" tone="muted">
+                    Les alertes AI, paiement et compte apparaîtront ici.
+                  </Text>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {filtered.map((n) => (
+                    <li key={n.id}>
+                      <button
+                        type="button"
+                        onClick={() => openAndMark(n)}
+                        className={cn(
+                          "flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition-colors active:scale-[0.99]",
+                          n.read
+                            ? "border-transparent bg-muted/35"
+                            : "border-[var(--dh-brand)]/25 bg-[var(--dh-brand-soft)]/25",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                            categoryAccent(n.category),
+                          )}
+                        >
+                          <CategoryIcon category={n.category} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="mb-1 flex items-center gap-2">
+                            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                              {NOTIFICATION_CATEGORY_LABELS[n.category]}
+                            </span>
+                            {!n.read ? (
+                              <span className="h-1.5 w-1.5 rounded-full bg-[var(--dh-brand)]" />
+                            ) : null}
+                            <span className="ml-auto text-[11px] text-muted-foreground">
+                              {relativeTime(n.created_at)}
+                            </span>
+                          </span>
+                          <span className="line-clamp-2 text-[15px] font-medium leading-snug text-foreground">
+                            {n.title}
+                          </span>
+                          {n.body ? (
+                            <span className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+                              {n.body}
+                            </span>
+                          ) : null}
+                        </span>
+                        <ChevronRight className="mt-2.5 h-4 w-4 shrink-0 text-muted-foreground/70" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </DialogPrimitive.Content>
+        </DialogPortal>
+      </Dialog>
+    </>
   );
 }

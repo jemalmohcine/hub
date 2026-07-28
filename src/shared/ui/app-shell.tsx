@@ -18,7 +18,6 @@ import {
   FormSubmit,
   NavItem,
   ThemeSync,
-  ThemeToggle,
 } from "@/design-system";
 import { NotificationBell } from "@/modules/notifications/ui/notification-bell";
 import type { HubNotification } from "@/modules/notifications/types";
@@ -44,7 +43,6 @@ export function AppShell({
           <BrandMark withWordmark href="/app/overview" />
           <div className="ml-auto flex items-center gap-1">
             <NotificationBell initialNotifications={notifications} />
-            <ThemeToggle />
             <Badge tone="neutral" className="capitalize">
               {plan}
             </Badge>
@@ -103,7 +101,6 @@ export function AppShell({
         <BrandMark withWordmark href="/app/overview" size="sm" />
         <div className="flex items-center gap-1">
           <NotificationBell initialNotifications={notifications} />
-          <ThemeToggle />
           <Badge tone="neutral" className="capitalize">
             {plan}
           </Badge>

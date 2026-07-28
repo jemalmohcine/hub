@@ -4,9 +4,10 @@ import type {
   AiUrgency,
   RawHit,
 } from "@/modules/ai-intel/types";
+import { DEV_SIGNAL_RE } from "@/modules/ai-intel/score";
 
 const URGENT_RE =
-  /\b(deprecat|sunset|retir|ban(ned)?|outage|breaking|security|critical|shutdown|removed)\b/i;
+  /\b(deprecat|sunset|retir|ban(ned)?|outage|breaking|security|cve|vulnerab|shutdown|removed|rate\s*limit|migration required|api change|price (cut|hike|increase)|pricing change)\b/i;
 const PRICING_RE = /\b(pric(e|ing)|cost|\$|€|token\s*price|rate\s*limit)\b/i;
 const MODEL_RE =
   /\b(model|llm|gpt|claude|gemini|llama|mistral|deepseek|grok|opus|sonnet|haiku|frontier)\b/i;
@@ -17,21 +18,31 @@ const OSS_RE =
 const WORLD_RE =
   /\b(regulat|policy|ban|government|china|eu ai act|congress|trump|law|court|country|geopolit)/i;
 
+/**
+ * Classify for a busy developer: urgent = may break or cost you time/money today.
+ */
 export function classifyHit(
   hit: RawHit,
   pillarHints: AiPillar[] = [],
 ): { pillar: AiPillar; category: AiCategory; urgency: AiUrgency } {
   const text = `${hit.title} ${hit.summary}`;
+  const hasDev = DEV_SIGNAL_RE.test(text);
 
   let urgency: AiUrgency = "light";
-  if (URGENT_RE.test(text)) urgency = "urgent";
-  else if (PRICING_RE.test(text) || MODEL_RE.test(text) || TOOL_RE.test(text)) {
+  if (URGENT_RE.test(text) && (hasDev || PRICING_RE.test(text) || /security|cve/i.test(text))) {
+    urgency = "urgent";
+  } else if (
+    hasDev &&
+    (PRICING_RE.test(text) ||
+      TOOL_RE.test(text) ||
+      (MODEL_RE.test(text) && /\b(launch|release|new|upgrade|announce)\b/i.test(text)))
+  ) {
     urgency = "medium";
   }
 
   let pillar: AiPillar =
     pillarHints[0] ??
-    (WORLD_RE.test(text)
+    (WORLD_RE.test(text) && !hasDev
       ? "world"
       : OSS_RE.test(text) && !MODEL_RE.test(text)
         ? "opensource"
@@ -41,7 +52,7 @@ export function classifyHit(
             ? "models"
             : pillarHints[0] ?? "tools");
 
-  if (WORLD_RE.test(text)) pillar = "world";
+  if (WORLD_RE.test(text) && !URGENT_RE.test(text) && !hasDev) pillar = "world";
   else if (pillarHints.includes("opensource") && /github|repo|stars?/i.test(text)) {
     pillar = "opensource";
   }
@@ -71,4 +82,36 @@ export function classifyHit(
   }
 
   return { pillar, category, urgency };
+}
+
+export function urgencyFromScore(input: {
+  base: AiUrgency;
+  verdict: string;
+  score: number;
+  category: AiCategory;
+  kind: "repo" | "tool" | "news";
+  starsToday?: number;
+}): AiUrgency {
+  const { base, verdict, score, category, kind, starsToday = 0 } = input;
+
+  if (
+    category === "deprecation" ||
+    category === "pricing" ||
+    category === "ban" ||
+    base === "urgent"
+  ) {
+    return verdict === "skip" ? "medium" : "urgent";
+  }
+
+  if (kind === "repo") {
+    if (verdict === "use_it" && (score >= 75 || starsToday >= 400)) return "urgent";
+    if (verdict === "use_it") return "medium";
+    if (verdict === "watch") return "medium";
+    return "light";
+  }
+
+  if (verdict === "use_it" && score >= 72) return kind === "news" ? "urgent" : "medium";
+  if (verdict === "use_it") return "medium";
+  if (verdict === "watch") return "light";
+  return "light";
 }

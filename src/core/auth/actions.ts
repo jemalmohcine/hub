@@ -255,7 +255,11 @@ export async function updatePreferences(
   if (!user) return { ok: false, error: "Non authentifié." };
 
   const theme = String(formData.get("theme") ?? "system") as ThemePreference;
-  const locale = String(formData.get("locale") ?? "fr");
+  const rawLocale = String(formData.get("locale") ?? "auto").toLowerCase();
+  let locale: "auto" | "fr" | "en" = "auto";
+  if (rawLocale === "auto") locale = "auto";
+  else if (rawLocale.startsWith("en")) locale = "en";
+  else if (rawLocale.startsWith("fr")) locale = "fr";
   const emailNotifications = formData.get("email_notifications") === "on";
   const productUpdates = formData.get("product_updates") === "on";
 
@@ -271,6 +275,9 @@ export async function updatePreferences(
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/app/settings");
+  revalidatePath("/app/settings/appearance");
+  revalidatePath("/app/ai");
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
 

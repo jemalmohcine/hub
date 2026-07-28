@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/core/auth/supabase/admin";
 import { collectFromSource } from "@/modules/ai-intel/collectors";
+import { enrichI18nMetadata } from "@/modules/ai-intel/brief";
 import { mergeHits } from "@/modules/ai-intel/merge/merge-hits";
 import { discoverNewSources } from "@/modules/ai-intel/sources/discover";
 import type { AiIntelSource, RawHit } from "@/modules/ai-intel/types";
@@ -98,6 +99,16 @@ export async function runAiIntelIngest() {
     );
 
     const { items, stats: mergeStats } = mergeHits(allHits, sourcesById);
+
+    // Translate once (EN↔FR) in small batches — stored in metadata.i18n
+    for (let i = 0; i < items.length; i += 4) {
+      const batch = items.slice(i, i + 4);
+      await Promise.all(
+        batch.map(async (item) => {
+          item.metadata = await enrichI18nMetadata(item);
+        }),
+      );
+    }
 
     let upserted = 0;
     const urgentTitles: string[] = [];

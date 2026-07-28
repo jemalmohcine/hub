@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useTheme } from "next-themes";
 import {
   mockUpgradePlan,
@@ -60,7 +60,7 @@ export function ProfileForm({ user }: { user: HubUser }) {
         <Field
           label="Email"
           htmlFor="email"
-          hint="Géré par l’authentification — lecture seule."
+          hint="Géré par l’authentification (lecture seule)."
         >
           <Input id="email" value={user.email} disabled />
         </Field>
@@ -78,11 +78,65 @@ export function PreferencesForm({ user }: { user: HubUser }) {
   const [state, action, pending] = useActionState(updatePreferences, null);
   const prefs = user.preferences;
   const { setTheme } = useTheme();
+  const initialLocale = (() => {
+    const raw = (prefs?.locale ?? "auto").toLowerCase();
+    if (raw === "auto") return "auto";
+    if (raw.startsWith("en")) return "en";
+    if (raw.startsWith("fr")) return "fr";
+    return "auto";
+  })();
+  const [locale, setLocale] = useState<"auto" | "fr" | "en">(initialLocale);
 
   return (
     <Form action={action}>
       <Stack gap={5}>
         <ResultAlert state={state} />
+
+        <Stack gap={3}>
+          <div>
+            <Text weight="medium" size="sm">
+              Langue
+            </Text>
+            <Text size="sm" tone="muted" className="mt-1">
+              Par défaut: langue du navigateur. Tu peux forcer FR ou EN.
+            </Text>
+          </div>
+          <input type="hidden" name="locale" value={locale} />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {(
+              [
+                {
+                  id: "auto" as const,
+                  label: "Automatique",
+                  hint: "Navigateur",
+                },
+                { id: "fr" as const, label: "Français", hint: "FR" },
+                { id: "en" as const, label: "English", hint: "EN" },
+              ] as const
+            ).map((opt) => {
+              const active = locale === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setLocale(opt.id)}
+                  className={
+                    active
+                      ? "rounded-2xl border border-[var(--dh-brand)] bg-[var(--dh-brand-soft)]/40 px-4 py-3.5 text-left"
+                      : "rounded-2xl border border-border bg-muted/30 px-4 py-3.5 text-left"
+                  }
+                >
+                  <Text weight="medium">{opt.label}</Text>
+                  <Text size="sm" tone="muted" className="mt-0.5">
+                    {opt.hint}
+                  </Text>
+                </button>
+              );
+            })}
+          </div>
+        </Stack>
+
+        <div className="h-px bg-border" aria-hidden />
 
         <Stack gap={4}>
           <Text weight="medium" size="sm">
@@ -100,16 +154,6 @@ export function PreferencesForm({ user }: { user: HubUser }) {
               <option value="system">Système</option>
               <option value="light">Clair</option>
               <option value="dark">Sombre</option>
-            </Select>
-          </Field>
-          <Field label="Langue" htmlFor="locale">
-            <Select
-              id="locale"
-              name="locale"
-              defaultValue={prefs?.locale ?? "fr"}
-            >
-              <option value="fr">Français</option>
-              <option value="en">English</option>
             </Select>
           </Field>
         </Stack>

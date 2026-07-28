@@ -13,7 +13,7 @@ export default async function ForgotPasswordPage({
   return (
     <AuthShell
       title="Mot de passe oublié"
-      description="Entre ton email — on t’envoie un lien de réinitialisation."
+      description="Entre ton email. On t’envoie un lien de réinitialisation."
     >
       {params.error === "expired" ? (
         <Alert tone="danger" className="text-center">

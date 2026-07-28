@@ -115,7 +115,7 @@ export const PILLAR_LABELS: Record<AiPillar, string> = {
 };
 
 export const URGENCY_LABELS: Record<AiUrgency, string> = {
-  urgent: "Urgent",
-  medium: "Medium",
-  light: "Light",
+  urgent: "Impact",
+  medium: "Utile",
+  light: "Secondaire",
 };

@@ -19,6 +19,8 @@ import {
   getLatestAiIntelRun,
 } from "@/modules/ai-intel/queries";
 import { AiIntelWorkspace } from "@/modules/ai-intel/ui/ai-intel-workspace";
+import { resolveLocale } from "@/modules/ai-intel/i18n/locale";
+import { headers } from "next/headers";
 
 export const metadata = { title: "AI" };
 
@@ -64,24 +66,39 @@ export default async function AiModulePage() {
     getLatestAiIntelRun().catch(() => null),
   ]);
 
+  const headerStore = await headers();
+  const locale = resolveLocale(
+    user.preferences?.locale,
+    headerStore.get("accept-language"),
+  );
+
   const digestLabel = lastRun?.finished_at
-    ? new Date(lastRun.finished_at).toLocaleString("fr-FR", {
-        day: "2-digit",
-        month: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+    ? new Date(lastRun.finished_at).toLocaleString(
+        locale === "en" ? "en-US" : "fr-FR",
+        {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        },
+      )
     : null;
+
+  const pageCopy = {
+    title: "AI",
+    desc:
+      locale === "en"
+        ? "Read the title. You get it. Tap for the brief."
+        : "Lis le titre. Tu comprends. Touche pour le brief.",
+  };
 
   return (
     <>
-      <PageHeader
-        title="AI Intelligence"
-        description="Modèles, outils, open source et actualité. Clique une carte pour le détail."
-      />
+      <PageHeader title={pageCopy.title} description={pageCopy.desc} />
       <AiIntelWorkspace
         initialItems={items}
         digestLabel={digestLabel}
+        initialLocale={locale}
       />
     </>
   );

@@ -7,7 +7,7 @@ import {
   SettingsBackLink,
 } from "@/design-system";
 
-export const metadata = { title: "Apparence" };
+export const metadata = { title: "Langue & apparence" };
 
 export default async function AppearanceSettingsPage() {
   const user = await getHubUser();
@@ -17,8 +17,8 @@ export default async function AppearanceSettingsPage() {
     <>
       <SettingsBackLink />
       <PageHeader
-        title="Apparence"
-        description="Thème clair / sombre, langue et notifications."
+        title="Langue & apparence"
+        description="Langue (auto / FR / EN), thème et notifications."
       />
       <Card>
         <PreferencesForm user={user} />
