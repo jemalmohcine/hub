@@ -23,6 +23,7 @@ import {
   getItemI18n,
   resolveBrief,
 } from "@/modules/ai-intel/brief";
+import { contentKindTone } from "@/modules/ai-intel/content-kind";
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
 import { t } from "@/modules/ai-intel/i18n/locale";
 import { isHotAlert } from "@/modules/ai-intel/ui/rank";
@@ -92,6 +93,23 @@ export function ItemDetailModal({
   const visitUrl = websiteHref(website) || localItem.url;
   const translated = Boolean(i18n?.translatedAt);
   const dateLocale = locale === "fr" ? "fr-FR" : "en-US";
+  const kindTone = contentKindTone(brief.kind);
+  const kindBadgeTone =
+    kindTone === "urgent"
+      ? ("danger" as const)
+      : kindTone === "ok"
+        ? ("success" as const)
+        : kindTone === "warn"
+          ? ("warning" as const)
+          : ("neutral" as const);
+  const contextLine = [
+    brief.product,
+    brief.name !== brief.title ? brief.name : null,
+    localItem.primary_source,
+  ]
+    .filter(Boolean)
+    .filter((part, idx, arr) => arr.indexOf(part) === idx)
+    .join(" · ");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -101,7 +119,10 @@ export function ItemDetailModal({
             {isHotAlert(localItem) ? (
               <Badge tone="danger">{copy.urgent}</Badge>
             ) : null}
-            <Badge tone="neutral">{brief.typeLabel}</Badge>
+            <Badge tone={kindBadgeTone}>{brief.typeLabel}</Badge>
+            {brief.product ? (
+              <Badge tone="neutral">{brief.product}</Badge>
+            ) : null}
             {verdictLabel ? (
               <Badge tone={verdictTone(meta.verdict)}>{verdictLabel}</Badge>
             ) : null}
@@ -124,15 +145,11 @@ export function ItemDetailModal({
           <DialogTitle className="text-balance text-xl leading-snug">
             {brief.title}
           </DialogTitle>
-          {brief.name && brief.name !== brief.title ? (
+          {contextLine ? (
             <Text size="sm" tone="muted" className="mt-1">
-              {brief.typeLabel} · {brief.name}
+              {contextLine}
             </Text>
-          ) : (
-            <Text size="sm" tone="muted" className="mt-1">
-              {brief.typeLabel}
-            </Text>
-          )}
+          ) : null}
           <DialogDescription className="sr-only">
             {brief.tldr}
           </DialogDescription>

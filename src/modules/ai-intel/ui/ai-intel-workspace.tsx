@@ -19,6 +19,7 @@ import {
   type DateRangeValue,
 } from "@/modules/ai-intel/ui/date-range-picker";
 import { markAiIntelRead } from "@/modules/ai-intel/actions";
+import { detectContentKind } from "@/modules/ai-intel/content-kind";
 import {
   isHotAlert,
   isNoise,
@@ -47,10 +48,12 @@ function itemDay(item: AiIntelItem): string {
 }
 
 function matchesTab(item: AiIntelItem, tab: TabId): boolean {
+  const kind = detectContentKind(item);
   if (tab === "urgent") return isHotAlert(item);
-  if (tab === "github") return item.pillar === "opensource";
-  if (tab === "tools") return item.pillar === "tools";
-  if (tab === "news") return item.pillar === "models" || item.pillar === "world";
+  // GitHub = repositories only; GitHub product news lands in News
+  if (tab === "github") return kind === "repo";
+  if (tab === "tools") return kind === "tool";
+  if (tab === "news") return kind !== "repo" && kind !== "tool";
   if (tab === "saved") return Boolean(item.saved);
   return false;
 }
@@ -106,10 +109,10 @@ export function AiIntelWorkspace({
       saved: 0,
     };
     for (const item of visiblePool) {
-      if (isHotAlert(item)) base.urgent += 1;
-      if (item.pillar === "opensource") base.github += 1;
-      if (item.pillar === "tools") base.tools += 1;
-      if (item.pillar === "models" || item.pillar === "world") base.news += 1;
+      if (matchesTab(item, "urgent")) base.urgent += 1;
+      if (matchesTab(item, "github")) base.github += 1;
+      if (matchesTab(item, "tools")) base.tools += 1;
+      if (matchesTab(item, "news")) base.news += 1;
       if (item.saved) base.saved += 1;
     }
     return base;

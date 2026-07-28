@@ -1,3 +1,9 @@
+import {
+  type ContentKind,
+  contentKindLabel,
+  detectContentKind,
+  productOf,
+} from "@/modules/ai-intel/content-kind";
 import { detectTextLang } from "@/modules/ai-intel/i18n/detect-lang";
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
 import { translateOnce } from "@/modules/ai-intel/i18n/translate";
@@ -9,8 +15,12 @@ export type LocalizedBrief = {
   title: string;
   /** Raw source name (repo path, tool name, …) */
   name: string;
-  /** Repo | Outil | Alerte | … */
+  /** Repo | Outil | Fonctionnalité | Modèle LLM | Prix | … */
   typeLabel: string;
+  /** Precise content kind for tones and layout */
+  kind: ContentKind;
+  /** Product / company the item is about (Vercel, Claude Code, …) */
+  product: string | null;
   /** Real summary / description — never coach fluff */
   tldr: string;
   /** Concrete relevance points (facts), empty if none */
@@ -105,6 +115,15 @@ function isFluff(text: string): boolean {
   return FLUFF_RE.test(value);
 }
 
+/** First candidate that carries real information (never coach fluff). */
+function pickClean(...candidates: Array<string | null | undefined>): string {
+  for (const candidate of candidates) {
+    const value = (candidate ?? "").trim();
+    if (value && !isFluff(value)) return value;
+  }
+  return "";
+}
+
 function itemKind(meta: Record<string, unknown>): "repo" | "tool" | "news" {
   if (meta.kind === "repo") return "repo";
   if (meta.kind === "tool") return "tool";
@@ -165,21 +184,6 @@ export function cleanVerdictLabel(
   return VERDICT[locale][key] || VERDICT[locale][`watch_${kind}`];
 }
 
-function typeLabelFor(
-  kind: "repo" | "tool" | "news",
-  urgency: string,
-  locale: AiLocale,
-): string {
-  if (locale === "fr") {
-    if (kind === "repo") return "GitHub";
-    if (kind === "tool") return "Outil";
-    return urgency === "urgent" ? "Alerte" : "Actu";
-  }
-  if (kind === "repo") return "GitHub";
-  if (kind === "tool") return "Tool";
-  return urgency === "urgent" ? "Alert" : "News";
-}
-
 function firstClause(text: string, max = 78): string {
   const clean = text.replace(/\s+/g, " ").trim();
   if (!clean) return "";
@@ -200,28 +204,41 @@ function repoShortName(name: string): string {
 export function explainTitle(
   item: Pick<
     AiIntelItem,
-    "title" | "summary" | "urgency" | "metadata" | "pillar"
+    | "title"
+    | "summary"
+    | "urgency"
+    | "metadata"
+    | "pillar"
+    | "category"
+    | "primary_source"
   >,
   locale: AiLocale,
-): { title: string; name: string; typeLabel: string } {
+): {
+  title: string;
+  name: string;
+  typeLabel: string;
+  kind: ContentKind;
+  product: string | null;
+} {
   const meta = (item.metadata ?? {}) as Record<string, unknown>;
   const i18n = getItemI18n(meta);
-  const kind =
-    item.pillar === "opensource" || meta.kind === "repo"
-      ? ("repo" as const)
-      : meta.kind === "tool" || item.pillar === "tools"
-        ? ("tool" as const)
-        : ("news" as const);
-  const typeLabel = typeLabelFor(kind, item.urgency, locale);
+  const kind = detectContentKind(item);
+  const typeLabel = contentKindLabel(kind, locale);
+  const product = productOf(item);
   const name = pickLocalized(i18n?.title, locale, item.title);
 
-  const whatSource =
-    pickLocalized(i18n?.about, locale, "") ||
-    readMeta(meta, "tagline") ||
-    readMeta(meta, "description") ||
-    pickLocalized(i18n?.summary, locale, "") ||
-    item.summary ||
-    "";
+  // News-like items (feature, model, pricing, …): the headline already says it all.
+  if (kind !== "repo" && kind !== "tool") {
+    return { title: name, name, typeLabel, kind, product };
+  }
+
+  const whatSource = pickClean(
+    pickLocalized(i18n?.about, locale, ""),
+    readMeta(meta, "tagline"),
+    readMeta(meta, "description"),
+    pickLocalized(i18n?.summary, locale, ""),
+    item.summary,
+  );
 
   const what = firstClause(
     whatSource
@@ -235,7 +252,7 @@ export function explainTitle(
   if (kind === "repo") {
     const short = repoShortName(name);
     if (what && !what.toLowerCase().startsWith(short.toLowerCase())) {
-      return { title: `${short}: ${what}`, name, typeLabel };
+      return { title: `${short}: ${what}`, name, typeLabel, kind, product };
     }
     return {
       title:
@@ -244,21 +261,21 @@ export function explainTitle(
           : `${short}: open-source repository`,
       name,
       typeLabel,
+      kind,
+      product,
     };
   }
 
-  if (kind === "tool") {
-    if (what && what.toLowerCase() !== name.toLowerCase()) {
-      return { title: `${name}: ${what}`, name, typeLabel };
-    }
-    return {
-      title: locale === "fr" ? `${name}: outil d’IA` : `${name}: AI tool`,
-      name,
-      typeLabel,
-    };
+  if (what && what.toLowerCase() !== name.toLowerCase()) {
+    return { title: `${name}: ${what}`, name, typeLabel, kind, product };
   }
-
-  return { title: name, name, typeLabel };
+  return {
+    title: locale === "fr" ? `${name}: outil d’IA` : `${name}: AI tool`,
+    name,
+    typeLabel,
+    kind,
+    product,
+  };
 }
 
 function buildFacts(
@@ -356,23 +373,24 @@ export function resolveBrief(
   const meta = (item.metadata ?? {}) as Record<string, unknown>;
   const i18n = getItemI18n(meta);
   const verdict = verdictKey(String(meta.verdict ?? "watch"));
-  const kind = itemKind(
-    item.pillar === "opensource"
-      ? { ...meta, kind: meta.kind ?? "repo" }
-      : item.pillar === "tools"
-        ? { ...meta, kind: meta.kind ?? "tool" }
-        : meta,
-  );
   const explained = explainTitle(item, locale);
+  const actionGroup =
+    explained.kind === "repo"
+      ? ("repo" as const)
+      : explained.kind === "tool"
+        ? ("tool" as const)
+        : ("news" as const);
 
-  const summary =
-    pickLocalized(i18n?.summary, locale, "") ||
-    (item.summary || "").trim() ||
-    pickLocalized(i18n?.about, locale, "") ||
-    readMeta(meta, "tagline") ||
-    readMeta(meta, "description") ||
-    readMeta(meta, "about") ||
-    "";
+  // Every candidate is checked for fluff individually so old coach text
+  // stored in i18n ("Bon à savoir", …) can never surface again.
+  const summary = pickClean(
+    pickLocalized(i18n?.summary, locale, ""),
+    item.summary,
+    pickLocalized(i18n?.about, locale, ""),
+    readMeta(meta, "tagline"),
+    readMeta(meta, "description"),
+    readMeta(meta, "about"),
+  );
 
   const storedTakeaway = pickLocalized(i18n?.takeaway, locale, "");
   const tldrCandidate = !isFluff(storedTakeaway)
@@ -397,14 +415,18 @@ export function resolveBrief(
     .filter((r, i, arr) => arr.indexOf(r) === i)
     .slice(0, 4);
 
-  const actionKey = `${verdict}_${kind}` as keyof (typeof ACTION)["fr"];
+  const actionKey = `${verdict}_${actionGroup}` as keyof (typeof ACTION)["fr"];
   const action = ACTION[locale][actionKey] || "";
 
   const facts = buildFacts(meta, locale);
-  if (item.category) {
+  facts.unshift({
+    label: locale === "fr" ? "Type" : "Type",
+    value: explained.typeLabel,
+  });
+  if (explained.product) {
     facts.unshift({
-      label: locale === "fr" ? "Catégorie" : "Category",
-      value: item.category.replace(/_/g, " "),
+      label: locale === "fr" ? "Produit" : "Product",
+      value: explained.product,
     });
   }
   if (item.primary_source) {
@@ -418,6 +440,8 @@ export function resolveBrief(
     title: explained.title,
     name: explained.name,
     typeLabel: explained.typeLabel,
+    kind: explained.kind,
+    product: explained.product,
     tldr,
     why,
     action,
@@ -442,6 +466,14 @@ export async function enrichI18nMetadata(
     // Refresh clean takeaways without re-hitting translate API
     const takeFr = cleanTakeaway(meta, "fr");
     const takeEn = cleanTakeaway(meta, "en");
+    // Drop legacy coach-fluff summaries so they never surface again
+    const scrubbedSummary = { ...(existing!.summary ?? {}) };
+    if (scrubbedSummary.fr && isFluff(scrubbedSummary.fr)) {
+      delete scrubbedSummary.fr;
+    }
+    if (scrubbedSummary.en && isFluff(scrubbedSummary.en)) {
+      delete scrubbedSummary.en;
+    }
     meta.takeaway = takeFr;
     meta.takeawayFr = takeFr;
     meta.takeawayEn = takeEn;
@@ -450,6 +482,7 @@ export async function enrichI18nMetadata(
     meta.verdictLabelEn = cleanVerdictLabel(meta, "en");
     meta.i18n = {
       ...existing!,
+      summary: scrubbedSummary,
       takeaway: { fr: takeFr, en: takeEn },
       verdictLabel: {
         fr: cleanVerdictLabel(meta, "fr"),

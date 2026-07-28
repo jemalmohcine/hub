@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Check, ChevronRight } from "lucide-react";
 import { Text } from "@/design-system";
 import { resolveBrief } from "@/modules/ai-intel/brief";
+import { contentKindTone } from "@/modules/ai-intel/content-kind";
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
 import { t } from "@/modules/ai-intel/i18n/locale";
 import {
@@ -59,10 +60,7 @@ function Chip({
 }
 
 /**
- * Scan-first row:
- * Type · Free · Trending · Date · Lu
- * Title
- * Real summary · metrics
+ * Scan-first row — read = small check on the right only (no reorder).
  */
 export function FeedItemRow({
   item,
@@ -96,13 +94,6 @@ export function FeedItemRow({
     Boolean(publishedLabel) &&
     publishedDay !== addedDay;
 
-  const typeLabel =
-    kind === "repo"
-      ? copy.typeRepo
-      : kind === "tool"
-        ? copy.typeTool
-        : copy.typeNews;
-
   const metricParts: string[] = [];
   if (kind === "repo") {
     if (stars) metricParts.push(`${stars}★`);
@@ -130,29 +121,15 @@ export function FeedItemRow({
       className={cn(
         "flex w-full items-start gap-3 rounded-2xl px-3.5 py-3.5 text-left transition-colors",
         "active:scale-[0.995]",
-        hot && !isRead
-          ? "bg-[var(--dh-danger-soft)]/40"
-          : isRead
-            ? "bg-muted/20 opacity-75 hover:opacity-100"
-            : "bg-muted/35 hover:bg-muted/50",
+        hot ? "bg-[var(--dh-danger-soft)]/40" : "bg-muted/35 hover:bg-muted/50",
       )}
     >
-      <span
-        className={cn(
-          "mt-1.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
-          isRead
-            ? "border-[var(--dh-brand)] bg-[var(--dh-brand)] text-[var(--dh-brand-foreground)]"
-            : hot
-              ? "border-[var(--dh-danger)]/50 bg-transparent"
-              : "border-muted-foreground/35 bg-transparent",
-        )}
-        aria-hidden
-      >
-        {isRead ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
-      </span>
       <span className="min-w-0 flex-1">
         <span className="mb-1.5 flex flex-wrap items-center gap-1.5">
-          <Chip>{typeLabel}</Chip>
+          <Chip tone={hot ? "urgent" : contentKindTone(brief.kind)}>
+            {brief.typeLabel}
+          </Chip>
+          {brief.product ? <Chip>{brief.product}</Chip> : null}
           {publishedLabel ? (
             <Chip>
               {copy.published} {publishedLabel}
@@ -179,16 +156,9 @@ export function FeedItemRow({
           ) : null}
           {trending ? <Chip tone="ok">{copy.trending}</Chip> : null}
           {hot ? <Chip tone="urgent">{copy.urgent}</Chip> : null}
-          {isRead ? <Chip>{copy.read}</Chip> : null}
         </span>
 
-        <Text
-          weight="medium"
-          className={cn(
-            "line-clamp-2 text-[15px] leading-snug",
-            isRead && "text-muted-foreground",
-          )}
-        >
+        <Text weight="medium" className="line-clamp-2 text-[15px] leading-snug">
           {brief.title}
         </Text>
 
@@ -202,7 +172,16 @@ export function FeedItemRow({
           </Text>
         ) : null}
       </span>
-      <ChevronRight className="mt-3 h-4 w-4 shrink-0 text-muted-foreground/55" />
+      <span className="mt-2.5 flex shrink-0 items-center gap-1.5">
+        {isRead ? (
+          <Check
+            className="h-4 w-4 text-[var(--dh-brand)]"
+            strokeWidth={2.5}
+            aria-hidden
+          />
+        ) : null}
+        <ChevronRight className="h-4 w-4 text-muted-foreground/55" />
+      </span>
     </button>
   );
 }

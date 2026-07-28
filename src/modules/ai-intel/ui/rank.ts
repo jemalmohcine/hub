@@ -1,3 +1,4 @@
+import { detectContentKind } from "@/modules/ai-intel/content-kind";
 import type { AiIntelItem, AiUrgency } from "@/modules/ai-intel/types";
 
 export function itemVerdict(item: AiIntelItem): string {
@@ -26,34 +27,21 @@ export function isNoise(item: AiIntelItem): boolean {
   );
 }
 
-/** Action required now: pricing, breaking, deprecation — never a trending repo. */
+/** Action required now: pricing, breaking, security — never a trending repo. */
 export function isHotAlert(item: AiIntelItem): boolean {
   if (itemVerdict(item) === "skip") return false;
 
-  const kind = itemKind(item);
+  const kind = detectContentKind(item);
   // GitHub repos are trending / useful, not urgent action items.
   if (kind === "repo") return false;
 
-  const category = String(item.category || "");
-  const score = itemScore(item);
-  const verdict = itemVerdict(item);
-  const text = `${item.title} ${item.summary}`.toLowerCase();
-
-  if (
-    category === "pricing" ||
-    category === "deprecation" ||
-    category === "ban"
-  ) {
+  // Same detection as the type chip: Prix / Breaking / Sécurité = action now.
+  if (kind === "pricing" || kind === "breaking" || kind === "security") {
     return true;
   }
 
-  // Radical change that forces a concrete action (migrate, update keys, pay more…)
-  const actionRequired =
-    /\b(deprecat|sunset|retir|breaking|migration required|api change|price|pricing|rate\s*limit|removed|shutdown|cve|vulnerab|security patch|outage)\b/i.test(
-      text,
-    );
-
-  if (actionRequired && verdict !== "skip") return true;
+  const category = String(item.category || "");
+  const score = itemScore(item);
 
   if (category === "upgrade" && item.urgency === "urgent" && score >= 70) {
     return true;
@@ -65,23 +53,20 @@ export function isHotAlert(item: AiIntelItem): boolean {
   );
 }
 
+/** Trending = a repo that is really accelerating, not every listed repo. */
 export function isTrending(item: AiIntelItem): boolean {
-  if (itemKind(item) !== "repo" && item.category !== "trending_repo") {
-    const meta = (item.metadata ?? {}) as Record<string, unknown>;
-    const starsToday = Number(meta.starsToday) || 0;
-    return starsToday >= 80;
-  }
+  if (itemKind(item) !== "repo") return false;
 
   const meta = (item.metadata ?? {}) as Record<string, unknown>;
   const starsToday = Number(meta.starsToday) || 0;
   const stars = Number(meta.stars) || 0;
   const rank = Number(meta.rank) || 0;
-  return (
-    item.category === "trending_repo" ||
-    starsToday >= 50 ||
-    (rank > 0 && rank <= 25) ||
-    (stars >= 2000 && starsToday >= 20)
-  );
+
+  if (starsToday >= 250) return true;
+  if (rank > 0 && rank <= 5 && starsToday >= 120) return true;
+  // Small repo exploding relative to its size
+  if (stars > 0 && starsToday >= 100 && starsToday >= stars * 0.15) return true;
+  return false;
 }
 
 export type PricingKind = "free" | "freemium" | "paid" | null;
@@ -106,12 +91,8 @@ const URGENCY_RANK: Record<AiUrgency, number> = {
   light: 2,
 };
 
-/** Unread first, then hot alerts, then trending repos, then score. */
+/** Hot alerts, then trending, then score — read state does not reorder. */
 export function sortForDeveloper(a: AiIntelItem, b: AiIntelItem): number {
-  const ra = a.read ? 1 : 0;
-  const rb = b.read ? 1 : 0;
-  if (ra !== rb) return ra - rb;
-
   const ha = isHotAlert(a) ? 1 : 0;
   const hb = isHotAlert(b) ? 1 : 0;
   if (ha !== hb) return hb - ha;

@@ -13,6 +13,21 @@ function tagContent(block: string, tag: string): string {
   return m ? decodeXmlEntities(m[1]) : "";
 }
 
+/** HTML/CDATA → clean readable text. */
+function cleanText(raw: string): string {
+  return raw
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, "$1")
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<\/(p|li|h[1-6]|div)>/gi, ". ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\s([.,;:!?])/g, "$1")
+    .replace(/\.\s*\./g, ".")
+    .trim();
+}
+
 function linkFromItem(block: string): string {
   const plain = tagContent(block, "link");
   if (plain && /^https?:\/\//i.test(plain)) return plain;
@@ -37,10 +52,12 @@ export async function collectRss(
     const title = tagContent(block, "title");
     const url = linkFromItem(block);
     if (!title || !url) return [];
+    // Prefer the richest field: full content beats the one-line description
     const summary =
-      tagContent(block, "description") ||
-      tagContent(block, "summary") ||
-      tagContent(block, "content") ||
+      cleanText(tagContent(block, "content:encoded")) ||
+      cleanText(tagContent(block, "description")) ||
+      cleanText(tagContent(block, "summary")) ||
+      cleanText(tagContent(block, "content")) ||
       "";
     const published =
       tagContent(block, "pubDate") ||
@@ -54,8 +71,8 @@ export async function collectRss(
     }
     return [
       {
-        title: title.replace(/<[^>]+>/g, "").slice(0, 240),
-        summary: summary.replace(/<[^>]+>/g, "").slice(0, 500),
+        title: cleanText(title).slice(0, 240),
+        summary: summary.slice(0, 700),
         url,
         sourceId,
         externalId: url,
