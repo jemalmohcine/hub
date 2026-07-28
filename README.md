@@ -78,15 +78,23 @@ update public.profiles set role = 'admin' where email = 'toi@example.com';
 
 ## Phase 2 — AI Intelligence
 
-Module Pro `/app/ai` : digest nocturne multi-sources (4 piliers), merge cross-sites, saves + filtres.
+Module Pro `/app/ai` : digest multi-sources (4 piliers), merge cross-sites, saves + filtres.
 
 1. Applique `supabase/migrations/003_ai_intelligence.sql` (SQL Editor ou `supabase db push`)
-2. Ajoute dans `.env.local` / Vercel :
-   - `CRON_SECRET` (obligatoire pour le cron)
+2. Ajoute dans `.env.local` / Vercel / GitHub Actions secrets :
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
    - `TAVILY_API_KEY` (optionnel — découverte de nouveaux sites)
-3. Cron Vercel : `0 1 * * *` UTC → `GET/POST /api/cron/ai-intel`
+   - `CRON_SECRET` (optionnel — trigger manuel local via `/api/cron/ai-intel`)
+3. Scrape quotidien : **GitHub Actions** (`.github/workflows/ai-intel-ingest.yml`)
+   - Schedule : `0 1 * * *` UTC
+   - Manual : Actions → « AI Intel Ingest » → Run workflow (`full` ou `i18n`)
 4. Test local :
    ```bash
+   npm run ai-intel:ingest
+   # ou
    curl -X POST http://localhost:3000/api/cron/ai-intel \
      -H "Authorization: Bearer $CRON_SECRET"
    ```
+
+Secrets GitHub requis pour le workflow : `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (et `TAVILY_API_KEY` si tu l’utilises).

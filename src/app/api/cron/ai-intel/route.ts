@@ -5,14 +5,16 @@ import { runAiIntelIngest } from "@/modules/ai-intel/ingest";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
+/**
+ * Manual / local trigger only.
+ * Production daily scrape runs in GitHub Actions (`.github/workflows/ai-intel-ingest.yml`),
+ * not via Vercel Cron.
+ */
 function authorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
   const header = req.headers.get("authorization");
-  if (header === `Bearer ${secret}`) return true;
-  const cronHeader = req.headers.get("x-vercel-cron-secret");
-  if (cronHeader && cronHeader === secret) return true;
-  return false;
+  return header === `Bearer ${secret}`;
 }
 
 async function handle(req: Request) {
