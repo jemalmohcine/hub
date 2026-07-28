@@ -1,0 +1,139 @@
+import * as cheerio from "cheerio";
+import { fetchJson, fetchText } from "@/modules/ai-intel/collectors/fetch";
+import { formatStars } from "@/modules/ai-intel/score";
+import type { RawHit } from "@/modules/ai-intel/types";
+
+type GhRepo = {
+  full_name?: string;
+  description?: string | null;
+  stargazers_count?: number;
+  forks_count?: number;
+  language?: string | null;
+  topics?: string[];
+  open_issues_count?: number;
+  html_url?: string;
+};
+
+function parseCount(text: string): number {
+  const n = Number(text.replace(/,/g, "").trim());
+  return Number.isFinite(n) ? n : 0;
+}
+
+async function fetchGithubRepo(repo: string): Promise<GhRepo | null> {
+  try {
+    const headers: Record<string, string> = {
+      Accept: "application/vnd.github+json",
+    };
+    if (process.env.GITHUB_TOKEN) {
+      headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+    }
+    return await fetchJson<GhRepo>(
+      `https://api.github.com/repos/${repo}`,
+      { timeoutMs: 10_000, headers },
+    );
+  } catch {
+    return null;
+  }
+}
+
+export async function collectGithubTrending(
+  sourceId: string,
+  url: string,
+): Promise<RawHit[]> {
+  const html = await fetchText(url, {
+    headers: { Accept: "text/html" },
+    timeoutMs: 14_000,
+  });
+  const $ = cheerio.load(html);
+  const rows: {
+    repo: string;
+    description: string;
+    starsToday: number;
+    language: string | null;
+    rank: number;
+  }[] = [];
+
+  $("article.Box-row").each((idx, el) => {
+    if (rows.length >= 15) return;
+    const href =
+      $(el).find("h2 a").attr("href") ||
+      $(el).find("a[href^='/']").first().attr("href") ||
+      "";
+    const repo = href.replace(/^\//, "").replace(/\/$/, "");
+    if (!/^[^/]+\/[^/]+$/.test(repo)) return;
+
+    const description = $(el)
+      .find("p")
+      .first()
+      .text()
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const todayText = $(el).text();
+    const todayMatch = todayText.match(/([\d,]+)\s*stars?\s*today/i);
+    const starsToday = todayMatch ? parseCount(todayMatch[1]) : 0;
+    const language =
+      $(el).find('[itemprop="programmingLanguage"]').first().text().trim() ||
+      null;
+
+    rows.push({
+      repo,
+      description,
+      starsToday,
+      language,
+      rank: idx + 1,
+    });
+  });
+
+  const hits: RawHit[] = [];
+  for (let i = 0; i < rows.length; i += 4) {
+    const batch = rows.slice(i, i + 4);
+    const enriched = await Promise.all(
+      batch.map(async (row) => {
+        const api = await fetchGithubRepo(row.repo);
+        const stars = api?.stargazers_count ?? 0;
+        const forks = api?.forks_count ?? 0;
+        const description =
+          (api?.description || row.description || "").trim();
+        const language = api?.language || row.language;
+        const topics = api?.topics ?? [];
+
+        const summary = [
+          description,
+          stars ? `${formatStars(stars)} stars` : "",
+          row.starsToday ? `+${formatStars(row.starsToday)} today` : "",
+          forks ? `${formatStars(forks)} forks` : "",
+          language || "",
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
+        const hit: RawHit = {
+          title: row.repo,
+          summary,
+          url: api?.html_url || `https://github.com/${row.repo}`,
+          sourceId,
+          externalId: row.repo,
+          publishedAt: new Date().toISOString(),
+          raw: {
+            provider: "github-trending",
+            kind: "repo",
+            description,
+            comments: description,
+            stars,
+            starsToday: row.starsToday,
+            forks,
+            language,
+            topics,
+            rank: row.rank,
+            openIssues: api?.open_issues_count ?? null,
+          },
+        };
+        return hit;
+      }),
+    );
+    hits.push(...enriched);
+  }
+
+  return hits;
+}

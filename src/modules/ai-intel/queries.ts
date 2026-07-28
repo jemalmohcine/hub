@@ -29,7 +29,7 @@ export async function getAiIntelFeed(
     .from("ai_intel_items")
     .select("*")
     .order("ingested_at", { ascending: false })
-    .limit(100);
+    .limit(500);
 
   if (filters.pillar && filters.pillar !== "all") {
     query = query.eq("pillar", filters.pillar);

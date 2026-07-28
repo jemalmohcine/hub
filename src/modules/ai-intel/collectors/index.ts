@@ -2,12 +2,10 @@ import {
   collectHackerNewsAi,
   collectTldrAi,
 } from "@/modules/ai-intel/collectors/api";
-import {
-  collectFutureTools,
-  collectGenericHtmlList,
-  collectGithubTrending,
-  collectGitTrend,
-} from "@/modules/ai-intel/collectors/html";
+import { collectFutureTools } from "@/modules/ai-intel/collectors/futuretools";
+import { collectGithubTrending } from "@/modules/ai-intel/collectors/github-trending";
+import { collectGitTrend } from "@/modules/ai-intel/collectors/gittrend";
+import { collectGenericHtmlList } from "@/modules/ai-intel/collectors/html";
 import { collectRss } from "@/modules/ai-intel/collectors/rss";
 import type { AiIntelSource, RawHit } from "@/modules/ai-intel/types";
 
@@ -28,7 +26,6 @@ export async function collectFromSource(
     default:
       if (source.kind === "rss") return collectRss(source.id, source.url);
       if (source.kind === "api") {
-        // Generic JSON list attempt via HN-like or TLDR-like shapes
         try {
           return await collectTldrAi(source.id, source.url);
         } catch {

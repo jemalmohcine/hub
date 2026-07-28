@@ -224,8 +224,26 @@ export async function updateProfile(
     },
   });
 
+  try {
+    const { createNotification } = await import(
+      "@/modules/notifications/create"
+    );
+    await createNotification({
+      userId: user.id,
+      category: "account",
+      title: "Profil mis à jour",
+      body: "Tes infos de compte ont bien été enregistrées.",
+      href: "/app/settings/account",
+      severity: "success",
+      dedupeKey: `account:profile:${user.id}:${new Date().toISOString().slice(0, 10)}`,
+    });
+  } catch {
+    // notifications table may not exist yet
+  }
+
   revalidatePath("/app/settings");
   revalidatePath("/app/settings/account");
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
 
@@ -298,9 +316,30 @@ export async function mockUpgradePlan(
 
   if (error) return { ok: false, error: error.message };
 
+  try {
+    const { createNotification } = await import(
+      "@/modules/notifications/create"
+    );
+    await createNotification({
+      userId: user.id,
+      category: "billing",
+      title: plan === "pro" ? "Plan Pro activé" : "Retour au plan Free",
+      body:
+        plan === "pro"
+          ? "Le module AI Intelligence est maintenant débloqué."
+          : "Ton abonnement est passé en Free.",
+      href: "/app/settings/billing",
+      severity: plan === "pro" ? "success" : "info",
+      dedupeKey: `billing:plan:${user.id}:${plan}:${new Date().toISOString().slice(0, 10)}`,
+    });
+  } catch {
+    // notifications table may not exist yet
+  }
+
   revalidatePath("/app");
   revalidatePath("/app/settings/billing");
   revalidatePath("/app/settings/modules");
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
 

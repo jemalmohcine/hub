@@ -20,12 +20,16 @@ import {
   ThemeSync,
   ThemeToggle,
 } from "@/design-system";
+import { NotificationBell } from "@/modules/notifications/ui/notification-bell";
+import type { HubNotification } from "@/modules/notifications/types";
 
 export function AppShell({
   user,
+  notifications = [],
   children,
 }: {
   user: HubUser;
+  notifications?: HubNotification[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -39,6 +43,7 @@ export function AppShell({
         <div className="flex h-16 items-center gap-[var(--dh-space-2)] border-b border-border px-[var(--dh-space-5)]">
           <BrandMark withWordmark href="/app/overview" />
           <div className="ml-auto flex items-center gap-1">
+            <NotificationBell initialNotifications={notifications} />
             <ThemeToggle />
             <Badge tone="neutral" className="capitalize">
               {plan}
@@ -97,6 +102,7 @@ export function AppShell({
       <header className="sticky top-0 z-20 flex h-[var(--dh-topbar-h)] items-center justify-between border-b border-border bg-card/90 px-[var(--dh-space-4)] backdrop-blur lg:hidden">
         <BrandMark withWordmark href="/app/overview" size="sm" />
         <div className="flex items-center gap-1">
+          <NotificationBell initialNotifications={notifications} />
           <ThemeToggle />
           <Badge tone="neutral" className="capitalize">
             {plan}

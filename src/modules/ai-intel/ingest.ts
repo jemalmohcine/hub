@@ -100,6 +100,7 @@ export async function runAiIntelIngest() {
     const { items, stats: mergeStats } = mergeHits(allHits, sourcesById);
 
     let upserted = 0;
+    const urgentTitles: string[] = [];
     for (const item of items) {
       const { error } = await admin.from("ai_intel_items").upsert(
         {
@@ -118,7 +119,31 @@ export async function runAiIntelIngest() {
         },
         { onConflict: "canonical_key" },
       );
-      if (!error) upserted += 1;
+      if (!error) {
+        upserted += 1;
+        if (item.urgency === "urgent") urgentTitles.push(item.title);
+      }
+    }
+
+    if (urgentTitles.length > 0) {
+      try {
+        const { createNotification } = await import(
+          "@/modules/notifications/create"
+        );
+        const day = new Date().toISOString().slice(0, 10);
+        await createNotification({
+          userId: null,
+          category: "ai",
+          title: `${urgentTitles.length} info${urgentTitles.length > 1 ? "s" : ""} AI urgente${urgentTitles.length > 1 ? "s" : ""}`,
+          body: urgentTitles.slice(0, 3).join(" · "),
+          href: "/app/ai",
+          severity: "urgent",
+          dedupeKey: `ai:urgent:${day}`,
+          metadata: { titles: urgentTitles.slice(0, 10) },
+        });
+      } catch {
+        // notifications optional until migration applied
+      }
     }
 
     const failures = Object.values(sourceStats).filter((s) => !s.ok).length;
