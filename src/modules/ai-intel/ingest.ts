@@ -1,25 +1,71 @@
 import { createAdminClient } from "@/core/auth/supabase/admin";
 import { collectFromSource } from "@/modules/ai-intel/collectors";
-import { enrichI18nMetadata } from "@/modules/ai-intel/brief";
 import { mergeHits } from "@/modules/ai-intel/merge/merge-hits";
 import { scrapeDayIso } from "@/modules/ai-intel/scrape-date";
 import { discoverNewSources } from "@/modules/ai-intel/sources/discover";
 import type { AiIntelSource, RawHit } from "@/modules/ai-intel/types";
+import { mapPool } from "@/lib/async-pool";
 
-async function healthCheck(url: string): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 6_000);
-    const res = await fetch(url, {
-      method: "GET",
-      signal: controller.signal,
-      headers: { "User-Agent": "DevHubAIIntel/1.0" },
-    });
-    clearTimeout(timer);
-    return res.ok || res.status === 304 || res.status === 429;
-  } catch {
-    return false;
+const SOURCE_CONCURRENCY = 8;
+
+async function notifyAiDigest(input: {
+  inserted: number;
+  urgentCount: number;
+  sampleTitles: string[];
+}) {
+  if (input.inserted <= 0) {
+    return {
+      notification: false,
+      push: { sent: 0, skipped: true, reason: "no_items" as const },
+    };
   }
+
+  const day = new Date().toISOString().slice(0, 10);
+  const urgent = input.urgentCount;
+  const title =
+    urgent > 0
+      ? `${urgent} alerte${urgent > 1 ? "s" : ""} AI · ${input.inserted} nouveauté${input.inserted > 1 ? "s" : ""}`
+      : `${input.inserted} nouvelle${input.inserted > 1 ? "s" : ""} info${input.inserted > 1 ? "s" : ""} AI`;
+  const body = input.sampleTitles.slice(0, 3).join(" · ");
+
+  let notification = false;
+  try {
+    const { createNotification } = await import(
+      "@/modules/notifications/create"
+    );
+    await createNotification({
+      userId: null,
+      category: "ai",
+      title,
+      body,
+      href: "/app/ai",
+      severity: urgent > 0 ? "urgent" : "info",
+      dedupeKey: `ai:digest:${day}`,
+      metadata: {
+        inserted: input.inserted,
+        urgent,
+        titles: input.sampleTitles.slice(0, 10),
+      },
+      skipPush: true,
+    });
+    notification = true;
+  } catch {
+    // hub_notifications optional until migration applied
+  }
+
+  const { sendPushBroadcast } = await import("@/modules/notifications/push");
+  const push = await sendPushBroadcast(
+    {
+      title,
+      body,
+      href: "/app/ai",
+      tag: `ai:digest:${day}`,
+      severity: urgent > 0 ? "urgent" : "info",
+    },
+    { category: "ai" },
+  );
+
+  return { notification, push };
 }
 
 export async function runAiIntelIngest() {
@@ -43,7 +89,7 @@ export async function runAiIntelIngest() {
   const scrapeDay = scrapeDayIso(new Date(startedAt));
   const sourceStats: Record<
     string,
-    { ok: boolean; count: number; error?: string; skipped?: boolean }
+    { ok: boolean; count: number; error?: string }
   > = {};
 
   try {
@@ -59,62 +105,38 @@ export async function runAiIntelIngest() {
 
     const list = (sources ?? []) as AiIntelSource[];
     const sourcesById = new Map(list.map((s) => [s.id, s]));
-    const allHits: RawHit[] = [];
 
-    await Promise.all(
-      list.map(async (source) => {
-        const healthy = await healthCheck(source.url);
-        if (!healthy) {
-          sourceStats[source.id] = {
-            ok: false,
-            count: 0,
-            skipped: true,
-            error: "health-check failed",
-          };
-          await admin
-            .from("ai_intel_sources")
-            .update({ last_error: "health-check failed" })
-            .eq("id", source.id);
-          return;
-        }
+    const hitBatches = await mapPool(list, SOURCE_CONCURRENCY, async (source) => {
+      try {
+        const hits = await collectFromSource(source);
+        sourceStats[source.id] = { ok: true, count: hits.length };
+        await admin
+          .from("ai_intel_sources")
+          .update({
+            last_ok_at: new Date().toISOString(),
+            last_error: null,
+          })
+          .eq("id", source.id);
+        return hits;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        sourceStats[source.id] = { ok: false, count: 0, error: message };
+        await admin
+          .from("ai_intel_sources")
+          .update({ last_error: message.slice(0, 500) })
+          .eq("id", source.id);
+        return [] as RawHit[];
+      }
+    });
 
-        try {
-          const hits = await collectFromSource(source);
-          allHits.push(...hits);
-          sourceStats[source.id] = { ok: true, count: hits.length };
-          await admin
-            .from("ai_intel_sources")
-            .update({
-              last_ok_at: new Date().toISOString(),
-              last_error: null,
-            })
-            .eq("id", source.id);
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          sourceStats[source.id] = { ok: false, count: 0, error: message };
-          await admin
-            .from("ai_intel_sources")
-            .update({ last_error: message.slice(0, 500) })
-            .eq("id", source.id);
-        }
-      }),
-    );
-
+    const allHits = hitBatches.flat();
     const { items, stats: mergeStats } = mergeHits(allHits, sourcesById);
-
-    // Translate once (EN↔FR) in small batches — stored in metadata.i18n
-    for (let i = 0; i < items.length; i += 4) {
-      const batch = items.slice(i, i + 4);
-      await Promise.all(
-        batch.map(async (item) => {
-          item.metadata = await enrichI18nMetadata(item);
-        }),
-      );
-    }
 
     let inserted = 0;
     let skipped = 0;
-    const urgentTitles: string[] = [];
+    let urgentCount = 0;
+    const sampleTitles: string[] = [];
+
     for (const item of items) {
       const { data, error } = await admin
         .from("ai_intel_items")
@@ -141,32 +163,18 @@ export async function runAiIntelIngest() {
 
       if (data && data.length > 0) {
         inserted += 1;
-        if (item.urgency === "urgent") urgentTitles.push(item.title);
+        sampleTitles.push(item.title);
+        if (item.urgency === "urgent") urgentCount += 1;
       } else {
         skipped += 1;
       }
     }
 
-    if (urgentTitles.length > 0) {
-      try {
-        const { createNotification } = await import(
-          "@/modules/notifications/create"
-        );
-        const day = new Date().toISOString().slice(0, 10);
-        await createNotification({
-          userId: null,
-          category: "ai",
-          title: `${urgentTitles.length} alerte${urgentTitles.length > 1 ? "s" : ""} AI`,
-          body: urgentTitles.slice(0, 3).join(" · "),
-          href: "/app/ai",
-          severity: "urgent",
-          dedupeKey: `ai:urgent:${day}`,
-          metadata: { titles: urgentTitles.slice(0, 10) },
-        });
-      } catch {
-        // notifications optional until migration applied
-      }
-    }
+    const notify = await notifyAiDigest({
+      inserted,
+      urgentCount,
+      sampleTitles,
+    });
 
     const failures = Object.values(sourceStats).filter((s) => !s.ok).length;
     const status =
@@ -183,7 +191,7 @@ export async function runAiIntelIngest() {
         status,
         discovery,
         source_stats: sourceStats,
-        merge_stats: { ...mergeStats, inserted, skipped },
+        merge_stats: { ...mergeStats, inserted, skipped, notify },
       })
       .eq("id", runId);
 
@@ -192,7 +200,7 @@ export async function runAiIntelIngest() {
       status,
       discovery,
       sourceStats,
-      mergeStats: { ...mergeStats, inserted, skipped },
+      mergeStats: { ...mergeStats, inserted, skipped, notify },
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

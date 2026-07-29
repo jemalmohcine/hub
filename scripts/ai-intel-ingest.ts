@@ -35,7 +35,7 @@ async function main() {
     discovery: result.discovery,
   }));
 
-  const i18n = await backfillAiIntelI18n(80).catch((err) => {
+  const i18n = await backfillAiIntelI18n(200).catch((err) => {
     console.warn("[ai-intel] i18n backfill skipped", err);
     return null;
   });

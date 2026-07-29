@@ -254,12 +254,12 @@ export async function collectFutureTools(
 ): Promise<RawHit[]> {
   const homeHtml = await fetchText(url, { timeoutMs: 12_000 });
   const toolUrls = await discoverToolUrls(url);
-  const limited = toolUrls.slice(0, 14);
+  const limited = toolUrls.slice(0, 22);
 
   const toolHits: RawHit[] = [];
-  // Enrich sequentially in small batches to avoid hammering the site
-  for (let i = 0; i < limited.length; i += 3) {
-    const batch = limited.slice(i, i + 3);
+  // Enrich in small batches to avoid hammering the site
+  for (let i = 0; i < limited.length; i += 4) {
+    const batch = limited.slice(i, i + 4);
     const enriched = await Promise.all(
       batch.map(async (toolUrl) => {
         try {
@@ -277,5 +277,5 @@ export async function collectFutureTools(
   const newsHits = await collectNewsCards(sourceId, homeHtml, url);
 
   // Prefer rich tool pages; keep a few news items
-  return [...toolHits, ...newsHits.slice(0, 8)];
+  return [...toolHits, ...newsHits.slice(0, 10)];
 }

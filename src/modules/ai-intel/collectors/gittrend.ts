@@ -134,7 +134,7 @@ export async function collectGitTrend(
 
   const targets = listItems
     .filter((i) => i.url && i.name)
-    .slice(0, 12);
+    .slice(0, 16);
 
   const hits: RawHit[] = [];
   for (let i = 0; i < targets.length; i += 3) {

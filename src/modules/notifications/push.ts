@@ -92,7 +92,14 @@ export async function sendPushBroadcast(
   payload: PushPayload,
   opts: { category?: string } = {},
 ) {
-  if (!configureWebPush()) return { sent: 0, skipped: true as const };
+  if (!configureWebPush()) {
+    return {
+      sent: 0,
+      skipped: true as const,
+      reason: "missing_vapid" as const,
+      eligible: 0,
+    };
+  }
 
   const admin = createAdminClient();
   const { data } = await admin
@@ -113,9 +120,15 @@ export async function sendPushBroadcast(
     rows = rows.filter((r) => proIds.has(r.user_id));
   }
 
+  const eligible = rows.length;
   let sent = 0;
   for (const row of rows) {
     if (await sendToRow(row, payload)) sent += 1;
   }
-  return { sent, skipped: false as const };
+  return {
+    sent,
+    skipped: false as const,
+    reason: eligible === 0 ? ("no_subscribers" as const) : null,
+    eligible,
+  };
 }

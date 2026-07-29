@@ -41,7 +41,7 @@ function linkFromItem(block: string): string {
 export async function collectRss(
   sourceId: string,
   feedUrl: string,
-  limit = 25,
+  limit = 40,
 ): Promise<RawHit[]> {
   const xml = await fetchText(feedUrl);
   const items = xml.match(/<item[\s\S]*?<\/item>/gi) ??

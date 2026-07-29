@@ -142,5 +142,5 @@ export async function collectGithubTrending(
     return DEV_SIGNAL_RE.test(blob) || starsToday >= 1200;
   });
 
-  return (useful.length >= 5 ? useful : hits).slice(0, 18);
+  return (useful.length >= 5 ? useful : hits).slice(0, 22);
 }

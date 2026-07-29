@@ -17,7 +17,7 @@ export async function collectHackerNewsAi(
   url: string,
 ): Promise<RawHit[]> {
   const data = await fetchJson<HnResponse>(url);
-  return (data.hits ?? []).slice(0, 30).flatMap((h) => {
+  return (data.hits ?? []).slice(0, 40).flatMap((h) => {
     const link = h.url || h.story_url;
     const title = h.title;
     if (!link || !title) return [];
@@ -59,7 +59,7 @@ export async function collectTldrAi(
         ? ((data as { data: TldrItem[] }).data)
         : [];
 
-  return list.slice(0, 30).flatMap((item) => {
+  return list.slice(0, 40).flatMap((item) => {
     const link = item.url || item.link;
     const title = item.title;
     if (!link || !title) return [];
