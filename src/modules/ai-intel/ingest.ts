@@ -2,6 +2,7 @@ import { createAdminClient } from "@/core/auth/supabase/admin";
 import { collectFromSource } from "@/modules/ai-intel/collectors";
 import { enrichI18nMetadata } from "@/modules/ai-intel/brief";
 import { mergeHits } from "@/modules/ai-intel/merge/merge-hits";
+import { scrapeDayIso } from "@/modules/ai-intel/scrape-date";
 import { discoverNewSources } from "@/modules/ai-intel/sources/discover";
 import type { AiIntelSource, RawHit } from "@/modules/ai-intel/types";
 
@@ -39,6 +40,7 @@ export async function runAiIntelIngest() {
   }
 
   const runId = runRow.id as string;
+  const scrapeDay = scrapeDayIso(new Date(startedAt));
   const sourceStats: Record<
     string,
     { ok: boolean; count: number; error?: string; skipped?: boolean }
@@ -110,29 +112,38 @@ export async function runAiIntelIngest() {
       );
     }
 
-    let upserted = 0;
+    let inserted = 0;
+    let skipped = 0;
     const urgentTitles: string[] = [];
     for (const item of items) {
-      const { error } = await admin.from("ai_intel_items").upsert(
-        {
-          canonical_key: item.canonicalKey,
-          pillar: item.pillar,
-          category: item.category,
-          urgency: item.urgency,
-          title: item.title,
-          summary: item.summary,
-          url: item.url,
-          primary_source: item.primarySource,
-          source_refs: item.sourceRefs,
-          metadata: item.metadata,
-          published_at: item.publishedAt,
-          ingested_at: new Date().toISOString(),
-        },
-        { onConflict: "canonical_key" },
-      );
-      if (!error) {
-        upserted += 1;
+      const { data, error } = await admin
+        .from("ai_intel_items")
+        .upsert(
+          {
+            canonical_key: item.canonicalKey,
+            pillar: item.pillar,
+            category: item.category,
+            urgency: item.urgency,
+            title: item.title,
+            summary: item.summary,
+            url: item.url,
+            primary_source: item.primarySource,
+            source_refs: item.sourceRefs,
+            metadata: item.metadata,
+            published_at: scrapeDay,
+            ingested_at: scrapeDay,
+          },
+          { onConflict: "canonical_key", ignoreDuplicates: true },
+        )
+        .select("id");
+
+      if (error) continue;
+
+      if (data && data.length > 0) {
+        inserted += 1;
         if (item.urgency === "urgent") urgentTitles.push(item.title);
+      } else {
+        skipped += 1;
       }
     }
 
@@ -161,7 +172,7 @@ export async function runAiIntelIngest() {
     const status =
       failures === 0
         ? "success"
-        : upserted > 0 || Object.values(sourceStats).some((s) => s.ok)
+        : inserted > 0 || Object.values(sourceStats).some((s) => s.ok)
           ? "partial"
           : "failed";
 
@@ -172,7 +183,7 @@ export async function runAiIntelIngest() {
         status,
         discovery,
         source_stats: sourceStats,
-        merge_stats: { ...mergeStats, upserted },
+        merge_stats: { ...mergeStats, inserted, skipped },
       })
       .eq("id", runId);
 
@@ -181,7 +192,7 @@ export async function runAiIntelIngest() {
       status,
       discovery,
       sourceStats,
-      mergeStats: { ...mergeStats, upserted },
+      mergeStats: { ...mergeStats, inserted, skipped },
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
