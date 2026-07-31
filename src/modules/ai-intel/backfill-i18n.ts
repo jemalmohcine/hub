@@ -20,8 +20,8 @@ export async function backfillAiIntelI18n(limit = 120) {
   let updated = 0;
   let failed = 0;
 
-  for (let i = 0; i < rows.length; i += 3) {
-    const batch = rows.slice(i, i + 3);
+  for (let i = 0; i < rows.length; i += 6) {
+    const batch = rows.slice(i, i + 6);
     await Promise.all(
       batch.map(async (row) => {
         try {

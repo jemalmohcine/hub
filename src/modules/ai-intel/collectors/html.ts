@@ -14,7 +14,7 @@ export async function collectGenericHtmlList(
   const hits: RawHit[] = [];
 
   $("article a[href], h2 a[href], h3 a[href], li a[href]").each((_, el) => {
-    if (hits.length >= 30) return;
+    if (hits.length >= 45) return;
     const href = $(el).attr("href");
     if (!href || href.startsWith("#")) return;
     const abs = absoluteUrl(url, href);

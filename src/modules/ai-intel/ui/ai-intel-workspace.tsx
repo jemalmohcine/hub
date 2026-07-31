@@ -42,9 +42,9 @@ function toLocalIsoDay(raw: string | null | undefined): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Date used by the period filter: when it entered the hub. */
+/** Date used by the period filter: first day the item was scraped into the hub. */
 function itemDay(item: AiIntelItem): string {
-  return toLocalIsoDay(item.ingested_at) || toLocalIsoDay(item.published_at);
+  return toLocalIsoDay(item.published_at);
 }
 
 function matchesTab(item: AiIntelItem, tab: TabId): boolean {

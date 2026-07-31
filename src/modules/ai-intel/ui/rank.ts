@@ -114,8 +114,7 @@ export function sortForDeveloper(a: AiIntelItem, b: AiIntelItem): number {
   if (sa !== sb) return sb - sa;
 
   return (
-    new Date(b.ingested_at).getTime() - new Date(a.ingested_at).getTime() ||
     new Date(b.published_at || 0).getTime() -
-      new Date(a.published_at || 0).getTime()
+    new Date(a.published_at || 0).getTime()
   );
 }

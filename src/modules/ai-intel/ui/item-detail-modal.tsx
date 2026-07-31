@@ -244,23 +244,12 @@ export function ItemDetailModal({
             <Text size="sm" tone="muted" className="mt-2">
               {copy.published}{" "}
               {localItem.published_at
-                ? new Date(localItem.published_at).toLocaleString(dateLocale, {
+                ? new Date(localItem.published_at).toLocaleDateString(dateLocale, {
                     day: "2-digit",
                     month: "short",
                     year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
                   })
                 : copy.unknownDate}
-              {" · "}
-              {copy.added}{" "}
-              {new Date(localItem.ingested_at).toLocaleString(dateLocale, {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
             </Text>
           </section>
         </Stack>

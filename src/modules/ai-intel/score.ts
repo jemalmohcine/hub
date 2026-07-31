@@ -346,9 +346,9 @@ export function isWorthKeeping(meta: Record<string, unknown>, confirmations = 1)
   const score = Number(meta.score) || 0;
   const verdict = meta.verdict;
   if (verdict === "use_it") return true;
-  if (verdict === "watch" && score >= 48) return true;
-  if (confirmations >= 2 && score >= 40) return true;
+  if (verdict === "watch" && score >= 44) return true;
+  if (confirmations >= 2 && score >= 36) return true;
   // Drop clear noise
-  if (verdict === "skip" && score < 42) return false;
-  return score >= 40;
+  if (verdict === "skip" && score < 36) return false;
+  return score >= 38;
 }

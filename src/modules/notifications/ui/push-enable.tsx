@@ -142,7 +142,9 @@ export function PushEnableCard() {
     return (
       <div className="rounded-2xl border border-border bg-muted/30 px-4 py-3">
         <Text size="sm" tone="muted">
-          Ce navigateur ne peut pas afficher les notifications système.
+          {!vapidKey
+            ? "Clés VAPID manquantes sur le serveur (NEXT_PUBLIC_VAPID_PUBLIC_KEY). Les alertes téléphone ne peuvent pas être activées."
+            : "Ce navigateur ne peut pas afficher les notifications système."}
         </Text>
       </div>
     );
@@ -166,10 +168,10 @@ export function PushEnableCard() {
           </Text>
           <Text size="sm" tone="muted" className="mt-1">
             {status === "on"
-              ? "OK. Chaque notif de la cloche arrive aussi comme alerte système (même hors app)."
+              ? "OK. Tu recevras un résumé après chaque scrape quotidien (et les alertes urgentes). Plan Pro requis."
               : status === "denied"
-                ? "Permission refusée. Réactive-la dans les réglages du téléphone."
-                : "Même contenu que la cloche, en notification système sur ton téléphone (PWA)."}
+                ? "Permission refusée. Réactive-la dans Réglages → Notifications de ton téléphone."
+                : "Résumé quotidien du scrape AI sur ton téléphone (PWA installée). Plan Pro requis."}
           </Text>
           {!isStandalonePwa() && status === "off" ? (
             <Text size="sm" tone="muted" className="mt-1">

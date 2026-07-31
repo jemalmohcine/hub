@@ -28,7 +28,7 @@ export async function getAiIntelFeed(
   let query = supabase
     .from("ai_intel_items")
     .select("*")
-    .order("ingested_at", { ascending: false })
+    .order("published_at", { ascending: false, nullsFirst: false })
     .limit(500);
 
   if (filters.pillar && filters.pillar !== "all") {
@@ -91,7 +91,8 @@ export async function getAiIntelFeed(
     const sb = Number(b.metadata?.score) || 0;
     if (sa !== sb) return sb - sa;
     return (
-      new Date(b.ingested_at).getTime() - new Date(a.ingested_at).getTime()
+      new Date(b.published_at || 0).getTime() -
+      new Date(a.published_at || 0).getTime()
     );
   });
 

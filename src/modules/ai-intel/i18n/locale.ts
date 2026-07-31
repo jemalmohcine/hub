@@ -81,7 +81,7 @@ export const UI = {
     score: "Score",
     pageTitle: "Intelligence AI",
     pageDesc:
-      "Le filtre de période suit la date d’ajout au hub. La date de publication reste visible sur chaque carte.",
+      "Le filtre de période et la date affichée correspondent au jour où l’info a été scrapée.",
     digestPrefix: "Dernière mise à jour",
     digestEmpty: "Aucune mise à jour pour le moment",
     detail: "En savoir plus",
@@ -130,7 +130,7 @@ export const UI = {
     score: "Score",
     pageTitle: "AI Intelligence",
     pageDesc:
-      "The date filter uses when items were added to the hub. Each card still shows the original publish date.",
+      "The date filter and card date both use the day the item was first scraped into the hub.",
     digestPrefix: "Last update",
     digestEmpty: "No update yet",
     detail: "More details",

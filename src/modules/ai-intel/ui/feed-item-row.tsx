@@ -82,17 +82,6 @@ export function FeedItemRow({
   const trending = isTrending(item);
   const isRead = Boolean(item.read);
   const publishedLabel = formatCardDate(item.published_at, locale);
-  const addedLabel = formatCardDate(item.ingested_at, locale);
-  const publishedDay = item.published_at
-    ? new Date(item.published_at).toDateString()
-    : "";
-  const addedDay = item.ingested_at
-    ? new Date(item.ingested_at).toDateString()
-    : "";
-  const showAdded =
-    Boolean(addedLabel) &&
-    Boolean(publishedLabel) &&
-    publishedDay !== addedDay;
 
   const metricParts: string[] = [];
   if (kind === "repo") {
@@ -133,15 +122,6 @@ export function FeedItemRow({
           {publishedLabel ? (
             <Chip>
               {copy.published} {publishedLabel}
-            </Chip>
-          ) : addedLabel ? (
-            <Chip>
-              {copy.added} {addedLabel}
-            </Chip>
-          ) : null}
-          {showAdded ? (
-            <Chip>
-              {copy.added} {addedLabel}
             </Chip>
           ) : null}
           {kind === "repo" ? <Chip tone="ok">{copy.free}</Chip> : null}
