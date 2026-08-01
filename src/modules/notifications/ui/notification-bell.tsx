@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Bell,
   CheckCheck,
@@ -87,10 +87,6 @@ export function NotificationBell({
   const [category, setCategory] = useState<NotificationCategory | "all">("all");
   const [items, setItems] = useState(initialNotifications);
   const { run, pending } = useAsyncAction();
-
-  useEffect(() => {
-    setItems(initialNotifications);
-  }, [initialNotifications]);
 
   const unread = useMemo(() => items.filter((n) => !n.read), [items]);
   const filtered = useMemo(

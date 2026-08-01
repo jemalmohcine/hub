@@ -73,7 +73,7 @@ export function defaultDateRange(): DateRangeValue {
 }
 
 function fmtShort(iso: string, locale: AiLocale) {
-  const [y, m, d] = iso.split("-");
+  const [, m, d] = iso.split("-");
   return locale === "fr" ? `${d}/${m}` : `${m}/${d}`;
 }
 

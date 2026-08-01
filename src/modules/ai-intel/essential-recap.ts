@@ -49,7 +49,6 @@ export function buildEssentialRecap(
   const i18n = getItemI18n(meta);
   const brief = resolveBrief(item, locale);
   const kind = detectContentKind(item);
-  const product = productOf(item);
   const about =
     pickLocalized(i18n?.about, locale, "") ||
     readMeta(meta, "about") ||

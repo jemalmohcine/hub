@@ -101,10 +101,6 @@ export function AiIntelWorkspace({
   const { run } = useAsyncAction();
 
   useEffect(() => {
-    setItems(initialItems);
-  }, [initialItems]);
-
-  useEffect(() => {
     if (locale !== "fr") return;
 
     const pending = initialItems

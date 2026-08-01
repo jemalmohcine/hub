@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Download,
   Eye,
@@ -16,6 +16,7 @@ import {
   Stack,
   Text,
   useAsyncAction,
+  useToast,
 } from "@/design-system";
 import { saveCvDocument } from "@/modules/cv-builder/actions";
 import { defaultCvDocument } from "@/modules/cv-builder/defaults";
@@ -46,10 +47,6 @@ export function CvBuilderWorkspace({
   const [panel, setPanel] = useState<WorkspacePanel>("edit");
   const [saved, setSaved] = useState(true);
   const { run, pending } = useAsyncAction();
-
-  useEffect(() => {
-    if (initialDoc) setDoc(initialDoc);
-  }, [initialDoc]);
 
   function update(next: CvDocument) {
     setDoc(next);
@@ -174,9 +171,17 @@ export function CvBuilderWorkspace({
 }
 
 function ExportButtons({ doc }: { doc: CvDocument }) {
+  const toast = useToast();
+
   return (
     <Stack gap={2}>
-      <Button type="button" onClick={() => exportCvPdf(doc)}>
+      <Button
+        type="button"
+        onClick={() => {
+          exportCvPdf(doc);
+          toast.info("Fenêtre d'impression ouverte pour exporter en PDF");
+        }}
+      >
         <Download className="h-4 w-4" />
         Exporter en PDF
       </Button>
@@ -191,7 +196,14 @@ function ExportButtons({ doc }: { doc: CvDocument }) {
         <FileText className="h-4 w-4" />
         Télécharger Markdown
       </Button>
-      <Button type="button" variant="outline" onClick={() => exportCvJson(doc)}>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => {
+          exportCvJson(doc);
+          toast.success("Sauvegarde JSON téléchargée");
+        }}
+      >
         <FileText className="h-4 w-4" />
         Télécharger JSON
       </Button>

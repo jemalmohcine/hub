@@ -95,15 +95,37 @@ export function ItemDetailModal({
   onOpenChange: (open: boolean) => void;
   onMetadataUpdate?: (itemId: string, metadata: Record<string, unknown>) => void;
 }) {
+  if (!item) return null;
+
+  return (
+    <ItemDetailModalBody
+      key={item.id}
+      item={item}
+      open={open}
+      locale={locale}
+      onOpenChange={onOpenChange}
+      onMetadataUpdate={onMetadataUpdate}
+    />
+  );
+}
+
+function ItemDetailModalBody({
+  item,
+  open,
+  locale,
+  onOpenChange,
+  onMetadataUpdate,
+}: {
+  item: AiIntelItem;
+  open: boolean;
+  locale: AiLocale;
+  onOpenChange: (open: boolean) => void;
+  onMetadataUpdate?: (itemId: string, metadata: Record<string, unknown>) => void;
+}) {
   const copy = t(locale);
   const { run, pending } = useAsyncAction();
   const [localItem, setLocalItem] = useState(item);
   const [expandedPoint, setExpandedPoint] = useState<string | null>(null);
-
-  useEffect(() => {
-    setLocalItem(item);
-    setExpandedPoint(null);
-  }, [item]);
 
   useEffect(() => {
     if (!open || !localItem) return;
@@ -125,9 +147,7 @@ export function ItemDetailModal({
         },
       },
     );
-  }, [open, localItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (!localItem) return null;
+  }, [open, localItem.id, run, onMetadataUpdate]);
 
   const meta = (localItem.metadata ?? {}) as Record<string, unknown>;
   const brief = resolveBrief(localItem, locale);
