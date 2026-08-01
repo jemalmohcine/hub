@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   Check,
@@ -179,6 +179,15 @@ export function DateRangePicker({
   const cells = useMemo(() => monthMatrix(view), [view]);
   const todayIso = toIsoDate(startOfDay(new Date()));
 
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   function openPanel() {
     setDraftFrom(value.from);
     setDraftTo(value.to);
@@ -247,13 +256,20 @@ export function DateRangePicker({
           <button
             type="button"
             aria-label={copy.close}
-            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[1px]"
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px]"
             onClick={() => setOpen(false)}
           />
           <div
             role="dialog"
             aria-label={copy.title}
-            className="absolute right-0 z-50 mt-2 w-[min(100vw-1.25rem,22rem)] overflow-hidden rounded-3xl border border-border bg-card shadow-2xl"
+            className={cn(
+              "z-50 overflow-hidden border border-border bg-card shadow-2xl",
+              // Mobile: bottom sheet centered in viewport (avoids overflow from narrow trigger)
+              "fixed inset-x-0 bottom-0 max-h-[min(92dvh,40rem)] overflow-y-auto rounded-t-3xl border-b-0",
+              "pb-[max(0.75rem,env(safe-area-inset-bottom))]",
+              // Desktop: dropdown anchored to trigger
+              "sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-2 sm:max-h-none sm:w-80 sm:rounded-3xl sm:border-b",
+            )}
           >
             <div className="flex items-center justify-between px-4 pb-1 pt-3">
               <Text weight="medium">{copy.title}</Text>
@@ -289,8 +305,8 @@ export function DateRangePicker({
               })}
             </div>
 
-            <div className="mx-3 mb-3 rounded-2xl bg-muted/40 p-3">
-              <div className="mb-3 flex items-center justify-between">
+            <div className="mx-3 mb-3 min-w-0 rounded-2xl bg-muted/40 p-2.5 sm:p-3">
+              <div className="mb-3 flex items-center justify-between gap-2">
                 <button
                   type="button"
                   aria-label={locale === "fr" ? "Mois précédent" : "Previous month"}
@@ -320,21 +336,21 @@ export function DateRangePicker({
                 </button>
               </div>
 
-              <div className="mb-1 grid grid-cols-7 gap-1">
+              <div className="mb-1 grid min-w-0 grid-cols-7 gap-0.5 sm:gap-1">
                 {copy.days.map((d, i) => (
                   <div
                     key={`${d}-${i}`}
-                    className="py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+                    className="py-1 text-center text-[9px] font-semibold uppercase tracking-wide text-muted-foreground sm:text-[10px]"
                   >
                     {d}
                   </div>
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-1">
+              <div className="grid min-w-0 grid-cols-7 gap-0.5 sm:gap-1">
                 {cells.map((day, idx) => {
                   if (!day) {
-                    return <div key={`e-${idx}`} className="h-9" />;
+                    return <div key={`e-${idx}`} className="aspect-square min-h-8 sm:min-h-9" />;
                   }
                   const iso = toIsoDate(day);
                   const selected = isEdge(iso);
@@ -346,7 +362,7 @@ export function DateRangePicker({
                       type="button"
                       onClick={() => onDayClick(day)}
                       className={cn(
-                        "relative h-9 rounded-xl text-sm font-medium transition-colors",
+                        "relative aspect-square min-h-8 rounded-lg text-xs font-medium transition-colors sm:min-h-9 sm:rounded-xl sm:text-sm",
                         selected &&
                           "bg-[var(--dh-brand)] text-[var(--dh-brand-foreground)]",
                         mid && "bg-[var(--dh-brand-soft)]/70 text-foreground",
