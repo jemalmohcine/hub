@@ -121,5 +121,12 @@ export function normalizeCvDocument(raw: unknown): CvDocument {
     languages: Array.isArray(data.languages) ? data.languages : base.languages,
     openSource: Array.isArray(data.openSource) ? data.openSource : base.openSource,
     id: typeof data.id === "string" ? data.id : undefined,
+    targetJobTitle:
+      typeof data.targetJobTitle === "string" ? data.targetJobTitle : undefined,
+    jobDescriptionSnippet:
+      typeof data.jobDescriptionSnippet === "string"
+        ? data.jobDescriptionSnippet
+        : undefined,
+    isTailored: data.isTailored === true,
   };
 }

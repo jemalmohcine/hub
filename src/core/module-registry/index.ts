@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Bot, FileText, LayoutDashboard } from "lucide-react";
+import { Bot, Briefcase, FileText, LayoutDashboard } from "lucide-react";
 import type { ModuleStatus } from "@/core/auth/types";
 
 export type ModuleDefinition = {
@@ -43,6 +43,16 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     requiredEntitlement: "module:cv",
     status: "active",
     icon: FileText,
+  },
+  {
+    id: "jobs",
+    label: "Candidatures",
+    description: "Suivi des offres et candidatures",
+    href: "/app/jobs",
+    order: 25,
+    requiredEntitlement: "module:jobs",
+    status: "active",
+    icon: Briefcase,
   },
 ];
 

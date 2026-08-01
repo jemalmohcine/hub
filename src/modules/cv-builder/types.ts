@@ -83,6 +83,9 @@ export type CvDocument = {
   id?: string;
   title: string;
   themeId: CvThemeId;
+  targetJobTitle?: string;
+  jobDescriptionSnippet?: string;
+  isTailored?: boolean;
   profile: CvProfile;
   skillGroups: CvSkillGroup[];
   experiences: CvExperience[];
@@ -91,4 +94,13 @@ export type CvDocument = {
   certifications: CvCertification[];
   languages: CvLanguage[];
   openSource: CvOpenSource[];
+};
+
+export type CvDocumentSummary = {
+  id: string;
+  title: string;
+  themeId: CvThemeId;
+  isTailored: boolean;
+  targetJobTitle: string | null;
+  updatedAt: string;
 };
