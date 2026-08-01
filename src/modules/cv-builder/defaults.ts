@@ -18,7 +18,7 @@ export function defaultCvDocument(): CvDocument {
       github: "",
       linkedin: "",
       summary:
-        "Développeur passionné par la qualité du code, les architectures scalables et l’expérience utilisateur. Expérience en TypeScript, React, Node.js et cloud.",
+        "Développeur full stack avec 3+ ans d'expérience sur produits web à fort trafic. Expert TypeScript, React et Node.js. Livraison continue, APIs performantes et code maintenable.",
     },
     skillGroups: [
       {
@@ -57,8 +57,8 @@ export function defaultCvDocument(): CvDocument {
         endDate: "",
         current: true,
         highlights: [
-          "Conception et livraison de features produit en React / Next.js",
-          "Mise en place de CI/CD et amélioration des performances API",
+          "Livraison de features produit en React et Next.js pour 50k+ utilisateurs",
+          "Réduction du temps de build CI/CD de 40% via pipelines optimisés",
         ],
         techStack: ["TypeScript", "Next.js", "PostgreSQL", "Vercel"],
       },
