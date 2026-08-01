@@ -37,6 +37,7 @@ function docToPayload(doc: CvDocument, userId: string) {
       certifications: doc.certifications,
       languages: doc.languages,
       openSource: doc.openSource,
+      tailorRecommendations: doc.tailorRecommendations ?? [],
     },
   };
 }
@@ -168,6 +169,6 @@ export async function tailorCvFromJobDescription(
     isTailored: data.is_tailored ?? false,
   };
 
-  const tailored = tailorCvForJob(source, jobDescription);
+  const { document: tailored } = tailorCvForJob(source, jobDescription);
   return saveCvDocument(tailored);
 }

@@ -16,6 +16,7 @@ import {
 import { tailorCvFromJobDescription } from "@/modules/cv-builder/actions";
 import { tailorPreviewHints } from "@/modules/cv-builder/tailor";
 import type { CvDocument } from "@/modules/cv-builder/types";
+import { TailorRecommendationsPanel } from "@/modules/cv-builder/ui/tailor-recommendations";
 
 export function JobTailorCard({
   sourceDoc,
@@ -25,18 +26,25 @@ export function JobTailorCard({
   onTailored: (doc: CvDocument) => void;
 }) {
   const [jobText, setJobText] = useState("");
+  const [lastRecommendations, setLastRecommendations] = useState(
+    sourceDoc.tailorRecommendations ?? [],
+  );
   const { run, pending } = useAsyncAction();
 
-  const hints = useMemo(() => tailorPreviewHints(jobText), [jobText]);
+  const hints = useMemo(
+    () => tailorPreviewHints(jobText, sourceDoc),
+    [jobText, sourceDoc],
+  );
 
   function handleTailor() {
     if (!sourceDoc.id) return;
     void run(
       () => tailorCvFromJobDescription(sourceDoc.id!, jobText),
       {
-        success: "CV adapté au poste et sauvegardé",
+        success: "CV adapté à partir de votre profil existant",
         error: "Impossible d'adapter le CV",
         onSuccess: (doc) => {
+          setLastRecommendations(doc.tailorRecommendations ?? []);
           onTailored(doc);
           setJobText("");
         },
@@ -53,8 +61,8 @@ export function JobTailorCard({
             <Text weight="medium">Adapter au poste</Text>
           </Cluster>
           <Text size="sm" tone="muted" className="mt-1">
-            Collez l&apos;offre d&apos;emploi : le CV sera optimisé (titre, résumé,
-            compétences et expériences) pour maximiser vos chances.
+            Collez l&apos;offre : on réorganise votre CV existant (sans copier le nom de
+            l&apos;entreprise) et on vous indique quoi mettre en avant, ajouter ou retirer.
           </Text>
         </div>
 
@@ -71,16 +79,25 @@ export function JobTailorCard({
         </div>
 
         {jobText.trim().length > 40 ? (
-          <Cluster gap={2} className="flex-wrap">
-            {hints.role ? (
-              <Badge tone="neutral">Poste : {hints.role.slice(0, 50)}</Badge>
+          <Stack gap={2}>
+            <Cluster gap={2} className="flex-wrap">
+              {hints.role ? (
+                <Badge tone="neutral">Poste ciblé : {hints.role.slice(0, 50)}</Badge>
+              ) : null}
+              {hints.keywords.slice(0, 5).map((kw) => (
+                <Badge key={kw} tone="info">
+                  {kw}
+                </Badge>
+              ))}
+            </Cluster>
+            {hints.recommendations.length > 0 ? (
+              <TailorRecommendationsPanel
+                recommendations={hints.recommendations}
+                title="Aperçu des conseils"
+                compact
+              />
             ) : null}
-            {hints.keywords.slice(0, 5).map((kw) => (
-              <Badge key={kw} tone="info">
-                {kw}
-              </Badge>
-            ))}
-          </Cluster>
+          </Stack>
         ) : null}
 
         <Button
@@ -93,8 +110,12 @@ export function JobTailorCard({
           ) : (
             <Sparkles className="h-4 w-4" />
           )}
-          {pending ? "Adaptation en cours…" : "Générer un CV parfait pour ce poste"}
+          {pending ? "Adaptation en cours…" : "Adapter mon CV pour ce poste"}
         </Button>
+
+        {lastRecommendations.length > 0 ? (
+          <TailorRecommendationsPanel recommendations={lastRecommendations} />
+        ) : null}
       </Stack>
     </Card>
   );

@@ -2,6 +2,7 @@ import { createId } from "@/modules/cv-builder/defaults";
 import type {
   CvDocument,
   CvSkillGroup,
+  CvTailorRecommendation,
 } from "@/modules/cv-builder/types";
 
 const TECH_VOCAB = [
@@ -73,6 +74,7 @@ const TECH_VOCAB = [
   "full stack",
   "fullstack",
   "frontend",
+  "back-end",
   "backend",
   "mobile",
   "react native",
@@ -91,52 +93,158 @@ const TECH_VOCAB = [
   "tdd",
 ];
 
-const ROLE_PATTERNS = [
-  /(?:nous recherchons|recherche|poste de|offre)\s*[:\-]?\s*(.{5,80})/i,
-  /(?:développeur|developer|engineer|ingénieur|architecte|lead|senior|junior)\s+[^.\n]{3,60}/i,
-  /^(.{5,80})$/m,
+const SOFT_VOCAB = [
+  "leadership",
+  "mentor",
+  "mentorat",
+  "communication",
+  "autonomie",
+  "rigoureux",
+  "équipe",
+  "team",
+  "collaboration",
+  "anglais",
+  "english",
+  "remote",
+  "télétravail",
 ];
+
+const JOB_KEYWORD_REGEX =
+  /développeur|developer|engineer|ingénieur|architecte|devops|full[\s-]?stack|front[\s-]?end|back[\s-]?end|data|mobile|lead|senior|junior/i;
+
+const ROLE_TITLE_PATTERNS = [
+  /(?:intitulé|titre)\s*(?:du poste)?\s*[:\-]\s*(.{4,70})/i,
+  /(?:poste|mission|fonction|role|rôle)\s*[:\-]\s*(.{4,70})/i,
+  /((?:senior|junior|lead|principal|staff|confirmé[e]?)\s+(?:développeur|developer|ingénieur|engineer|devops|architecte)[^.\n]{0,45})/i,
+  /((?:développeur|developer|ingénieur|engineer|devops|architecte)\s+(?:full[\s-]?stack|front[\s-]?end|back[\s-]?end|mobile|web|logiciel)[^.\n]{0,35})/i,
+  /((?:full[\s-]?stack|front[\s-]?end|back[\s-]?end|mobile)\s*(?:developer|développeur|engineer|ingénieur)?)/i,
+];
+
+const STOPWORDS = new Set([
+  "the",
+  "and",
+  "des",
+  "les",
+  "une",
+  "pour",
+  "avec",
+  "dans",
+  "sur",
+  "par",
+  "est",
+  "nous",
+  "vous",
+  "your",
+  "our",
+  "job",
+  "poste",
+  "offre",
+  "emploi",
+  "hiring",
+  "recrute",
+]);
+
+export type TailorCvResult = {
+  document: CvDocument;
+  recommendations: CvTailorRecommendation[];
+};
 
 function normalizeToken(value: string): string {
   return value.toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function formatKeyword(keyword: string): string {
+  if (keyword.length <= 3) return keyword.toUpperCase();
+  return keyword
+    .split(/[\s-]+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(keyword.includes(".") ? "." : " ");
 }
 
 function extractKeywords(jobDescription: string): string[] {
   const lower = jobDescription.toLowerCase();
   const found = new Set<string>();
 
-  for (const term of TECH_VOCAB) {
+  for (const term of [...TECH_VOCAB, ...SOFT_VOCAB]) {
     if (lower.includes(term)) found.add(term);
   }
 
   const tokens = lower.match(/[a-z+#/]{2,}(?:\.[a-z]+)?/g) ?? [];
   for (const token of tokens) {
-    if (token.length >= 3 && !["the", "and", "des", "les", "une", "pour"].includes(token)) {
-      found.add(token);
+    if (token.length >= 3 && !STOPWORDS.has(token)) found.add(token);
+  }
+
+  return [...found].slice(0, 30);
+}
+
+function detectCompanyNames(jobDescription: string): string[] {
+  const companies = new Set<string>();
+  const lines = jobDescription
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const first = lines[0];
+  if (
+    first &&
+    first.length <= 60 &&
+    !JOB_KEYWORD_REGEX.test(first) &&
+    /^[A-ZÀ-Ÿ0-9]/.test(first)
+  ) {
+    companies.add(first.replace(/\s*(recrute|hiring|jobs?|careers?).*$/i, "").trim());
+  }
+
+  const patterns = [
+    /\b(?:chez|at|@)\s+([A-ZÀ-Ÿ][\w\s&.'-]{1,45})/g,
+    /\b([A-ZÀ-Ÿ][\w\s&.'-]{2,40})\s+(?:recrute|hiring|recherche)\b/g,
+  ];
+
+  for (const pattern of patterns) {
+    for (const match of jobDescription.matchAll(pattern)) {
+      const name = match[1]?.trim();
+      if (name && name.length > 2 && !JOB_KEYWORD_REGEX.test(name)) {
+        companies.add(name);
+      }
     }
   }
 
-  return [...found].slice(0, 24);
+  return [...companies].filter((name) => name.length > 2);
 }
 
-function detectRole(jobDescription: string): string | null {
+function sanitizeRole(role: string, companyNames: string[]): string {
+  let cleaned = role.trim();
+
+  for (const company of companyNames) {
+    cleaned = cleaned.replace(new RegExp(escapeRegex(company), "gi"), "");
+  }
+
+  cleaned = cleaned
+    .replace(/\b(chez|at|@)\s+[\w\s&.'-]+/gi, "")
+    .replace(/^[\s\-:,;|]+|[\s\-:,;|]+$/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  return cleaned.slice(0, 80);
+}
+
+function detectRole(jobDescription: string, companyNames: string[]): string | null {
   const trimmed = jobDescription.trim();
   if (!trimmed) return null;
 
-  for (const pattern of ROLE_PATTERNS) {
+  for (const pattern of ROLE_TITLE_PATTERNS) {
     const match = trimmed.match(pattern);
-    if (match?.[1]) {
-      const role = match[1].replace(/\s+/g, " ").trim();
-      if (role.length >= 5 && role.length <= 80) return role;
-    }
-    if (match?.[0] && !match[1]) {
-      const role = match[0].replace(/\s+/g, " ").trim();
-      if (role.length >= 5 && role.length <= 80) return role;
-    }
+    const raw = match?.[1] ?? match?.[0];
+    if (!raw) continue;
+
+    const role = sanitizeRole(raw, companyNames);
+    if (role.length >= 4 && JOB_KEYWORD_REGEX.test(role)) return role;
   }
 
-  const firstLine = trimmed.split("\n").find((line) => line.trim().length > 4);
-  return firstLine?.trim().slice(0, 80) ?? null;
+  return null;
 }
 
 function keywordScore(text: string, keywords: string[]): number {
@@ -154,46 +262,29 @@ function sortByRelevance<T>(items: T[], keywords: string[], toText: (item: T) =>
   );
 }
 
-function tuneHighlights(highlights: string[], keywords: string[]): string[] {
-  const sorted = sortByRelevance(highlights, keywords, (h) => h);
-  return sorted.map((line) => {
-    const lower = line.toLowerCase();
-    const missing = keywords.filter((kw) => !lower.includes(kw)).slice(0, 2);
-    if (missing.length === 0 || line.length > 140) return line;
-    const extra = missing
-      .map((kw) => kw.charAt(0).toUpperCase() + kw.slice(1))
-      .join(", ");
-    return `${line} (aligné ${extra})`;
-  });
-}
-
 function reorderSkillGroups(groups: CvSkillGroup[], keywords: string[]): CvSkillGroup[] {
-  return groups.map((group) => ({
+  const sortedGroups = sortByRelevance(groups, keywords, (group) =>
+    [group.label, ...group.skills.map((s) => s.name)].join(" "),
+  );
+
+  return sortedGroups.map((group) => ({
     ...group,
     skills: sortByRelevance(
       group.skills,
       keywords,
-      (s) => `${s.name} ${s.level ?? ""}`,
+      (skill) => `${skill.name} ${skill.level ?? ""}`,
     ),
   }));
 }
 
-function buildTailoredSummary(
-  baseSummary: string,
-  role: string,
-  matchedSkills: string[],
-  keywords: string[],
-): string {
-  const skillsPhrase =
-    matchedSkills.length > 0
-      ? matchedSkills.slice(0, 6).join(", ")
-      : keywords.slice(0, 5).join(", ");
-
-  const intro = `${role}. Profil orienté vers ce poste avec expertise sur ${skillsPhrase}.`;
-  const trimmedBase = baseSummary.trim();
-  if (!trimmedBase) return intro;
-  if (trimmedBase.length < 120) return `${intro} ${trimmedBase}`;
-  return `${intro} ${trimmedBase.slice(0, 220).trim()}…`;
+function collectAllSkillNames(doc: CvDocument): string[] {
+  const names: string[] = [];
+  for (const group of doc.skillGroups) {
+    for (const skill of group.skills) {
+      names.push(skill.name);
+    }
+  }
+  return names;
 }
 
 function collectMatchingSkills(doc: CvDocument, keywords: string[]): string[] {
@@ -209,23 +300,170 @@ function collectMatchingSkills(doc: CvDocument, keywords: string[]): string[] {
   return [...new Set(names)];
 }
 
-export function tailorCvForJob(doc: CvDocument, jobDescription: string): CvDocument {
+function skillMatchesKeyword(skillName: string, keyword: string): boolean {
+  const skill = skillName.toLowerCase();
+  const kw = keyword.toLowerCase();
+  return skill.includes(kw) || kw.includes(skill);
+}
+
+function buildHeadline(currentHeadline: string, role: string | null): string {
+  if (role && role.length >= 4) return role;
+  return currentHeadline;
+}
+
+function buildTailoredSummary(
+  baseSummary: string,
+  matchedSkills: string[],
+): string {
+  const trimmed = baseSummary.trim();
+  if (matchedSkills.length === 0) return trimmed;
+
+  const focus = matchedSkills.slice(0, 5).join(", ");
+  const prefix = `Points forts pour ce poste : ${focus}.`;
+
+  if (!trimmed) return prefix;
+  if (trimmed.toLowerCase().includes(focus.toLowerCase().slice(0, 12))) {
+    return trimmed;
+  }
+
+  return `${prefix} ${trimmed}`;
+}
+
+function buildRecommendations(
+  doc: CvDocument,
+  keywords: string[],
+  matchedSkills: string[],
+): CvTailorRecommendation[] {
+  const recommendations: CvTailorRecommendation[] = [];
+  const allSkills = collectAllSkillNames(doc);
+  const techKeywords = keywords.filter((kw) => TECH_VOCAB.includes(kw));
+
+  for (const skill of matchedSkills.slice(0, 5)) {
+    recommendations.push({
+      id: createId(),
+      kind: "highlight",
+      section: "skills",
+      message: `« ${skill} » correspond à l'offre : gardez-le en tête de votre CV`,
+    });
+  }
+
+  const missingTech = techKeywords.filter(
+    (kw) => !allSkills.some((skill) => skillMatchesKeyword(skill, kw)),
+  );
+
+  for (const kw of missingTech.slice(0, 6)) {
+    recommendations.push({
+      id: createId(),
+      kind: "add",
+      section: "skills",
+      message: `Ajoutez « ${formatKeyword(kw)} » si vous maîtrisez cette technologie`,
+    });
+  }
+
+  const lowRelevanceSkills = allSkills.filter(
+    (skill) =>
+      !keywords.some((kw) => skillMatchesKeyword(skill, kw)) &&
+      !matchedSkills.includes(skill),
+  );
+
+  for (const skill of lowRelevanceSkills.slice(0, 4)) {
+    recommendations.push({
+      id: createId(),
+      kind: "reduce",
+      section: "skills",
+      message: `« ${skill} » est peu cité dans l'offre : retirez-le ou placez-le en fin de liste`,
+    });
+  }
+
+  const topExperience = sortByRelevance(doc.experiences, keywords, (exp) =>
+    [exp.role, ...exp.highlights, ...exp.techStack].join(" "),
+  )[0];
+
+  if (topExperience) {
+    recommendations.push({
+      id: createId(),
+      kind: "highlight",
+      section: "experience",
+      message: `Mettez en avant votre expérience « ${topExperience.role} » chez ${topExperience.company}`,
+    });
+  }
+
+  const weakExperiences = doc.experiences.filter(
+    (exp) => keywordScore([exp.role, ...exp.highlights].join(" "), keywords) === 0,
+  );
+
+  for (const exp of weakExperiences.slice(0, 2)) {
+    recommendations.push({
+      id: createId(),
+      kind: "reduce",
+      section: "experience",
+      message: `L'expérience « ${exp.role} » est moins alignée : gardez-la courte ou en fin de CV`,
+    });
+  }
+
+  const topProject = sortByRelevance(doc.projects, keywords, (proj) =>
+    [proj.name, proj.description, ...proj.highlights, ...proj.techStack].join(" "),
+  )[0];
+
+  if (topProject && keywordScore(topProject.name + topProject.description, keywords) > 0) {
+    recommendations.push({
+      id: createId(),
+      kind: "highlight",
+      section: "projects",
+      message: `Le projet « ${topProject.name} » est pertinent : détaillez-le en priorité`,
+    });
+  }
+
+  const softGaps = SOFT_VOCAB.filter(
+    (term) =>
+      keywords.includes(term) &&
+      !doc.profile.summary.toLowerCase().includes(term) &&
+      !doc.experiences.some((exp) =>
+        exp.highlights.some((h) => h.toLowerCase().includes(term)),
+      ),
+  );
+
+  for (const term of softGaps.slice(0, 3)) {
+    recommendations.push({
+      id: createId(),
+      kind: "manual",
+      section: "summary",
+      message: `L'offre mentionne « ${formatKeyword(term)} » : ajoutez un exemple concret dans votre résumé ou vos expériences`,
+    });
+  }
+
+  if (missingTech.length > 0) {
+    recommendations.push({
+      id: createId(),
+      kind: "manual",
+      section: "general",
+      message:
+        "Complétez manuellement les missions ou projets où vous avez utilisé les technologies manquantes",
+    });
+  }
+
+  return recommendations;
+}
+
+export function tailorCvForJob(doc: CvDocument, jobDescription: string): TailorCvResult {
   const trimmed = jobDescription.trim();
   if (!trimmed) {
     throw new Error("Collez la description du poste pour adapter le CV");
   }
 
+  const companyNames = detectCompanyNames(trimmed);
   const keywords = extractKeywords(trimmed);
-  const role = detectRole(trimmed) ?? doc.profile.headline;
+  const role = detectRole(trimmed, companyNames);
   const matchedSkills = collectMatchingSkills(doc, keywords);
+  const recommendations = buildRecommendations(doc, keywords, matchedSkills);
 
   const experiences = sortByRelevance(doc.experiences, keywords, (exp) =>
-    [exp.role, exp.company, ...exp.highlights, ...exp.techStack].join(" "),
+    [exp.role, ...exp.highlights, ...exp.techStack].join(" "),
   ).map((exp) => ({
     ...exp,
     id: createId(),
-    highlights: tuneHighlights(exp.highlights, keywords),
-    techStack: sortByRelevance(exp.techStack, keywords, (t) => t),
+    highlights: sortByRelevance(exp.highlights, keywords, (line) => line),
+    techStack: sortByRelevance(exp.techStack, keywords, (tech) => tech),
   }));
 
   const projects = sortByRelevance(doc.projects, keywords, (proj) =>
@@ -233,42 +471,55 @@ export function tailorCvForJob(doc: CvDocument, jobDescription: string): CvDocum
   ).map((proj) => ({
     ...proj,
     id: createId(),
-    highlights: tuneHighlights(proj.highlights, keywords),
-    techStack: sortByRelevance(proj.techStack, keywords, (t) => t),
+    highlights: sortByRelevance(proj.highlights, keywords, (line) => line),
+    techStack: sortByRelevance(proj.techStack, keywords, (tech) => tech),
   }));
 
   const skillGroups = reorderSkillGroups(doc.skillGroups, keywords);
-
+  const headline = buildHeadline(doc.profile.headline, role);
   const snippet = trimmed.slice(0, 500);
 
-  return {
+  const document: CvDocument = {
     ...doc,
     id: undefined,
-    title: `CV · ${role.slice(0, 60)}`,
+    title: role ? `CV · ${role.slice(0, 60)}` : `CV · ${doc.title.replace(/^CV ·\s*/, "").slice(0, 60)}`,
     isTailored: true,
-    targetJobTitle: role,
+    targetJobTitle: role ?? doc.profile.headline,
     jobDescriptionSnippet: snippet,
+    tailorRecommendations: recommendations,
     profile: {
       ...doc.profile,
-      headline: role,
-      summary: buildTailoredSummary(doc.profile.summary, role, matchedSkills, keywords),
+      headline,
+      summary: buildTailoredSummary(doc.profile.summary, matchedSkills),
     },
-    skillGroups: skillGroups.map((g) => ({ ...g, id: createId() })),
+    skillGroups: skillGroups.map((group) => ({ ...group, id: createId() })),
     experiences,
     projects,
-    education: doc.education.map((e) => ({ ...e, id: createId() })),
-    certifications: doc.certifications.map((c) => ({ ...c, id: createId() })),
-    languages: doc.languages.map((l) => ({ ...l, id: createId() })),
-    openSource: doc.openSource.map((o) => ({ ...o, id: createId() })),
+    education: doc.education.map((item) => ({ ...item, id: createId() })),
+    certifications: doc.certifications.map((item) => ({ ...item, id: createId() })),
+    languages: doc.languages.map((item) => ({ ...item, id: createId() })),
+    openSource: doc.openSource.map((item) => ({ ...item, id: createId() })),
   };
+
+  return { document, recommendations };
 }
 
-export function tailorPreviewHints(jobDescription: string): {
+export function tailorPreviewHints(
+  jobDescription: string,
+  doc?: CvDocument,
+): {
   role: string | null;
   keywords: string[];
+  recommendations: CvTailorRecommendation[];
 } {
-  return {
-    role: detectRole(jobDescription),
-    keywords: extractKeywords(jobDescription),
-  };
+  const trimmed = jobDescription.trim();
+  const companyNames = detectCompanyNames(trimmed);
+  const keywords = extractKeywords(trimmed);
+  const role = detectRole(trimmed, companyNames);
+
+  const recommendations = doc
+    ? buildRecommendations(doc, keywords, collectMatchingSkills(doc, keywords)).slice(0, 6)
+    : [];
+
+  return { role, keywords, recommendations };
 }
