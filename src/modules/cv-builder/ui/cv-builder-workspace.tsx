@@ -43,6 +43,7 @@ import {
 } from "@/modules/cv-builder/ui/cv-form";
 import { CvPreview } from "@/modules/cv-builder/ui/cv-preview";
 import { JobTailorCard } from "@/modules/cv-builder/ui/job-tailor-card";
+import { TailorRecommendationsPanel } from "@/modules/cv-builder/ui/tailor-recommendations";
 import { ThemePicker } from "@/modules/cv-builder/ui/theme-picker";
 import { cn } from "@/lib/utils";
 
@@ -246,6 +247,9 @@ export function CvBuilderWorkspace({
               />
             </Card>
             <CvPreview doc={doc} />
+            {doc.tailorRecommendations && doc.tailorRecommendations.length > 0 ? (
+              <TailorRecommendationsPanel recommendations={doc.tailorRecommendations} />
+            ) : null}
             <Card className="p-4">
               <Text weight="medium" className="mb-3">
                 Exporter

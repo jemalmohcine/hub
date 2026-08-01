@@ -1,7 +1,7 @@
 :root {
   --sidebar-w: 16rem;
   --topbar-h: 3.5rem;
-  --bottom-nav-h: 4.25rem;
+  --bottom-nav-h: 4.75rem;
   --content-max: 64rem;
   --auth-max: 28rem;
   --safe-top: env(safe-area-inset-top, 0px);

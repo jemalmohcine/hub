@@ -79,6 +79,15 @@ export type CvProfile = {
   summary: string;
 };
 
+export type CvTailorRecommendationKind = "highlight" | "add" | "reduce" | "manual";
+
+export type CvTailorRecommendation = {
+  id: string;
+  kind: CvTailorRecommendationKind;
+  section: "skills" | "experience" | "projects" | "summary" | "general";
+  message: string;
+};
+
 export type CvDocument = {
   id?: string;
   title: string;
@@ -86,6 +95,7 @@ export type CvDocument = {
   targetJobTitle?: string;
   jobDescriptionSnippet?: string;
   isTailored?: boolean;
+  tailorRecommendations?: CvTailorRecommendation[];
   profile: CvProfile;
   skillGroups: CvSkillGroup[];
   experiences: CvExperience[];

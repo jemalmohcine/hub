@@ -128,5 +128,8 @@ export function normalizeCvDocument(raw: unknown): CvDocument {
         ? data.jobDescriptionSnippet
         : undefined,
     isTailored: data.isTailored === true,
+    tailorRecommendations: Array.isArray(data.tailorRecommendations)
+      ? data.tailorRecommendations
+      : undefined,
   };
 }
