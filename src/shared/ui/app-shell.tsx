@@ -2,8 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import {
-  Briefcase,
-  FileText,
   LayoutDashboard,
   Lock,
   Settings,
@@ -15,7 +13,6 @@ import type { HubUser } from "@/core/auth/types";
 import { signOut } from "@/core/auth/actions";
 import {
   Badge,
-  BottomNavItem,
   BrandMark,
   FormSubmit,
   NavItem,
@@ -24,6 +21,7 @@ import {
 import { NotificationBell } from "@/modules/notifications/ui/notification-bell";
 import type { HubNotification } from "@/modules/notifications/types";
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
+import { MobileBottomNav } from "@/shared/ui/mobile-bottom-nav";
 
 const SHELL_COPY = {
   fr: {
@@ -138,31 +136,12 @@ export function AppShell({
       </header>
 
       <main className="lg:pl-[var(--dh-sidebar-w)]">
-        <div className="mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] pb-[calc(var(--dh-bottom-nav-h)+var(--dh-safe-bottom)+1.5rem)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)] lg:pb-[var(--dh-space-8)]">
+        <div className="mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] pb-[calc(var(--dh-bottom-nav-h)+var(--dh-safe-bottom)+2rem)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)] lg:pb-[var(--dh-space-8)]">
           {children}
         </div>
       </main>
 
-      <nav
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden"
-        style={{ paddingBottom: "var(--dh-safe-bottom)" }}
-      >
-        <div className="mx-auto grid max-w-lg grid-cols-5 gap-[var(--dh-space-1)] px-[var(--dh-space-2)] py-[var(--dh-space-2)]">
-          <BottomNavItem
-            href="/app/overview"
-            label={copy.overview}
-            icon={LayoutDashboard}
-          />
-          <BottomNavItem href="/app/ai" label={copy.ai} icon={Sparkles} />
-          <BottomNavItem href="/app/cv" label={copy.cv} icon={FileText} />
-          <BottomNavItem href="/app/jobs" label={copy.jobs} icon={Briefcase} />
-          <BottomNavItem
-            href="/app/settings"
-            label={copy.settings}
-            icon={Settings}
-          />
-        </div>
-      </nav>
+      <MobileBottomNav labels={copy} />
     </div>
   );
 }

@@ -84,12 +84,12 @@ export function BottomNavItem({
     <Link
       href={href}
       className={cn(
-        "relative flex cursor-pointer flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] transition-opacity",
+        "relative flex cursor-pointer flex-col items-center gap-0.5 rounded-xl px-1.5 py-1.5 text-[10px] leading-tight transition-opacity",
         active ? "text-primary" : "text-muted-foreground",
       )}
     >
-      <Icon className="size-5" />
-      <span>{label}</span>
+      <Icon className="size-5 shrink-0" />
+      <span className="max-w-full truncate">{label}</span>
       <span className="absolute top-1.5 right-2">
         <LinkPendingHint />
       </span>

@@ -227,9 +227,12 @@ export function JobTrackerWorkspace({
         </Card>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-5">
+      <div className="-mx-[var(--dh-space-4)] flex gap-3 overflow-x-auto px-[var(--dh-space-4)] pb-2 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-5 lg:overflow-visible lg:px-0 lg:pb-0 lg:snap-none [&::-webkit-scrollbar]:hidden">
         {JOB_STATUS_ORDER.map((status) => (
-          <div key={status} className="min-w-0">
+          <div
+            key={status}
+            className="w-[min(82vw,18rem)] shrink-0 snap-start lg:w-auto lg:shrink"
+          >
             <Cluster gap={2} className="mb-2">
               <Text size="sm" weight="medium">
                 {JOB_STATUS_LABELS[status]}
