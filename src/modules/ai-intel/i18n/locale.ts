@@ -41,10 +41,16 @@ export function resolveLocale(
 
 export const UI = {
   fr: {
+    tabAll: "Tout",
     tabUrgent: "Urgent",
     tabGithub: "GitHub",
     tabTools: "Outils",
     tabNews: "Actus",
+    sectionUrgentDesc: "Repos en explosion, prix, modèles, breaking",
+    sectionGithubDesc: "Trending, releases, repos à surveiller",
+    sectionToolsDesc: "Nouveaux outils et mises à jour produit",
+    sectionNewsDesc: "Annonces, recherche, communauté",
+    viewAll: "Voir tout",
     tabSaved: "Favoris",
     urgent: "Urgent",
     free: "Gratuit",
@@ -92,10 +98,16 @@ export const UI = {
     langEn: "EN",
   },
   en: {
+    tabAll: "All",
     tabUrgent: "Urgent",
     tabGithub: "GitHub",
     tabTools: "Tools",
     tabNews: "News",
+    sectionUrgentDesc: "Exploding repos, pricing, models, breaking",
+    sectionGithubDesc: "Trending, releases, repos to watch",
+    sectionToolsDesc: "New tools and product updates",
+    sectionNewsDesc: "Announcements, research, community",
+    viewAll: "View all",
     tabSaved: "Saved",
     urgent: "Urgent",
     free: "Free",
