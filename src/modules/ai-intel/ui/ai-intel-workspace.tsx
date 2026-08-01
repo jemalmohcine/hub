@@ -11,6 +11,11 @@ import {
   Text,
 } from "@/design-system";
 import { FeedItemRow } from "@/modules/ai-intel/ui/feed-item-row";
+import { FeedSection } from "@/modules/ai-intel/ui/feed-section";
+import {
+  FeedStatsBar,
+  type FeedTabId,
+} from "@/modules/ai-intel/ui/feed-stats-bar";
 import { ItemDetailModal } from "@/modules/ai-intel/ui/item-detail-modal";
 import {
   DateRangePicker,
@@ -19,6 +24,8 @@ import {
   type DateRangeValue,
 } from "@/modules/ai-intel/ui/date-range-picker";
 import { markAiIntelRead } from "@/modules/ai-intel/actions";
+import { ensureItemTranslation } from "@/modules/ai-intel/actions-i18n";
+import { getItemI18n } from "@/modules/ai-intel/brief";
 import { detectContentKind } from "@/modules/ai-intel/content-kind";
 import {
   isHotAlert,
@@ -30,7 +37,14 @@ import { t } from "@/modules/ai-intel/i18n/locale";
 import type { AiIntelItem } from "@/modules/ai-intel/types";
 import { cn } from "@/lib/utils";
 
-type TabId = "urgent" | "github" | "tools" | "news" | "saved";
+type TabId = FeedTabId;
+
+const SECTION_LIMITS = {
+  urgent: 5,
+  github: 6,
+  tools: 5,
+  news: 6,
+} as const;
 
 function toLocalIsoDay(raw: string | null | undefined): string {
   if (!raw) return "";
@@ -48,14 +62,22 @@ function itemDay(item: AiIntelItem): string {
 }
 
 function matchesTab(item: AiIntelItem, tab: TabId): boolean {
+  if (tab === "all") return true;
   const kind = detectContentKind(item);
   if (tab === "urgent") return isHotAlert(item);
-  // GitHub = repositories only; GitHub product news lands in News
   if (tab === "github") return kind === "repo";
   if (tab === "tools") return kind === "tool";
   if (tab === "news") return kind !== "repo" && kind !== "tool";
   if (tab === "saved") return Boolean(item.saved);
   return false;
+}
+
+function filterByQuery(items: AiIntelItem[], query: string): AiIntelItem[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return items;
+  return items.filter((item) =>
+    `${item.title} ${item.summary}`.toLowerCase().includes(q),
+  );
 }
 
 export function AiIntelWorkspace({
@@ -69,7 +91,7 @@ export function AiIntelWorkspace({
 }) {
   const locale = initialLocale;
   const copy = t(locale);
-  const [tab, setTab] = useState<TabId>("urgent");
+  const [tab, setTab] = useState<TabId>("all");
   const [q, setQ] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRangeValue>(defaultDateRange);
@@ -81,13 +103,46 @@ export function AiIntelWorkspace({
     setItems(initialItems);
   }, [initialItems]);
 
-  const tabs: { id: TabId; label: string }[] = [
-    { id: "urgent", label: copy.tabUrgent },
-    { id: "github", label: copy.tabGithub },
-    { id: "tools", label: copy.tabTools },
-    { id: "news", label: copy.tabNews },
-    { id: "saved", label: copy.tabSaved },
-  ];
+  useEffect(() => {
+    if (locale !== "fr") return;
+
+    const pending = initialItems
+      .filter((item) => !getItemI18n(item.metadata)?.translatedAt)
+      .slice(0, 12);
+    if (pending.length === 0) return;
+
+    let cancelled = false;
+
+    (async () => {
+      for (const item of pending) {
+        if (cancelled) return;
+        try {
+          const meta = await ensureItemTranslation(item.id);
+          if (cancelled) return;
+          setItems((prev) =>
+            prev.map((x) =>
+              x.id === item.id
+                ? {
+                    ...x,
+                    metadata: meta as Record<string, unknown>,
+                    summary:
+                      typeof meta.takeaway === "string"
+                        ? String(meta.takeaway).slice(0, 220)
+                        : x.summary,
+                  }
+                : x,
+            ),
+          );
+        } catch {
+          // keep original row if translation fails
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [locale, initialItems]);
 
   const datedItems = useMemo(() => {
     return items.filter((item) => itemInRange(itemDay(item), dateRange));
@@ -100,14 +155,13 @@ export function AiIntelWorkspace({
     return [...pool].sort(sortForDeveloper);
   }, [datedItems]);
 
+  const searchedPool = useMemo(
+    () => filterByQuery(visiblePool, q),
+    [visiblePool, q],
+  );
+
   const counts = useMemo(() => {
-    const base: Record<TabId, number> = {
-      urgent: 0,
-      github: 0,
-      tools: 0,
-      news: 0,
-      saved: 0,
-    };
+    const base = { urgent: 0, github: 0, tools: 0, news: 0, saved: 0 };
     for (const item of visiblePool) {
       if (matchesTab(item, "urgent")) base.urgent += 1;
       if (matchesTab(item, "github")) base.github += 1;
@@ -118,19 +172,22 @@ export function AiIntelWorkspace({
     return base;
   }, [visiblePool]);
 
+  const sections = useMemo(() => {
+    const urgent = searchedPool.filter((i) => matchesTab(i, "urgent"));
+    const github = searchedPool.filter((i) => matchesTab(i, "github"));
+    const tools = searchedPool.filter((i) => matchesTab(i, "tools"));
+    const news = searchedPool.filter((i) => matchesTab(i, "news"));
+    return { urgent, github, tools, news };
+  }, [searchedPool]);
+
   const filtered = useMemo(() => {
-    const query = q.trim().toLowerCase();
-    return visiblePool.filter((item) => {
-      if (!matchesTab(item, tab)) return false;
-      if (
-        query &&
-        !`${item.title} ${item.summary}`.toLowerCase().includes(query)
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }, [visiblePool, tab, q]);
+    return searchedPool.filter((item) => matchesTab(item, tab));
+  }, [searchedPool, tab]);
+
+  const savedUnread = useMemo(
+    () => visiblePool.filter((i) => i.saved && !i.read).length,
+    [visiblePool],
+  );
 
   const selected =
     selectedId != null
@@ -152,13 +209,51 @@ export function AiIntelWorkspace({
     });
   }
 
+  function renderItems(list: AiIntelItem[], compact = false) {
+    return list.map((item) => (
+      <FeedItemRow
+        key={item.id}
+        item={item}
+        locale={locale}
+        onOpen={openItem}
+        compact={compact}
+      />
+    ));
+  }
+
+  const emptyMessage =
+    tab === "urgent"
+      ? copy.emptyUrgent
+      : tab === "saved"
+        ? copy.noData
+        : copy.noData;
+  const emptyHint =
+    tab === "urgent" ? copy.emptyUrgentHint : copy.emptyHint;
+
   return (
-    <Stack gap={4}>
+    <Stack gap={4} className="pb-8">
       <Cluster gap={2} className="w-full items-center justify-between">
         <Text size="sm" tone="muted" className="min-w-0 truncate">
           {digestLabel || copy.digestEmpty}
         </Text>
         <Cluster gap={1} className="shrink-0">
+          <button
+            type="button"
+            aria-label={copy.tabSaved}
+            aria-pressed={tab === "saved"}
+            onClick={() => setTab(tab === "saved" ? "all" : "saved")}
+            className={cn(
+              "relative inline-flex h-9 w-9 items-center justify-center rounded-xl",
+              tab === "saved"
+                ? "bg-foreground text-background"
+                : "bg-muted text-muted-foreground",
+            )}
+          >
+            <Bookmark className="h-4 w-4" />
+            {savedUnread > 0 && tab !== "saved" ? (
+              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--dh-brand)]" />
+            ) : null}
+          </button>
           <button
             type="button"
             aria-label={copy.search}
@@ -191,69 +286,99 @@ export function AiIntelWorkspace({
         />
       ) : null}
 
-      <div className="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {tabs.map((tabItem) => {
-          const active = tab === tabItem.id;
-          const unreadInTab = visiblePool.filter(
-            (i) => matchesTab(i, tabItem.id) && !i.read,
-          ).length;
-          return (
-            <button
-              key={tabItem.id}
-              type="button"
-              onClick={() => setTab(tabItem.id)}
-              className={cn(
-                "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium transition-colors",
-                active
-                  ? "bg-foreground text-background"
-                  : "bg-muted/80 text-muted-foreground",
-              )}
-            >
-              {tabItem.id === "saved" ? (
-                <Bookmark className="h-3.5 w-3.5" />
-              ) : null}
-              {tabItem.label}
-              <span
-                className={cn(
-                  "tabular-nums text-[11px]",
-                  active ? "opacity-70" : "opacity-50",
-                )}
-              >
-                {counts[tabItem.id]}
-              </span>
-              {unreadInTab > 0 && tabItem.id !== "saved" ? (
-                <span
-                  className={cn(
-                    "h-1.5 w-1.5 rounded-full",
-                    active ? "bg-background/80" : "bg-[var(--dh-brand)]",
-                  )}
-                />
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
+      {tab !== "saved" ? (
+        <FeedStatsBar
+          counts={counts}
+          total={searchedPool.length}
+          activeTab={tab}
+          onSelect={setTab}
+          locale={locale}
+        />
+      ) : (
+        <div className="flex items-center gap-2 rounded-2xl border border-border/80 bg-card/60 px-4 py-3">
+          <Bookmark className="h-4 w-4 text-[var(--dh-brand)]" />
+          <Text weight="medium">{copy.tabSaved}</Text>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
+            {counts.saved}
+          </span>
+        </div>
+      )}
 
-      {filtered.length === 0 ? (
+      {tab === "all" ? (
+        <Stack gap={3}>
+          {sections.urgent.length > 0 ? (
+            <FeedSection
+              title={copy.tabUrgent}
+              count={sections.urgent.length}
+              description={copy.sectionUrgentDesc}
+              tone="urgent"
+              viewAllLabel={copy.viewAll}
+              onViewAll={() => setTab("urgent")}
+            >
+              {renderItems(
+                sections.urgent.slice(0, SECTION_LIMITS.urgent),
+                true,
+              )}
+            </FeedSection>
+          ) : null}
+
+          {sections.github.length > 0 ? (
+            <FeedSection
+              title={copy.tabGithub}
+              count={sections.github.length}
+              description={copy.sectionGithubDesc}
+              viewAllLabel={copy.viewAll}
+              onViewAll={() => setTab("github")}
+            >
+              {renderItems(
+                sections.github.slice(0, SECTION_LIMITS.github),
+                true,
+              )}
+            </FeedSection>
+          ) : null}
+
+          {sections.tools.length > 0 ? (
+            <FeedSection
+              title={copy.tabTools}
+              count={sections.tools.length}
+              description={copy.sectionToolsDesc}
+              viewAllLabel={copy.viewAll}
+              onViewAll={() => setTab("tools")}
+            >
+              {renderItems(sections.tools.slice(0, SECTION_LIMITS.tools), true)}
+            </FeedSection>
+          ) : null}
+
+          {sections.news.length > 0 ? (
+            <FeedSection
+              title={copy.tabNews}
+              count={sections.news.length}
+              description={copy.sectionNewsDesc}
+              viewAllLabel={copy.viewAll}
+              onViewAll={() => setTab("news")}
+            >
+              {renderItems(sections.news.slice(0, SECTION_LIMITS.news), true)}
+            </FeedSection>
+          ) : null}
+
+          {searchedPool.length === 0 ? (
+            <Card className="p-6">
+              <Heading level={3}>{copy.noData}</Heading>
+              <Text size="sm" tone="muted" className="mt-1">
+                {copy.emptyHint}
+              </Text>
+            </Card>
+          ) : null}
+        </Stack>
+      ) : filtered.length === 0 ? (
         <Card className="p-6">
-          <Heading level={3}>
-            {tab === "urgent" ? copy.emptyUrgent : copy.noData}
-          </Heading>
+          <Heading level={3}>{emptyMessage}</Heading>
           <Text size="sm" tone="muted" className="mt-1">
-            {tab === "urgent" ? copy.emptyUrgentHint : copy.emptyHint}
+            {emptyHint}
           </Text>
         </Card>
       ) : (
-        <Stack gap={1}>
-          {filtered.map((item) => (
-            <FeedItemRow
-              key={item.id}
-              item={item}
-              locale={locale}
-              onOpen={openItem}
-            />
-          ))}
-        </Stack>
+        <Stack gap={1}>{renderItems(filtered)}</Stack>
       )}
 
       <ItemDetailModal

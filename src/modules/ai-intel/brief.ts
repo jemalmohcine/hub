@@ -52,7 +52,10 @@ function pickLocalized(
   fallback: string,
 ): string {
   if (!bag) return fallback;
-  return (bag[locale] || bag.fr || bag.en || fallback).trim();
+  if (locale === "fr") {
+    return (bag.fr || fallback).trim();
+  }
+  return (bag.en || bag.fr || fallback).trim();
 }
 
 const VERDICT = {
@@ -259,7 +262,7 @@ export function explainTitle(
       return {
         title: product
           ? locale === "fr"
-            ? `${product} — breaking change`
+            ? `${product} — changement majeur`
             : `${product} — breaking change`
           : name,
         name,
@@ -450,11 +453,14 @@ export function resolveBrief(
   // stored in i18n ("Bon à savoir", …) can never surface again.
   const summary = pickClean(
     pickLocalized(i18n?.summary, locale, ""),
-    item.summary,
+    pickLocalized(i18n?.takeaway, locale, ""),
+    locale === "fr" ? readMeta(meta, "takeawayFr") : readMeta(meta, "takeawayEn"),
     pickLocalized(i18n?.about, locale, ""),
-    readMeta(meta, "tagline"),
-    readMeta(meta, "description"),
-    readMeta(meta, "about"),
+    cleanTakeaway(meta, locale),
+    locale === "en" ? readMeta(meta, "tagline") : null,
+    locale === "en" ? readMeta(meta, "description") : null,
+    locale === "en" ? readMeta(meta, "about") : null,
+    locale === "en" ? item.summary : null,
   );
 
   const storedTakeaway = pickLocalized(i18n?.takeaway, locale, "");
@@ -465,9 +471,12 @@ export function resolveBrief(
 
   const reasonsI18n =
     (locale === "fr" ? i18n?.reasons?.fr : i18n?.reasons?.en) || [];
-  const reasonsRaw = Array.isArray(meta.scoreReasons)
-    ? (meta.scoreReasons as string[])
-    : [];
+  const reasonsRaw =
+    locale === "fr"
+      ? []
+      : Array.isArray(meta.scoreReasons)
+        ? (meta.scoreReasons as string[])
+        : [];
   const why = [...reasonsI18n, ...reasonsRaw]
     .map((r) => String(r).trim())
     .filter((r) => r && !isFluff(r))

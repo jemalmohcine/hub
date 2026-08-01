@@ -21,19 +21,38 @@ import {
 } from "@/design-system";
 import { NotificationBell } from "@/modules/notifications/ui/notification-bell";
 import type { HubNotification } from "@/modules/notifications/types";
+import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
+
+const SHELL_COPY = {
+  fr: {
+    overview: "Aperçu",
+    modules: "Modules",
+    settings: "Réglages",
+    signOut: "Se déconnecter",
+  },
+  en: {
+    overview: "Overview",
+    modules: "Modules",
+    settings: "Settings",
+    signOut: "Sign out",
+  },
+} as const;
 
 export function AppShell({
   user,
   notifications = [],
+  locale = "fr",
   children,
 }: {
   user: HubUser;
   notifications?: HubNotification[];
+  locale?: AiLocale;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const modules = getSortedModules();
   const plan = user.subscription?.plan ?? "free";
+  const copy = SHELL_COPY[locale];
 
   return (
     <div className="min-h-dvh bg-background">
@@ -77,7 +96,7 @@ export function AppShell({
         <div className="space-y-[var(--dh-space-1)] border-t border-border p-[var(--dh-space-3)]">
           <NavItem
             href="/app/settings"
-            label="Settings"
+            label={copy.settings}
             icon={Settings}
             active={pathname.startsWith("/app/settings")}
           />
@@ -91,7 +110,7 @@ export function AppShell({
           ) : null}
           <form action={signOut}>
             <FormSubmit variant="ghost" className="justify-start px-[var(--dh-space-3)]">
-              Se déconnecter
+              {copy.signOut}
             </FormSubmit>
           </form>
         </div>
@@ -113,7 +132,7 @@ export function AppShell({
       </header>
 
       <main className="lg:pl-[var(--dh-sidebar-w)]">
-        <div className="mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] pb-[calc(var(--dh-bottom-nav-h)+var(--dh-safe-bottom))] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)] lg:pb-[var(--dh-space-8)]">
+        <div className="mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] pb-[calc(var(--dh-bottom-nav-h)+var(--dh-safe-bottom)+1.5rem)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)] lg:pb-[var(--dh-space-8)]">
           {children}
         </div>
       </main>
@@ -125,13 +144,13 @@ export function AppShell({
         <div className="mx-auto grid max-w-lg grid-cols-3 gap-[var(--dh-space-1)] px-[var(--dh-space-2)] py-[var(--dh-space-2)]">
           <BottomNavItem
             href="/app/overview"
-            label="Overview"
+            label={copy.overview}
             icon={LayoutDashboard}
           />
-          <BottomNavItem href="/app/ai" label="Modules" icon={Sparkles} />
+          <BottomNavItem href="/app/ai" label={copy.modules} icon={Sparkles} />
           <BottomNavItem
             href="/app/settings"
-            label="Settings"
+            label={copy.settings}
             icon={Settings}
           />
         </div>

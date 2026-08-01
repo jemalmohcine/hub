@@ -65,7 +65,7 @@ export function buildEssentialRecap(
           repoMomentum: "Momentum GitHub",
           priceChange: "Changement tarifaire",
           modelRelease: "Nouveau modèle",
-          breakingChange: "Changement breaking",
+          breakingChange: "Changement majeur",
           securityIssue: "Sécurité",
           source: "Source",
         }
@@ -96,11 +96,21 @@ export function buildEssentialRecap(
         : `+${formatStars(starsToday)} today`,
     );
   }
-  if (forks) signalLines.push(`${formatStars(forks)} forks`);
+  if (forks) {
+    signalLines.push(
+      locale === "fr"
+        ? `${formatStars(forks)} forks`
+        : `${formatStars(forks)} forks`,
+    );
+  }
   if (language) signalLines.push(language);
   if (pricing) signalLines.push(pricing);
   if (readMeta(meta, "upvotes")) {
-    signalLines.push(`${readMeta(meta, "upvotes")} upvotes`);
+    signalLines.push(
+      locale === "fr"
+        ? `${readMeta(meta, "upvotes")} votes`
+        : `${readMeta(meta, "upvotes")} upvotes`,
+    );
   }
   if (readMeta(meta, "api")) signalLines.push(`API: ${readMeta(meta, "api")}`);
 
@@ -248,7 +258,7 @@ export function pushAlertTitle(
   if (kind === "breaking") {
     return product
       ? locale === "fr"
-        ? `${product} — breaking change`
+        ? `${product} — changement majeur`
         : `${product} — breaking change`
       : explained.title;
   }

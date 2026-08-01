@@ -32,7 +32,6 @@ function formatCardDate(iso: string | null | undefined, locale: AiLocale): strin
   return d.toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", {
     day: "2-digit",
     month: "short",
-    year: "numeric",
   });
 }
 
@@ -46,13 +45,13 @@ function Chip({
   return (
     <span
       className={cn(
-        "rounded-md px-1.5 py-0.5 text-[11px] font-semibold tracking-wide",
+        "rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
         tone === "urgent" &&
           "bg-[var(--dh-danger-soft)] text-[var(--dh-danger)]",
         tone === "ok" && "bg-[var(--dh-brand-soft)] text-[var(--dh-brand)]",
         tone === "warn" &&
           "bg-[var(--dh-warning-soft)] text-[var(--dh-warning)]",
-        tone === "muted" && "bg-background/70 text-muted-foreground",
+        tone === "muted" && "bg-background/80 text-muted-foreground",
       )}
     >
       {children}
@@ -60,17 +59,16 @@ function Chip({
   );
 }
 
-/**
- * Scan-first row — read = small check on the right only (no reorder).
- */
 export function FeedItemRow({
   item,
   locale,
   onOpen,
+  compact = false,
 }: {
   item: AiIntelItem;
   locale: AiLocale;
   onOpen: (item: AiIntelItem) => void;
+  compact?: boolean;
 }) {
   const copy = t(locale);
   const meta = (item.metadata ?? {}) as Record<string, unknown>;
@@ -78,6 +76,7 @@ export function FeedItemRow({
   const recap = buildEssentialRecap(item, locale);
   const stars = prettyCount(readMetaString(meta, "stars"));
   const starsToday = prettyCount(readMetaString(meta, "starsToday"));
+  const score = readMetaString(meta, "score");
   const kind = itemKind(item);
   const pricing = pricingKind(item);
   const hot = isHotAlert(item);
@@ -99,70 +98,80 @@ export function FeedItemRow({
     );
   }
 
-  const subtitle = recap
-    .map((point) => point.teaser)
-    .filter(Boolean)
-    .slice(0, 2)
-    .join(" · ");
-
   return (
     <button
       type="button"
       onClick={() => onOpen(item)}
       aria-label={`${brief.title}. ${isRead ? copy.read : copy.unread}`}
       className={cn(
-        "mb-1.5 flex w-full items-start gap-3 rounded-2xl px-3.5 py-3.5 text-left transition-colors",
+        "mb-1.5 flex w-full items-start gap-3 rounded-2xl border border-transparent px-3 py-3 text-left transition-colors",
         "active:scale-[0.995]",
-        hot ? "bg-[var(--dh-danger-soft)]/40" : "bg-muted/35 hover:bg-muted/50",
+        hot
+          ? "border-[var(--dh-danger)]/15 bg-[var(--dh-danger-soft)]/35 hover:bg-[var(--dh-danger-soft)]/45"
+          : "bg-background/70 hover:bg-muted/45",
+        !isRead && "ring-1 ring-[var(--dh-brand)]/10",
       )}
     >
       <span className="min-w-0 flex-1">
-        <span className="mb-1.5 flex flex-wrap items-center gap-1.5">
+        <span className="mb-2 flex flex-wrap items-center gap-1">
           <Chip tone={hot ? "urgent" : contentKindTone(brief.kind)}>
             {brief.typeLabel}
           </Chip>
           {brief.product ? <Chip>{brief.product}</Chip> : null}
-          {publishedLabel ? (
-            <Chip>
-              {copy.published} {publishedLabel}
-            </Chip>
-          ) : null}
-          {kind === "repo" ? <Chip tone="ok">{copy.free}</Chip> : null}
-          {kind !== "repo" && pricing === "free" ? (
-            <Chip tone="ok">{copy.free}</Chip>
-          ) : null}
-          {kind !== "repo" && pricing === "freemium" ? (
-            <Chip>{copy.freemium}</Chip>
-          ) : null}
-          {kind !== "repo" && pricing === "paid" ? (
-            <Chip tone="warn">{copy.paid}</Chip>
-          ) : null}
           {trending ? <Chip tone="ok">{copy.trending}</Chip> : null}
           {hot ? <Chip tone="urgent">{copy.urgent}</Chip> : null}
+          {score ? (
+            <Chip tone="ok">
+              {copy.score} {score}
+            </Chip>
+          ) : null}
         </span>
 
-        <Text weight="medium" className="line-clamp-2 text-[15px] leading-snug">
+        <Text
+          weight="medium"
+          className={cn(
+            "text-balance leading-snug",
+            compact ? "line-clamp-2 text-[14px]" : "line-clamp-3 text-[15px]",
+          )}
+        >
           {brief.title}
         </Text>
 
-        {subtitle || metricParts.length > 0 ? (
-          <Text
-            size="sm"
-            tone="muted"
-            className="mt-1.5 line-clamp-2 leading-relaxed"
-          >
-            {[subtitle, ...metricParts].filter(Boolean).join(" · ")}
-          </Text>
-        ) : null}
+        <ul className="mt-2.5 space-y-1.5">
+          {recap.map((point) => (
+            <li key={point.id} className="flex gap-2 text-left">
+              <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[var(--dh-brand)]" />
+              <span className="min-w-0">
+                <span className="text-[11px] font-semibold text-foreground/85">
+                  {point.label}
+                </span>
+                <span className="mt-0.5 block text-[12px] leading-relaxed text-muted-foreground line-clamp-2">
+                  {point.teaser}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+          <span>{item.primary_source}</span>
+          {publishedLabel ? <span>· {publishedLabel}</span> : null}
+          {metricParts.length > 0 ? (
+            <span>· {metricParts.join(" · ")}</span>
+          ) : null}
+        </div>
       </span>
-      <span className="mt-2.5 flex shrink-0 items-center gap-1.5">
+
+      <span className="mt-1 flex shrink-0 flex-col items-center gap-2">
         {isRead ? (
           <Check
             className="h-4 w-4 text-[var(--dh-brand)]"
             strokeWidth={2.5}
             aria-hidden
           />
-        ) : null}
+        ) : (
+          <span className="h-2 w-2 rounded-full bg-[var(--dh-brand)]" aria-hidden />
+        )}
         <ChevronRight className="h-4 w-4 text-muted-foreground/55" />
       </span>
     </button>
