@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bell,
   CheckCheck,
@@ -11,7 +11,7 @@ import {
   Shield,
   X,
 } from "lucide-react";
-import { Button, Text } from "@/design-system";
+import { Button, Text, useAsyncAction } from "@/design-system";
 import {
   Dialog,
   DialogDescription,
@@ -86,7 +86,7 @@ export function NotificationBell({
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<NotificationCategory | "all">("all");
   const [items, setItems] = useState(initialNotifications);
-  const [pending, startTransition] = useTransition();
+  const { run, pending } = useAsyncAction();
 
   useEffect(() => {
     setItems(initialNotifications);
@@ -110,25 +110,34 @@ export function NotificationBell({
   }, [unread]);
 
   function openAndMark(n: HubNotification) {
-    startTransition(async () => {
-      if (!n.read) {
-        await markNotificationRead(n.id);
-        setItems((prev) =>
-          prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)),
-        );
-      }
-      setOpen(false);
-      if (n.href) router.push(n.href);
-    });
+    void run(
+      async () => {
+        if (!n.read) {
+          await markNotificationRead(n.id);
+          setItems((prev) =>
+            prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)),
+          );
+        }
+        setOpen(false);
+        if (n.href) router.push(n.href);
+      },
+      { silent: true },
+    );
   }
 
   function markAll() {
     const ids = unread.map((n) => n.id);
     if (ids.length === 0) return;
-    startTransition(async () => {
-      await markAllNotificationsRead(ids);
-      setItems((prev) => prev.map((n) => ({ ...n, read: true })));
-    });
+    void run(
+      async () => {
+        await markAllNotificationsRead(ids);
+        setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+      },
+      {
+        success: "Toutes les notifications sont lues",
+        error: "Impossible de marquer les notifications",
+      },
+    );
   }
 
   return (

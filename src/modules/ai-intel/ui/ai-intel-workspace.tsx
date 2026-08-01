@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Bookmark, Search } from "lucide-react";
 import {
   Card,
@@ -36,6 +36,7 @@ import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
 import { t } from "@/modules/ai-intel/i18n/locale";
 import type { AiIntelItem } from "@/modules/ai-intel/types";
 import { cn } from "@/lib/utils";
+import { useAsyncAction } from "@/design-system";
 
 type TabId = FeedTabId;
 
@@ -97,7 +98,7 @@ export function AiIntelWorkspace({
   const [dateRange, setDateRange] = useState<DateRangeValue>(defaultDateRange);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [items, setItems] = useState(initialItems);
-  const [, startTransition] = useTransition();
+  const { run } = useAsyncAction();
 
   useEffect(() => {
     setItems(initialItems);
@@ -200,13 +201,7 @@ export function AiIntelWorkspace({
     setItems((prev) =>
       prev.map((x) => (x.id === item.id ? { ...x, read: true } : x)),
     );
-    startTransition(async () => {
-      try {
-        await markAiIntelRead(item.id);
-      } catch {
-        // Migration may not be applied yet; optimistic UI still marks as read
-      }
-    });
+    void run(() => markAiIntelRead(item.id), { silent: true });
   }
 
   function renderItems(list: AiIntelItem[], compact = false) {

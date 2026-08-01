@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { ChevronDown, ExternalLink, Languages } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ChevronDown, ExternalLink, Languages, Loader2 } from "lucide-react";
 import {
   Badge,
   Button,
   Cluster,
   Stack,
   Text,
+  useAsyncAction,
 } from "@/design-system";
 import {
   Dialog,
@@ -95,7 +96,7 @@ export function ItemDetailModal({
   onMetadataUpdate?: (itemId: string, metadata: Record<string, unknown>) => void;
 }) {
   const copy = t(locale);
-  const [pending, startTransition] = useTransition();
+  const { run, pending } = useAsyncAction();
   const [localItem, setLocalItem] = useState(item);
   const [expandedPoint, setExpandedPoint] = useState<string | null>(null);
 
@@ -109,17 +110,21 @@ export function ItemDetailModal({
     const i18n = getItemI18n((localItem.metadata ?? {}) as Record<string, unknown>);
     if (i18n?.translatedAt) return;
 
-    startTransition(async () => {
-      try {
+    void run(
+      async () => {
         const meta = await ensureItemTranslation(localItem.id);
         setLocalItem((prev) =>
           prev ? { ...prev, metadata: meta as Record<string, unknown> } : prev,
         );
         onMetadataUpdate?.(localItem.id, meta as Record<string, unknown>);
-      } catch {
-        // keep original language if translation fails
-      }
-    });
+      },
+      {
+        silent: true,
+        onError: () => {
+          /* keep original language */
+        },
+      },
+    );
   }, [open, localItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!localItem) return null;
@@ -175,7 +180,12 @@ export function ItemDetailModal({
                 </span>
               </Badge>
             ) : pending ? (
-              <Badge tone="neutral">…</Badge>
+              <Badge tone="neutral">
+                <span className="inline-flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  …
+                </span>
+              </Badge>
             ) : null}
           </Cluster>
           <DialogTitle className="text-balance text-xl leading-snug">

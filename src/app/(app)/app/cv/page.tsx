@@ -63,7 +63,7 @@ export default async function CvBuilderPage() {
     <>
       <PageHeader
         title="CV Builder"
-        description="CV développeur — profil, stack, projets, open source. 4 thèmes, export PDF."
+        description="CV développeur : profil, stack, projets, open source. 4 thèmes, export PDF."
       />
       <CvBuilderWorkspace initialDoc={initialDoc} />
     </>

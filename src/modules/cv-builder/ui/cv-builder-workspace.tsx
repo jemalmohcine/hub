@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import {
   Download,
   Eye,
   FileText,
+  Loader2,
   Palette,
   Save,
 } from "lucide-react";
@@ -14,6 +15,7 @@ import {
   Cluster,
   Stack,
   Text,
+  useAsyncAction,
 } from "@/design-system";
 import { saveCvDocument } from "@/modules/cv-builder/actions";
 import { defaultCvDocument } from "@/modules/cv-builder/defaults";
@@ -43,8 +45,7 @@ export function CvBuilderWorkspace({
   const [formSection, setFormSection] = useState<CvFormSection>("profile");
   const [panel, setPanel] = useState<WorkspacePanel>("edit");
   const [saved, setSaved] = useState(true);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
+  const { run, pending } = useAsyncAction();
 
   useEffect(() => {
     if (initialDoc) setDoc(initialDoc);
@@ -56,14 +57,10 @@ export function CvBuilderWorkspace({
   }
 
   function handleSave() {
-    setSaveError(null);
-    startTransition(async () => {
-      try {
-        await saveCvDocument(doc);
-        setSaved(true);
-      } catch (e) {
-        setSaveError(e instanceof Error ? e.message : "Erreur de sauvegarde");
-      }
+    void run(() => saveCvDocument(doc), {
+      success: "CV sauvegardé",
+      error: "Impossible de sauvegarder le CV",
+      onSuccess: () => setSaved(true),
     });
   }
 
@@ -84,17 +81,21 @@ export function CvBuilderWorkspace({
         <Text size="sm" tone="muted">
           {saved ? "Sauvegardé" : "Modifications non sauvegardées"}
         </Text>
-        <Button type="button" size="sm" variant="outline" onClick={handleSave}>
-          <Save className="h-4 w-4" />
-          Sauvegarder
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={pending}
+          onClick={handleSave}
+        >
+          {pending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4" />
+          )}
+          {pending ? "Sauvegarde…" : "Sauvegarder"}
         </Button>
       </Cluster>
-
-      {saveError ? (
-        <Card className="border-[var(--dh-danger)]/30 bg-[var(--dh-danger-soft)]/20 p-3">
-          <Text size="sm">{saveError}</Text>
-        </Card>
-      ) : null}
 
       <div className="flex gap-1 overflow-x-auto pb-0.5 lg:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {mobileTabs.map((tab) => {
@@ -179,7 +180,14 @@ function ExportButtons({ doc }: { doc: CvDocument }) {
         <Download className="h-4 w-4" />
         Exporter en PDF
       </Button>
-      <Button type="button" variant="outline" onClick={() => exportCvMarkdown(doc)}>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => {
+          exportCvMarkdown(doc);
+          toast.success("Markdown téléchargé");
+        }}
+      >
         <FileText className="h-4 w-4" />
         Télécharger Markdown
       </Button>
