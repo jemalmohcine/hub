@@ -19,6 +19,8 @@ import {
   type DateRangeValue,
 } from "@/modules/ai-intel/ui/date-range-picker";
 import { markAiIntelRead } from "@/modules/ai-intel/actions";
+import { ensureItemTranslation } from "@/modules/ai-intel/actions-i18n";
+import { getItemI18n } from "@/modules/ai-intel/brief";
 import { detectContentKind } from "@/modules/ai-intel/content-kind";
 import {
   isHotAlert,
@@ -80,6 +82,48 @@ export function AiIntelWorkspace({
   useEffect(() => {
     setItems(initialItems);
   }, [initialItems]);
+
+  // Pre-translate feed items so FR UI never shows English fallbacks.
+  useEffect(() => {
+    if (locale !== "fr") return;
+
+    const pending = initialItems
+      .filter((item) => !getItemI18n(item.metadata)?.translatedAt)
+      .slice(0, 12);
+    if (pending.length === 0) return;
+
+    let cancelled = false;
+
+    (async () => {
+      for (const item of pending) {
+        if (cancelled) return;
+        try {
+          const meta = await ensureItemTranslation(item.id);
+          if (cancelled) return;
+          setItems((prev) =>
+            prev.map((x) =>
+              x.id === item.id
+                ? {
+                    ...x,
+                    metadata: meta as Record<string, unknown>,
+                    summary:
+                      typeof meta.takeaway === "string"
+                        ? String(meta.takeaway).slice(0, 220)
+                        : x.summary,
+                  }
+                : x,
+            ),
+          );
+        } catch {
+          // keep original row if translation fails
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [locale, initialItems]);
 
   const tabs: { id: TabId; label: string }[] = [
     { id: "urgent", label: copy.tabUrgent },
@@ -153,7 +197,7 @@ export function AiIntelWorkspace({
   }
 
   return (
-    <Stack gap={4}>
+    <Stack gap={4} className="pb-8">
       <Cluster gap={2} className="w-full items-center justify-between">
         <Text size="sm" tone="muted" className="min-w-0 truncate">
           {digestLabel || copy.digestEmpty}

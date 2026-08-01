@@ -149,7 +149,7 @@ export function ItemDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto pb-[calc(var(--dh-safe-bottom)+0.75rem)] sm:max-w-lg">
         <DialogHeader>
           <Cluster gap={2} className="mb-2 flex-wrap">
             {isHotAlert(localItem) ? (
