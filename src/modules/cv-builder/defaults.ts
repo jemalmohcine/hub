@@ -10,7 +10,7 @@ export function defaultCvDocument(): CvDocument {
     themeId: "modern",
     profile: {
       fullName: "",
-      headline: "Développeur Full-Stack",
+      headline: "Développeur Full Stack",
       email: "",
       phone: "",
       location: "",
@@ -51,7 +51,7 @@ export function defaultCvDocument(): CvDocument {
       {
         id: createId(),
         company: "Entreprise",
-        role: "Développeur Full-Stack",
+        role: "Développeur Full Stack",
         location: "Paris",
         startDate: "2022-01",
         endDate: "",
@@ -68,7 +68,7 @@ export function defaultCvDocument(): CvDocument {
         id: createId(),
         name: "Projet personnel",
         url: "",
-        description: "Application web full-stack avec authentification et API REST.",
+        description: "Application web full stack avec authentification et API REST.",
         highlights: [
           "Architecture modulaire et tests automatisés",
           "Déploiement continu sur Vercel",

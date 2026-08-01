@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { IBM_Plex_Mono, Sora } from "next/font/google";
 import { PwaRegister } from "@/shared/ui/pwa-register";
-import { NavigationProgress, ThemeProvider } from "@/design-system";
+import { NavigationProgress, ThemeProvider, ToastProvider } from "@/design-system";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
@@ -71,11 +71,13 @@ export default function RootLayout({
     >
       <body className="min-h-full font-sans">
         <ThemeProvider>
-          <Suspense fallback={null}>
-            <NavigationProgress />
-          </Suspense>
-          {children}
-          <PwaRegister />
+          <ToastProvider>
+            <Suspense fallback={null}>
+              <NavigationProgress />
+            </Suspense>
+            {children}
+            <PwaRegister />
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

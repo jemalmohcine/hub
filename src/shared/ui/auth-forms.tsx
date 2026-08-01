@@ -22,6 +22,7 @@ import {
   PasswordInput,
   Stack,
   Text,
+  useActionToast,
 } from "@/design-system";
 import {
   validateChangePassword,
@@ -61,6 +62,7 @@ function clearField(
 
 export function SignInForm({ next }: { next?: string }) {
   const [state, action, pending] = useActionState(signInWithPassword, null);
+  useActionToast(state, { error: "Connexion impossible" });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isPending, startTransition] = useTransition();
 
@@ -138,6 +140,7 @@ export function SignInForm({ next }: { next?: string }) {
 
 export function SignUpForm() {
   const [state, action, pending] = useActionState(signUpWithPassword, null);
+  useActionToast(state, { error: "Création de compte impossible" });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isPending, startTransition] = useTransition();
 
@@ -230,6 +233,10 @@ export function SignUpForm() {
 
 export function ForgotPasswordForm() {
   const [state, action, pending] = useActionState(requestPasswordReset, null);
+  useActionToast(state, {
+    success: "Email envoyé si le compte existe",
+    error: "Impossible d'envoyer l'email",
+  });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isPending, startTransition] = useTransition();
   const busy = pending || isPending;
@@ -288,6 +295,10 @@ export function ForgotPasswordForm() {
 
 export function ResetPasswordForm() {
   const [state, action, pending] = useActionState(resetPassword, null);
+  useActionToast(state, {
+    success: "Mot de passe mis à jour",
+    error: "Impossible de réinitialiser le mot de passe",
+  });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isPending, startTransition] = useTransition();
   const busy = pending || isPending;
@@ -343,6 +354,10 @@ export function ResetPasswordForm() {
 
 export function ChangePasswordForm() {
   const [state, action, pending] = useActionState(changePassword, null);
+  useActionToast(state, {
+    success: "Mot de passe changé",
+    error: "Impossible de changer le mot de passe",
+  });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isPending, startTransition] = useTransition();
   const busy = pending || isPending;

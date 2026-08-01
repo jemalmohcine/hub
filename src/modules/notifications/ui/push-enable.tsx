@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { Bell, BellOff, BellRing } from "lucide-react";
-import { Button, Text } from "@/design-system";
+import { useEffect, useState } from "react";
+import { Bell, BellOff, BellRing, Loader2 } from "lucide-react";
+import { Button, Text, useAsyncAction } from "@/design-system";
 import {
   removePushSubscription,
   savePushSubscription,
@@ -102,28 +102,30 @@ function usePushStatus() {
 /** Full card for Settings — same hub notifs, on the phone. */
 export function PushEnableCard() {
   const { status, setStatus, vapidKey } = usePushStatus();
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const { run, pending } = useAsyncAction();
 
   function enable() {
-    setError(null);
-    startTransition(async () => {
-      try {
+    void run(
+      async () => {
         if (!vapidKey) throw new Error("Clé VAPID manquante");
         const result = await ensureSubscription(vapidKey);
         if (result.status === "granted") setStatus("on");
         else setStatus(result.status === "denied" ? "denied" : "off");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-        setStatus("off");
-      }
-    });
+        if (result.status === "denied") {
+          throw new Error("Permission refusée par le navigateur");
+        }
+      },
+      {
+        success: "Notifications téléphone activées",
+        error: (err) =>
+          err instanceof Error ? err.message : "Activation impossible",
+      },
+    );
   }
 
   function disable() {
-    setError(null);
-    startTransition(async () => {
-      try {
+    void run(
+      async () => {
         const reg = await navigator.serviceWorker.ready;
         const sub = await reg.pushManager.getSubscription();
         if (sub) {
@@ -131,10 +133,12 @@ export function PushEnableCard() {
           await sub.unsubscribe();
         }
         setStatus("off");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-      }
-    });
+      },
+      {
+        success: "Notifications téléphone désactivées",
+        error: "Impossible de désactiver les notifications",
+      },
+    );
   }
 
   if (status === "loading") return null;
@@ -178,11 +182,6 @@ export function PushEnableCard() {
               iPhone : Safari → Partager → Sur l’écran d’accueil, puis active ici.
             </Text>
           ) : null}
-          {error ? (
-            <Text size="sm" className="mt-2 text-[var(--dh-danger)]">
-              {error}
-            </Text>
-          ) : null}
           <div className="mt-3">
             {status === "on" ? (
               <Button
@@ -192,11 +191,25 @@ export function PushEnableCard() {
                 disabled={pending}
                 onClick={disable}
               >
-                Désactiver
+                {pending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Désactivation…
+                  </>
+                ) : (
+                  "Désactiver"
+                )}
               </Button>
             ) : status === "denied" ? null : (
               <Button type="button" size="sm" disabled={pending} onClick={enable}>
-                {pending ? "Activation…" : "Recevoir les notifs sur le téléphone"}
+                {pending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Activation…
+                  </>
+                ) : (
+                  "Recevoir les notifs sur le téléphone"
+                )}
               </Button>
             )}
           </div>
@@ -209,7 +222,7 @@ export function PushEnableCard() {
 /** Compact banner inside the notifications panel. */
 export function PushEnableBanner({ className }: { className?: string }) {
   const { status, setStatus, vapidKey } = usePushStatus();
-  const [pending, startTransition] = useTransition();
+  const { run, pending } = useAsyncAction();
 
   if (status === "loading" || status === "unsupported" || status === "on" || status === "denied") {
     return null;
@@ -231,16 +244,21 @@ export function PushEnableBanner({ className }: { className?: string }) {
         size="sm"
         disabled={pending || !vapidKey}
         onClick={() => {
-          startTransition(async () => {
-            if (!vapidKey) return;
-            try {
+          void run(
+            async () => {
+              if (!vapidKey) throw new Error("Clé VAPID manquante");
               const result = await ensureSubscription(vapidKey);
               if (result.status === "granted") setStatus("on");
               else setStatus(result.status === "denied" ? "denied" : "off");
-            } catch {
-              setStatus("off");
-            }
-          });
+              if (result.status !== "granted") {
+                throw new Error("Activation refusée");
+              }
+            },
+            {
+              success: "Notifications activées",
+              error: "Impossible d'activer les notifications",
+            },
+          );
         }}
         className="h-8 shrink-0 px-2.5 text-xs"
       >

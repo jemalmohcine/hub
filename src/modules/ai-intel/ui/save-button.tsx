@@ -1,8 +1,7 @@
 "use client";
 
-import { useTransition } from "react";
-import { Bookmark } from "lucide-react";
-import { Button } from "@/design-system";
+import { Bookmark, Loader2 } from "lucide-react";
+import { Button, useAsyncAction } from "@/design-system";
 import { toggleAiIntelSave } from "@/modules/ai-intel/actions";
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
 import { t } from "@/modules/ai-intel/i18n/locale";
@@ -17,7 +16,7 @@ export function SaveButton({
   saved: boolean;
   locale?: AiLocale;
 }) {
-  const [pending, startTransition] = useTransition();
+  const { run, pending } = useAsyncAction();
   const copy = t(locale);
 
   return (
@@ -29,12 +28,17 @@ export function SaveButton({
       aria-pressed={saved}
       aria-label={saved ? copy.savedBtn : copy.save}
       onClick={() => {
-        startTransition(async () => {
-          await toggleAiIntelSave(itemId);
+        void run(() => toggleAiIntelSave(itemId), {
+          success: saved ? "Retiré des favoris" : "Ajouté aux favoris",
+          error: "Impossible de mettre à jour les favoris",
         });
       }}
     >
-      <Bookmark className={cn("h-4 w-4", saved && "fill-current")} />
+      {pending ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Bookmark className={cn("h-4 w-4", saved && "fill-current")} />
+      )}
       {saved ? copy.savedBtn : copy.save}
     </Button>
   );

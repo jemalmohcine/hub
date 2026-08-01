@@ -22,16 +22,17 @@ import {
   Select,
   Stack,
   Text,
+  useActionToast,
 } from "@/design-system";
 
 function ResultAlert({ state }: { state: ActionResult | null }) {
-  if (!state) return null;
-  if (state.ok) return <Alert tone="success">Enregistré.</Alert>;
+  if (!state || state.ok) return null;
   return <Alert tone="danger">{state.error}</Alert>;
 }
 
 export function ProfileForm({ user }: { user: HubUser }) {
   const [state, action, pending] = useActionState(updateProfile, null);
+  useActionToast(state, { success: "Profil mis à jour" });
 
   return (
     <Form action={action}>
@@ -76,6 +77,7 @@ export function ProfileForm({ user }: { user: HubUser }) {
 
 export function PreferencesForm({ user }: { user: HubUser }) {
   const [state, action, pending] = useActionState(updatePreferences, null);
+  useActionToast(state, { success: "Préférences enregistrées" });
   const prefs = user.preferences;
   const { setTheme } = useTheme();
   const initialLocale = (() => {
@@ -188,6 +190,7 @@ export function PreferencesForm({ user }: { user: HubUser }) {
 
 export function BillingForm({ user }: { user: HubUser }) {
   const [state, action, pending] = useActionState(mockUpgradePlan, null);
+  useActionToast(state, { success: "Plan mis à jour" });
   const plan = user.subscription?.plan ?? "free";
 
   return (

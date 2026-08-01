@@ -149,7 +149,7 @@ export function CvForm({
             <Input
               value={doc.profile.headline}
               onChange={(e) => patchProfile("headline", e.target.value)}
-              placeholder="Développeur Full Stack · React & Node.js"
+              placeholder="Développeur Full Stack · React et Node.js"
             />
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -595,7 +595,7 @@ export function CvForm({
                   <Input
                     className="flex-1"
                     value={oss.name}
-                    placeholder="nom-du-repo"
+                    placeholder="nom du repo"
                     onChange={(e) => {
                       const openSource = [...doc.openSource];
                       openSource[oi] = { ...oss, name: e.target.value };
