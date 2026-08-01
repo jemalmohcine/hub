@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import {
+  FileText,
   LayoutDashboard,
   Lock,
   Settings,
@@ -26,13 +27,15 @@ import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
 const SHELL_COPY = {
   fr: {
     overview: "Aperçu",
-    modules: "Modules",
+    ai: "AI",
+    cv: "CV",
     settings: "Réglages",
     signOut: "Se déconnecter",
   },
   en: {
     overview: "Overview",
-    modules: "Modules",
+    ai: "AI",
+    cv: "CV",
     settings: "Settings",
     signOut: "Sign out",
   },
@@ -141,13 +144,14 @@ export function AppShell({
         className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden"
         style={{ paddingBottom: "var(--dh-safe-bottom)" }}
       >
-        <div className="mx-auto grid max-w-lg grid-cols-3 gap-[var(--dh-space-1)] px-[var(--dh-space-2)] py-[var(--dh-space-2)]">
+        <div className="mx-auto grid max-w-lg grid-cols-4 gap-[var(--dh-space-1)] px-[var(--dh-space-2)] py-[var(--dh-space-2)]">
           <BottomNavItem
             href="/app/overview"
             label={copy.overview}
             icon={LayoutDashboard}
           />
-          <BottomNavItem href="/app/ai" label={copy.modules} icon={Sparkles} />
+          <BottomNavItem href="/app/ai" label={copy.ai} icon={Sparkles} />
+          <BottomNavItem href="/app/cv" label={copy.cv} icon={FileText} />
           <BottomNavItem
             href="/app/settings"
             label={copy.settings}
