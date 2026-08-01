@@ -5,7 +5,7 @@ import {
   Download,
   Eye,
   FileText,
-  Pencil,
+  Palette,
   Save,
 } from "lucide-react";
 import {
@@ -23,12 +23,16 @@ import {
   exportCvPdf,
 } from "@/modules/cv-builder/export";
 import type { CvDocument } from "@/modules/cv-builder/types";
-import { CvForm } from "@/modules/cv-builder/ui/cv-form";
+import {
+  CvForm,
+  CvFormTabs,
+  type CvFormSection,
+} from "@/modules/cv-builder/ui/cv-form";
 import { CvPreview } from "@/modules/cv-builder/ui/cv-preview";
 import { ThemePicker } from "@/modules/cv-builder/ui/theme-picker";
 import { cn } from "@/lib/utils";
 
-type Panel = "edit" | "preview" | "themes" | "export";
+type WorkspacePanel = "edit" | "preview" | "themes" | "export";
 
 export function CvBuilderWorkspace({
   initialDoc,
@@ -36,7 +40,8 @@ export function CvBuilderWorkspace({
   initialDoc: CvDocument | null;
 }) {
   const [doc, setDoc] = useState<CvDocument>(initialDoc ?? defaultCvDocument());
-  const [panel, setPanel] = useState<Panel>("edit");
+  const [formSection, setFormSection] = useState<CvFormSection>("profile");
+  const [panel, setPanel] = useState<WorkspacePanel>("edit");
   const [saved, setSaved] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -62,11 +67,15 @@ export function CvBuilderWorkspace({
     });
   }
 
-  const tabs: Array<{ id: Panel; label: string; icon: typeof Pencil }> = [
-    { id: "edit", label: "Éditer", icon: Pencil },
+  const mobileTabs: Array<{
+    id: WorkspacePanel;
+    label: string;
+    icon: typeof Eye;
+  }> = [
+    { id: "edit", label: "Éditer", icon: FileText },
     { id: "preview", label: "Aperçu", icon: Eye },
-    { id: "themes", label: "Thèmes", icon: FileText },
-    { id: "export", label: "Exporter", icon: Download },
+    { id: "themes", label: "Thèmes", icon: Palette },
+    { id: "export", label: "Export", icon: Download },
   ];
 
   return (
@@ -75,12 +84,10 @@ export function CvBuilderWorkspace({
         <Text size="sm" tone="muted">
           {saved ? "Sauvegardé" : "Modifications non sauvegardées"}
         </Text>
-        <Cluster gap={2}>
-          <Button type="button" size="sm" variant="outline" onClick={handleSave}>
-            <Save className="h-4 w-4" />
-            Sauvegarder
-          </Button>
-        </Cluster>
+        <Button type="button" size="sm" variant="outline" onClick={handleSave}>
+          <Save className="h-4 w-4" />
+          Sauvegarder
+        </Button>
       </Cluster>
 
       {saveError ? (
@@ -89,8 +96,8 @@ export function CvBuilderWorkspace({
         </Card>
       ) : null}
 
-      <div className="flex gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
-        {tabs.map((tab) => {
+      <div className="flex gap-1 overflow-x-auto pb-0.5 lg:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {mobileTabs.map((tab) => {
           const Icon = tab.icon;
           const active = panel === tab.id;
           return (
@@ -114,19 +121,20 @@ export function CvBuilderWorkspace({
 
       <div className="hidden gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <Stack gap={3}>
-          <Card className="p-4">
-            <Text weight="medium" className="mb-3">
-              Thème
-            </Text>
-            <ThemePicker
-              value={doc.themeId}
-              onChange={(themeId) => update({ ...doc, themeId })}
-            />
-          </Card>
-          <CvForm doc={doc} onChange={update} />
+          <CvFormTabs active={formSection} onChange={setFormSection} />
+          <CvForm doc={doc} onChange={update} section={formSection} />
         </Stack>
         <div className="sticky top-24 self-start">
           <Stack gap={3}>
+            <Card className="p-4">
+              <Text weight="medium" className="mb-3">
+                Thème
+              </Text>
+              <ThemePicker
+                value={doc.themeId}
+                onChange={(themeId) => update({ ...doc, themeId })}
+              />
+            </Card>
             <CvPreview doc={doc} />
             <Card className="p-4">
               <Text weight="medium" className="mb-3">
@@ -139,7 +147,12 @@ export function CvBuilderWorkspace({
       </div>
 
       <div className="lg:hidden">
-        {panel === "edit" ? <CvForm doc={doc} onChange={update} /> : null}
+        {panel === "edit" ? (
+          <Stack gap={3}>
+            <CvFormTabs active={formSection} onChange={setFormSection} />
+            <CvForm doc={doc} onChange={update} section={formSection} />
+          </Stack>
+        ) : null}
         {panel === "preview" ? <CvPreview doc={doc} /> : null}
         {panel === "themes" ? (
           <Card className="p-4">
@@ -172,11 +185,11 @@ function ExportButtons({ doc }: { doc: CvDocument }) {
       </Button>
       <Button type="button" variant="outline" onClick={() => exportCvJson(doc)}>
         <FileText className="h-4 w-4" />
-        Télécharger JSON (backup)
+        Télécharger JSON
       </Button>
       <Text size="sm" tone="muted">
-        Le PDF s’ouvre via l’impression du navigateur — choisissez « Enregistrer
-        au format PDF ».
+        Le PDF utilise l’impression du navigateur. Choisissez « Enregistrer au
+        format PDF ».
       </Text>
     </Stack>
   );

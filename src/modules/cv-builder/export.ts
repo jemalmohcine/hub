@@ -9,19 +9,34 @@ function esc(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function formatPeriod(
-  start: string,
-  end: string,
-  current: boolean,
-): string {
-  const a = start || "—";
-  const b = current || !end ? "Présent" : end;
-  return `${a} — ${b}`;
+/** Recruiter friendly date: "2022" or "Jan 2024 à Présent" */
+function formatPeriod(start: string, end: string, current: boolean): string {
+  const a = formatDateLabel(start) || "…";
+  const b = current || !end ? "Présent" : formatDateLabel(end);
+  return `${a} à ${b}`;
 }
 
-function contactLine(doc: CvDocument): string {
+function formatDateLabel(raw: string): string {
+  if (!raw) return "";
+  if (/^\d{4}$/.test(raw)) return raw;
+  if (/^\d{4}-\d{2}$/.test(raw)) {
+    const [y, m] = raw.split("-");
+    const months = [
+      "Jan", "Fév", "Mar", "Avr", "Mai", "Juin",
+      "Juil", "Aoû", "Sep", "Oct", "Nov", "Déc",
+    ];
+    return `${months[Number(m) - 1] ?? m} ${y}`;
+  }
+  return raw;
+}
+
+function joinParts(parts: string[], sep = " · "): string {
+  return parts.filter(Boolean).map(esc).join(sep);
+}
+
+function contactItems(doc: CvDocument): string[] {
   const { profile } = doc;
-  const parts = [
+  return [
     profile.email,
     profile.phone,
     profile.location,
@@ -29,7 +44,22 @@ function contactLine(doc: CvDocument): string {
     profile.github,
     profile.linkedin,
   ].filter(Boolean);
-  return parts.map(esc).join(" · ");
+}
+
+function skillGroupsHtml(doc: CvDocument): string {
+  return doc.skillGroups
+    .filter((g) => g.skills.some((s) => s.name.trim()))
+    .map(
+      (g) => `
+      <div class="skill-group">
+        <h4>${esc(g.label)}</h4>
+        <div class="chips">${g.skills
+          .filter((s) => s.name.trim())
+          .map((s) => `<span class="chip">${esc(s.name)}</span>`)
+          .join("")}</div>
+      </div>`,
+    )
+    .join("");
 }
 
 function experienceBlock(exp: CvExperience): string {
@@ -39,7 +69,7 @@ function experienceBlock(exp: CvExperience): string {
     .join("");
   const tech =
     exp.techStack.filter(Boolean).length > 0
-      ? `<p class="tech">${exp.techStack.map(esc).join(" · ")}</p>`
+      ? `<div class="tech-row">${exp.techStack.map((t) => `<span class="chip chip-sm">${esc(t)}</span>`).join("")}</div>`
       : "";
 
   return `
@@ -47,40 +77,28 @@ function experienceBlock(exp: CvExperience): string {
       <div class="block-head">
         <div>
           <h3>${esc(exp.role)}</h3>
-          <p class="sub">${esc(exp.company)}${exp.location ? ` · ${esc(exp.location)}` : ""}</p>
+          <p class="sub">${joinParts([exp.company, exp.location ?? ""])}</p>
         </div>
         <span class="dates">${esc(formatPeriod(exp.startDate, exp.endDate, exp.current))}</span>
       </div>
       ${highlights ? `<ul>${highlights}</ul>` : ""}
       ${tech}
-    </article>
-  `;
+    </article>`;
+}
+
+function section(title: string, body: string): string {
+  if (!body.trim()) return "";
+  return `<section class="cv-section"><h2>${esc(title)}</h2>${body}</section>`;
 }
 
 export function buildCvHtml(doc: CvDocument): string {
   const theme = getTheme(doc.themeId);
-  const isTech = doc.themeId === "tech";
-  const isModern = doc.themeId === "modern";
-  const isClassic = doc.themeId === "classic";
-
-  const skillsHtml = doc.skillGroups
-    .filter((g) => g.skills.some((s) => s.name.trim()))
-    .map(
-      (g) => `
-      <div class="skill-group">
-        <h4>${esc(g.label)}</h4>
-        <p>${g.skills
-          .filter((s) => s.name.trim())
-          .map((s) => esc(s.name))
-          .join(" · ")}</p>
-      </div>
-    `,
-    )
-    .join("");
+  const c = theme.colors;
+  const sidebar = theme.layout === "sidebar";
 
   const experiencesHtml = doc.experiences
     .filter((e) => e.company.trim() || e.role.trim())
-    .map(experienceBlock)
+    .map((e) => experienceBlock(e))
     .join("");
 
   const projectsHtml = doc.projects
@@ -91,7 +109,7 @@ export function buildCvHtml(doc: CvDocument): string {
         <div class="block-head">
           <div>
             <h3>${p.url ? `<a href="${esc(p.url)}">${esc(p.name)}</a>` : esc(p.name)}</h3>
-            <p class="sub">${esc(p.description)}</p>
+            ${p.description ? `<p class="sub">${esc(p.description)}</p>` : ""}
           </div>
         </div>
         ${
@@ -101,11 +119,10 @@ export function buildCvHtml(doc: CvDocument): string {
         }
         ${
           p.techStack.filter(Boolean).length
-            ? `<p class="tech">${p.techStack.map(esc).join(" · ")}</p>`
+            ? `<div class="tech-row">${p.techStack.map((t) => `<span class="chip chip-sm">${esc(t)}</span>`).join("")}</div>`
             : ""
         }
-      </article>
-    `,
+      </article>`,
     )
     .join("");
 
@@ -116,74 +133,157 @@ export function buildCvHtml(doc: CvDocument): string {
       <article class="block">
         <div class="block-head">
           <div>
-            <h3>${esc(e.degree)}${e.field ? ` — ${esc(e.field)}` : ""}</h3>
+            <h3>${esc(e.degree)}${e.field ? `<span class="muted-inline">, ${esc(e.field)}</span>` : ""}</h3>
             <p class="sub">${esc(e.school)}</p>
           </div>
           <span class="dates">${esc(formatPeriod(e.startDate, e.endDate, false))}</span>
         </div>
-      </article>
-    `,
+      </article>`,
     )
     .join("");
 
   const certsHtml = doc.certifications
-    .filter((c) => c.name.trim())
+    .filter((cert) => cert.name.trim())
     .map(
-      (c) =>
-        `<li><strong>${esc(c.name)}</strong> — ${esc(c.issuer)} (${esc(c.date)})</li>`,
+      (cert) =>
+        `<li><strong>${esc(cert.name)}</strong> · ${esc(cert.issuer)}${cert.date ? ` (${esc(cert.date)})` : ""}</li>`,
     )
     .join("");
 
   const langsHtml = doc.languages
     .filter((l) => l.name.trim())
-    .map((l) => `<li>${esc(l.name)} — ${esc(l.level)}</li>`)
+    .map((l) => `<li><strong>${esc(l.name)}</strong> · ${esc(l.level)}</li>`)
     .join("");
 
   const ossHtml = doc.openSource
     .filter((o) => o.name.trim())
     .map(
       (o) =>
-        `<li>${o.url ? `<a href="${esc(o.url)}">${esc(o.name)}</a>` : esc(o.name)}${o.stars ? ` (${esc(o.stars)}★)` : ""} — ${esc(o.description)}</li>`,
+        `<li>${o.url ? `<a href="${esc(o.url)}">${esc(o.name)}</a>` : esc(o.name)}${o.stars ? ` <span class="stars">${esc(o.stars)} ★</span>` : ""}${o.description ? ` · ${esc(o.description)}` : ""}</li>`,
     )
     .join("");
 
-  const sidebarBg = isTech ? "#020617" : isModern ? theme.preview.accent : isClassic ? "#f5f0e6" : "#f9fafb";
-  const accent = theme.preview.accent;
-  const text = theme.preview.text;
-  const muted = theme.preview.muted;
-  const bg = theme.preview.bg;
-  const font = theme.preview.font;
-  const headingFont = isClassic ? "Georgia, serif" : font;
+  const summaryBlock = doc.profile.summary
+    ? section("Profil", `<p class="summary-body">${esc(doc.profile.summary)}</p>`)
+    : "";
+
+  const mainSections = [
+    summaryBlock,
+    section("Expérience", experiencesHtml),
+    section("Projets", projectsHtml),
+    section("Open Source", ossHtml ? `<ul>${ossHtml}</ul>` : ""),
+    section("Formation", educationHtml),
+    section("Certifications", certsHtml ? `<ul>${certsHtml}</ul>` : ""),
+  ].join("");
+
+  const sidebarContent = `
+    <h1>${esc(doc.profile.fullName || "Votre nom")}</h1>
+    <p class="headline">${esc(doc.profile.headline)}</p>
+    <div class="contact">${contactItems(doc).map((item) => `<div>${esc(item)}</div>`).join("")}</div>
+    ${skillGroupsHtml(doc) ? section("Compétences", skillGroupsHtml(doc)) : ""}
+    ${langsHtml ? section("Langues", `<ul class="plain">${langsHtml}</ul>`) : ""}
+  `;
+
+  const singleColumnContent = `
+    <header class="hero">
+      <h1>${esc(doc.profile.fullName || "Votre nom")}</h1>
+      <p class="headline">${esc(doc.profile.headline)}</p>
+      <div class="contact-line">${joinParts(contactItems(doc))}</div>
+    </header>
+    ${summaryBlock}
+    ${skillGroupsHtml(doc) ? section("Compétences techniques", skillGroupsHtml(doc)) : ""}
+    ${section("Expérience professionnelle", experiencesHtml)}
+    ${section("Projets", projectsHtml)}
+    ${section("Open Source", ossHtml ? `<ul>${ossHtml}</ul>` : "")}
+    ${section("Formation", educationHtml)}
+    ${section("Certifications", certsHtml ? `<ul>${certsHtml}</ul>` : "")}
+    ${section("Langues", langsHtml ? `<ul class="plain">${langsHtml}</ul>` : "")}
+  `;
+
+  const isDark = doc.themeId === "tech";
 
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
   <title>${esc(doc.profile.fullName || doc.title)}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="${theme.fonts.google}" rel="stylesheet" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: ${font}; color: ${text}; background: ${bg}; line-height: 1.45; font-size: 11pt; }
-    .page { max-width: 210mm; margin: 0 auto; min-height: 297mm; }
-    .layout { display: grid; grid-template-columns: ${isModern || isTech ? "72mm 1fr" : "1fr"}; min-height: 297mm; }
-    .sidebar { background: ${sidebarBg}; color: ${isTech || isModern ? "#f8fafc" : text}; padding: 14mm 10mm; }
-    .main { padding: 14mm 12mm; }
-    h1 { font-family: ${headingFont}; font-size: 20pt; line-height: 1.1; margin-bottom: 4px; }
-    h2 { font-family: ${headingFont}; font-size: 11pt; text-transform: uppercase; letter-spacing: 0.08em; color: ${accent}; margin: 14px 0 8px; border-bottom: 1px solid ${isTech ? "#334155" : "#e5e7eb"}; padding-bottom: 4px; }
-    h3 { font-size: 11pt; margin-bottom: 2px; }
-    h4 { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.06em; color: ${muted}; margin-bottom: 4px; }
-    .headline { color: ${muted}; font-size: 11pt; margin-bottom: 10px; }
-    .contact { font-size: 9pt; line-height: 1.6; opacity: 0.9; }
-    .summary { font-size: 10pt; margin-top: 8px; }
-    .block { margin-bottom: 10px; }
-    .block-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-    .sub { color: ${muted}; font-size: 9.5pt; }
-    .dates { font-size: 9pt; color: ${muted}; white-space: nowrap; }
-    ul { margin: 4px 0 0 16px; font-size: 9.5pt; }
-    li { margin-bottom: 2px; }
-    .tech { font-size: 8.5pt; color: ${accent}; margin-top: 4px; font-family: ui-monospace, monospace; }
+    body {
+      font-family: ${theme.fonts.body};
+      color: ${c.text};
+      background: ${c.bg};
+      line-height: 1.5;
+      font-size: 10.5pt;
+      -webkit-font-smoothing: antialiased;
+    }
+    .page { max-width: 210mm; margin: 0 auto; min-height: 297mm; background: ${c.surface}; }
+    .layout {
+      display: grid;
+      grid-template-columns: ${sidebar ? "68mm 1fr" : "1fr"};
+      min-height: 297mm;
+    }
+    .sidebar {
+      background: ${c.sidebar};
+      color: ${c.sidebarText};
+      padding: 12mm 9mm;
+    }
+    .sidebar h2 { color: ${isDark ? c.accent : c.sidebarText}; border-color: ${isDark ? c.border : "rgba(255,255,255,0.15)"}; opacity: 0.95; }
+    .sidebar .sub, .sidebar .dates, .sidebar .contact { color: ${isDark ? c.muted : "rgba(255,255,255,0.75)"}; }
+    .sidebar .chip { background: ${isDark ? c.chip : "rgba(255,255,255,0.12)"}; color: ${isDark ? c.chipText : "#fff"}; }
+    .main { padding: 12mm 11mm; background: ${c.surface}; }
+    h1 {
+      font-family: ${theme.fonts.heading};
+      font-size: ${sidebar ? "17pt" : "22pt"};
+      line-height: 1.15;
+      margin-bottom: 4px;
+      letter-spacing: ${doc.themeId === "tech" ? "-0.02em" : "normal"};
+    }
+    h2 {
+      font-family: ${theme.fonts.heading};
+      font-size: 9.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: ${c.accent};
+      margin: 0 0 8px;
+      padding-bottom: 4px;
+      border-bottom: 1.5px solid ${c.border};
+    }
+    h3 { font-size: 10.5pt; font-weight: 600; margin-bottom: 2px; }
+    h4 { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.08em; color: ${c.muted}; margin-bottom: 5px; }
+    .headline { color: ${sidebar ? (isDark ? c.accent : "rgba(255,255,255,0.9)") : c.muted}; font-size: 10.5pt; margin-bottom: 10px; font-weight: 500; }
+    .hero { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 2.5px solid ${c.accent}; }
+    .contact, .contact-line { font-size: 8.5pt; line-height: 1.7; color: ${c.muted}; }
+    .contact div { margin-bottom: 2px; }
+    .summary-body { font-size: 10pt; color: ${c.text}; }
+    .cv-section { margin-bottom: 14px; }
+    .block { margin-bottom: 11px; page-break-inside: avoid; }
+    .block-head { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 4px; align-items: flex-start; }
+    .sub { color: ${c.muted}; font-size: 9pt; margin-top: 1px; }
+    .muted-inline { color: ${c.muted}; font-weight: 400; }
+    .dates { font-size: 8.5pt; color: ${c.muted}; white-space: nowrap; flex-shrink: 0; }
+    ul { margin: 4px 0 0 15px; font-size: 9.5pt; }
+    ul.plain { list-style: none; margin-left: 0; }
+    li { margin-bottom: 3px; }
+    .skill-group { margin-bottom: 10px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+    .chip {
+      display: inline-block;
+      font-size: 8pt;
+      font-family: ${theme.fonts.mono};
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: ${c.chip};
+      color: ${c.chipText};
+    }
+    .chip-sm { font-size: 7.5pt; padding: 1px 6px; }
+    .tech-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+    .stars { color: ${c.accent}; font-family: ${theme.fonts.mono}; font-size: 8.5pt; }
     a { color: inherit; text-decoration: none; }
-    .skill-group { margin-bottom: 8px; }
-    .skill-group p { font-size: 9.5pt; }
+    a:hover { text-decoration: underline; }
     @media print {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .page { max-width: none; margin: 0; }
@@ -194,39 +294,9 @@ export function buildCvHtml(doc: CvDocument): string {
   <div class="page">
     <div class="layout">
       ${
-        isModern || isTech
-          ? `
-      <aside class="sidebar">
-        <h1>${esc(doc.profile.fullName || "Votre nom")}</h1>
-        <p class="headline">${esc(doc.profile.headline)}</p>
-        <div class="contact">${contactLine(doc)}</div>
-        ${doc.profile.summary ? `<p class="summary">${esc(doc.profile.summary)}</p>` : ""}
-        ${skillsHtml ? `<h2>Compétences</h2>${skillsHtml}` : ""}
-        ${langsHtml ? `<h2>Langues</h2><ul>${langsHtml}</ul>` : ""}
-      </aside>
-      <main class="main">
-        ${experiencesHtml ? `<h2>Expérience</h2>${experiencesHtml}` : ""}
-        ${projectsHtml ? `<h2>Projets</h2>${projectsHtml}` : ""}
-        ${educationHtml ? `<h2>Formation</h2>${educationHtml}` : ""}
-        ${certsHtml ? `<h2>Certifications</h2><ul>${certsHtml}</ul>` : ""}
-        ${ossHtml ? `<h2>Open Source</h2><ul>${ossHtml}</ul>` : ""}
-      </main>`
-          : `
-      <main class="main" style="grid-column: 1 / -1;">
-        <header style="margin-bottom: 12px; border-bottom: 2px solid ${accent}; padding-bottom: 10px;">
-          <h1>${esc(doc.profile.fullName || "Votre nom")}</h1>
-          <p class="headline">${esc(doc.profile.headline)}</p>
-          <div class="contact">${contactLine(doc)}</div>
-          ${doc.profile.summary ? `<p class="summary">${esc(doc.profile.summary)}</p>` : ""}
-        </header>
-        ${skillsHtml ? `<h2>Compétences</h2>${skillsHtml}` : ""}
-        ${experiencesHtml ? `<h2>Expérience</h2>${experiencesHtml}` : ""}
-        ${projectsHtml ? `<h2>Projets</h2>${projectsHtml}` : ""}
-        ${educationHtml ? `<h2>Formation</h2>${educationHtml}` : ""}
-        ${certsHtml ? `<h2>Certifications</h2><ul>${certsHtml}</ul>` : ""}
-        ${langsHtml ? `<h2>Langues</h2><ul>${langsHtml}</ul>` : ""}
-        ${ossHtml ? `<h2>Open Source</h2><ul>${ossHtml}</ul>` : ""}
-      </main>`
+        sidebar
+          ? `<aside class="sidebar">${sidebarContent}</aside><main class="main">${mainSections}</main>`
+          : `<main class="main">${singleColumnContent}</main>`
       }
     </div>
   </div>
@@ -260,50 +330,50 @@ export function exportCvMarkdown(doc: CvDocument): void {
   lines.push(`# ${p.fullName || doc.title}`);
   lines.push(`**${p.headline}**`);
   lines.push("");
-  const contact = [p.email, p.phone, p.location, p.website, p.github, p.linkedin]
-    .filter(Boolean)
-    .join(" · ");
+  const contact = joinParts(
+    [p.email, p.phone, p.location, p.website, p.github, p.linkedin],
+    " | ",
+  );
   if (contact) lines.push(contact);
   if (p.summary) {
-    lines.push("");
-    lines.push(p.summary);
+    lines.push("", "## Profil", "", p.summary);
   }
 
   if (doc.skillGroups.some((g) => g.skills.length)) {
-    lines.push("", "## Compétences");
+    lines.push("", "## Compétences techniques");
     for (const g of doc.skillGroups) {
       if (!g.skills.some((s) => s.name.trim())) continue;
       lines.push(
-        `- **${g.label}:** ${g.skills.map((s) => s.name).filter(Boolean).join(", ")}`,
+        `**${g.label}:** ${g.skills.map((s) => s.name).filter(Boolean).join(", ")}`,
       );
     }
   }
 
   if (doc.experiences.some((e) => e.role || e.company)) {
-    lines.push("", "## Expérience");
+    lines.push("", "## Expérience professionnelle");
     for (const e of doc.experiences) {
       if (!e.role && !e.company) continue;
       lines.push(
-        `### ${e.role} — ${e.company}`,
+        `### ${e.role} · ${e.company}`,
         `*${formatPeriod(e.startDate, e.endDate, e.current)}*`,
       );
-      for (const h of e.highlights.filter(Boolean)) lines.push(`- ${h}`);
+      for (const h of e.highlights.filter(Boolean)) lines.push(`• ${h}`);
       if (e.techStack.filter(Boolean).length) {
-        lines.push(`- Stack: ${e.techStack.join(", ")}`);
+        lines.push(`Stack: ${e.techStack.join(", ")}`);
       }
       lines.push("");
     }
   }
 
-  if (doc.projects.some((p) => p.name.trim())) {
+  if (doc.projects.some((proj) => proj.name.trim())) {
     lines.push("## Projets");
     for (const proj of doc.projects) {
       if (!proj.name.trim()) continue;
       lines.push(`### ${proj.name}`);
       if (proj.description) lines.push(proj.description);
-      for (const h of proj.highlights.filter(Boolean)) lines.push(`- ${h}`);
+      for (const h of proj.highlights.filter(Boolean)) lines.push(`• ${h}`);
       if (proj.techStack.filter(Boolean).length) {
-        lines.push(`- Stack: ${proj.techStack.join(", ")}`);
+        lines.push(`Stack: ${proj.techStack.join(", ")}`);
       }
       lines.push("");
     }
