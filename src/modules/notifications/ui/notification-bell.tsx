@@ -297,9 +297,11 @@ export function NotificationBell({
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="mb-1 flex items-center gap-2">
-                            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                              {NOTIFICATION_CATEGORY_LABELS[n.category]}
-                            </span>
+                            {n.category !== "ai" ? (
+                              <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                                {NOTIFICATION_CATEGORY_LABELS[n.category]}
+                              </span>
+                            ) : null}
                             {!n.read ? (
                               <span className="h-1.5 w-1.5 rounded-full bg-[var(--dh-brand)]" />
                             ) : null}

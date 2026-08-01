@@ -1,71 +1,73 @@
 import { createAdminClient } from "@/core/auth/supabase/admin";
 import { collectFromSource } from "@/modules/ai-intel/collectors";
+import { pushAlertTitle } from "@/modules/ai-intel/essential-recap";
 import { mergeHits } from "@/modules/ai-intel/merge/merge-hits";
 import { scrapeDayIso } from "@/modules/ai-intel/scrape-date";
 import { discoverNewSources } from "@/modules/ai-intel/sources/discover";
-import type { AiIntelSource, RawHit } from "@/modules/ai-intel/types";
+import type { AiIntelSource, ClassifiedItem, RawHit } from "@/modules/ai-intel/types";
+import { isCriticalPushAlert } from "@/modules/ai-intel/ui/rank";
 import { mapPool } from "@/lib/async-pool";
 
 const SOURCE_CONCURRENCY = 8;
+const MAX_PUSH_ALERTS = 8;
 
-async function notifyAiDigest(input: {
-  inserted: number;
-  urgentCount: number;
-  sampleTitles: string[];
-}) {
-  if (input.inserted <= 0) {
+async function notifyCriticalAlerts(insertedItems: ClassifiedItem[]) {
+  const critical = insertedItems.filter(isCriticalPushAlert);
+  if (critical.length === 0) {
     return {
-      notification: false,
-      push: { sent: 0, skipped: true, reason: "no_items" as const },
+      alerts: 0,
+      notifications: 0,
+      push: { sent: 0, skipped: true as const, reason: "no_critical" as const },
     };
   }
 
-  const day = new Date().toISOString().slice(0, 10);
-  const urgent = input.urgentCount;
-  const title =
-    urgent > 0
-      ? `${urgent} alerte${urgent > 1 ? "s" : ""} AI · ${input.inserted} nouveauté${input.inserted > 1 ? "s" : ""}`
-      : `${input.inserted} nouvelle${input.inserted > 1 ? "s" : ""} info${input.inserted > 1 ? "s" : ""} AI`;
-  const body = input.sampleTitles.slice(0, 3).join(" · ");
+  const { createNotification } = await import(
+    "@/modules/notifications/create"
+  );
+  const { sendPushBroadcast } = await import("@/modules/notifications/push");
 
-  let notification = false;
-  try {
-    const { createNotification } = await import(
-      "@/modules/notifications/create"
-    );
-    await createNotification({
-      userId: null,
-      category: "ai",
-      title,
-      body,
-      href: "/app/ai",
-      severity: urgent > 0 ? "urgent" : "info",
-      dedupeKey: `ai:digest:${day}`,
-      metadata: {
-        inserted: input.inserted,
-        urgent,
-        titles: input.sampleTitles.slice(0, 10),
+  let notifications = 0;
+  let pushSent = 0;
+
+  for (const item of critical.slice(0, MAX_PUSH_ALERTS)) {
+    const title = pushAlertTitle(item, "fr");
+    const body = item.summary.slice(0, 180);
+
+    try {
+      await createNotification({
+        userId: null,
+        category: "ai",
+        title,
+        body,
+        href: "/app/ai",
+        severity: "urgent",
+        dedupeKey: `ai:alert:${item.canonicalKey}`,
+        metadata: { canonicalKey: item.canonicalKey, alertKind: item.category },
+        skipPush: true,
+      });
+      notifications += 1;
+    } catch {
+      // optional until migration applied
+    }
+
+    const push = await sendPushBroadcast(
+      {
+        title,
+        body,
+        href: "/app/ai",
+        tag: `ai:${item.canonicalKey}`,
+        severity: "urgent",
       },
-      skipPush: true,
-    });
-    notification = true;
-  } catch {
-    // hub_notifications optional until migration applied
+      { category: "ai" },
+    );
+    pushSent += push.sent;
   }
 
-  const { sendPushBroadcast } = await import("@/modules/notifications/push");
-  const push = await sendPushBroadcast(
-    {
-      title,
-      body,
-      href: "/app/ai",
-      tag: `ai:digest:${day}`,
-      severity: urgent > 0 ? "urgent" : "info",
-    },
-    { category: "ai" },
-  );
-
-  return { notification, push };
+  return {
+    alerts: critical.length,
+    notifications,
+    push: { sent: pushSent, skipped: false as const, reason: null },
+  };
 }
 
 export async function runAiIntelIngest() {
@@ -134,8 +136,7 @@ export async function runAiIntelIngest() {
 
     let inserted = 0;
     let skipped = 0;
-    let urgentCount = 0;
-    const sampleTitles: string[] = [];
+    const insertedItems: ClassifiedItem[] = [];
 
     for (const item of items) {
       const { data, error } = await admin
@@ -163,18 +164,13 @@ export async function runAiIntelIngest() {
 
       if (data && data.length > 0) {
         inserted += 1;
-        sampleTitles.push(item.title);
-        if (item.urgency === "urgent") urgentCount += 1;
+        insertedItems.push(item);
       } else {
         skipped += 1;
       }
     }
 
-    const notify = await notifyAiDigest({
-      inserted,
-      urgentCount,
-      sampleTitles,
-    });
+    const notify = await notifyCriticalAlerts(insertedItems);
 
     const failures = Object.values(sourceStats).filter((s) => !s.ok).length;
     const status =

@@ -41,7 +41,7 @@ export type ItemI18n = {
   reasons: { en?: string[]; fr?: string[] };
 };
 
-function readMeta(meta: Record<string, unknown>, key: string): string | null {
+export function readMeta(meta: Record<string, unknown>, key: string): string | null {
   const v = meta[key];
   return typeof v === "string" && v.trim() ? v.trim() : null;
 }
@@ -227,8 +227,60 @@ export function explainTitle(
   const product = productOf(item);
   const name = pickLocalized(i18n?.title, locale, item.title);
 
-  // News-like items (feature, model, pricing, …): the headline already says it all.
+  // News-like items: enrich headline by kind when possible.
   if (kind !== "repo" && kind !== "tool") {
+    if (kind === "pricing") {
+      return {
+        title: product
+          ? locale === "fr"
+            ? `${product} — changement de prix`
+            : `${product} — pricing change`
+          : name,
+        name,
+        typeLabel,
+        kind,
+        product,
+      };
+    }
+    if (kind === "model") {
+      return {
+        title: product
+          ? locale === "fr"
+            ? `${product} — nouveau modèle`
+            : `${product} — new model`
+          : name,
+        name,
+        typeLabel,
+        kind,
+        product,
+      };
+    }
+    if (kind === "breaking") {
+      return {
+        title: product
+          ? locale === "fr"
+            ? `${product} — breaking change`
+            : `${product} — breaking change`
+          : name,
+        name,
+        typeLabel,
+        kind,
+        product,
+      };
+    }
+    if (kind === "security") {
+      return {
+        title: product
+          ? locale === "fr"
+            ? `${product} — sécurité`
+            : `${product} — security`
+          : name,
+        name,
+        typeLabel,
+        kind,
+        product,
+      };
+    }
     return { title: name, name, typeLabel, kind, product };
   }
 
@@ -251,6 +303,19 @@ export function explainTitle(
 
   if (kind === "repo") {
     const short = repoShortName(name);
+    const starsToday = Number(meta.starsToday) || 0;
+    if (starsToday >= 200) {
+      return {
+        title:
+          locale === "fr"
+            ? `${short}: +${formatStars(starsToday)} stars en 24h`
+            : `${short}: +${formatStars(starsToday)} stars in 24h`,
+        name,
+        typeLabel,
+        kind,
+        product,
+      };
+    }
     if (what && !what.toLowerCase().startsWith(short.toLowerCase())) {
       return { title: `${short}: ${what}`, name, typeLabel, kind, product };
     }

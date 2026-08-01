@@ -27,21 +27,33 @@ export function isNoise(item: AiIntelItem): boolean {
   );
 }
 
-/** Action required now: pricing, breaking, security — never a trending repo. */
+/** Action required now: pricing, breaking, security, exploding repos. */
 export function isHotAlert(item: AiIntelItem): boolean {
   if (itemVerdict(item) === "skip") return false;
 
   const kind = detectContentKind(item);
-  // GitHub repos are trending / useful, not urgent action items.
-  if (kind === "repo") return false;
+  const meta = (item.metadata ?? {}) as Record<string, unknown>;
+  const starsToday = Number(meta.starsToday) || 0;
 
-  // Same detection as the type chip: Prix / Breaking / Sécurité = action now.
+  if (kind === "repo") {
+    return starsToday >= 350 || isTrending(item);
+  }
+
   if (kind === "pricing" || kind === "breaking" || kind === "security") {
     return true;
   }
 
   const category = String(item.category || "");
   const score = itemScore(item);
+
+  if (kind === "model") {
+    return (
+      category === "new_model" ||
+      category === "upgrade" ||
+      category === "capacity" ||
+      item.urgency === "urgent"
+    );
+  }
 
   if (category === "upgrade" && item.urgency === "urgent" && score >= 70) {
     return true;
@@ -66,6 +78,49 @@ export function isTrending(item: AiIntelItem): boolean {
   if (rank > 0 && rank <= 5 && starsToday >= 120) return true;
   // Small repo exploding relative to its size
   if (stars > 0 && starsToday >= 100 && starsToday >= stars * 0.15) return true;
+  return false;
+}
+
+type AlertItem = Pick<
+  AiIntelItem,
+  "title" | "summary" | "urgency" | "category" | "pillar" | "metadata"
+> & { primary_source?: string; primarySource?: string };
+
+function asIntelItem(item: AlertItem): AiIntelItem {
+  return {
+    ...(item as AiIntelItem),
+    primary_source: item.primary_source ?? item.primarySource ?? "",
+  };
+}
+
+/**
+ * Phone + bell alerts only for high-signal events:
+ * exploding repos, pricing, new models, breaking/security.
+ */
+export function isCriticalPushAlert(item: AlertItem): boolean {
+  const intel = asIntelItem(item);
+  const meta = (item.metadata ?? {}) as Record<string, unknown>;
+  const kind = detectContentKind(intel);
+  const category = String(item.category || "");
+  const starsToday = Number(meta.starsToday) || 0;
+
+  if (kind === "repo") {
+    return starsToday >= 350 || isTrending(intel);
+  }
+
+  if (kind === "pricing" || kind === "breaking" || kind === "security") {
+    return true;
+  }
+
+  if (kind === "model") {
+    return (
+      category === "new_model" ||
+      category === "upgrade" ||
+      category === "capacity" ||
+      item.urgency === "urgent"
+    );
+  }
+
   return false;
 }
 
