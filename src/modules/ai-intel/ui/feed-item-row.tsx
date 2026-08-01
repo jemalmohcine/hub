@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Check, ChevronRight } from "lucide-react";
 import { Text } from "@/design-system";
 import { resolveBrief } from "@/modules/ai-intel/brief";
+import { buildEssentialRecap } from "@/modules/ai-intel/essential-recap";
 import { contentKindTone } from "@/modules/ai-intel/content-kind";
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
 import { t } from "@/modules/ai-intel/i18n/locale";
@@ -74,6 +75,7 @@ export function FeedItemRow({
   const copy = t(locale);
   const meta = (item.metadata ?? {}) as Record<string, unknown>;
   const brief = resolveBrief(item, locale);
+  const recap = buildEssentialRecap(item, locale);
   const stars = prettyCount(readMetaString(meta, "stars"));
   const starsToday = prettyCount(readMetaString(meta, "starsToday"));
   const kind = itemKind(item);
@@ -97,9 +99,10 @@ export function FeedItemRow({
     );
   }
 
-  const subtitle = [brief.tldr, ...metricParts]
+  const subtitle = recap
+    .map((point) => point.teaser)
     .filter(Boolean)
-    .filter((part, idx, arr) => arr.indexOf(part) === idx)
+    .slice(0, 2)
     .join(" · ");
 
   return (
@@ -108,7 +111,7 @@ export function FeedItemRow({
       onClick={() => onOpen(item)}
       aria-label={`${brief.title}. ${isRead ? copy.read : copy.unread}`}
       className={cn(
-        "flex w-full items-start gap-3 rounded-2xl px-3.5 py-3.5 text-left transition-colors",
+        "mb-1.5 flex w-full items-start gap-3 rounded-2xl px-3.5 py-3.5 text-left transition-colors",
         "active:scale-[0.995]",
         hot ? "bg-[var(--dh-danger-soft)]/40" : "bg-muted/35 hover:bg-muted/50",
       )}
@@ -142,13 +145,13 @@ export function FeedItemRow({
           {brief.title}
         </Text>
 
-        {subtitle ? (
+        {subtitle || metricParts.length > 0 ? (
           <Text
             size="sm"
             tone="muted"
             className="mt-1.5 line-clamp-2 leading-relaxed"
           >
-            {subtitle}
+            {[subtitle, ...metricParts].filter(Boolean).join(" · ")}
           </Text>
         ) : null}
       </span>

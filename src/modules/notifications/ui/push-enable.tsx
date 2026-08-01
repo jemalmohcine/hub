@@ -168,10 +168,10 @@ export function PushEnableCard() {
           </Text>
           <Text size="sm" tone="muted" className="mt-1">
             {status === "on"
-              ? "OK. Tu recevras un résumé après chaque scrape quotidien (et les alertes urgentes). Plan Pro requis."
+              ? "OK. Tu recevras une alerte uniquement pour l’urgent (prix, modèle, repo qui explose). Plan Pro requis."
               : status === "denied"
                 ? "Permission refusée. Réactive-la dans Réglages → Notifications de ton téléphone."
-                : "Résumé quotidien du scrape AI sur ton téléphone (PWA installée). Plan Pro requis."}
+                : "Alertes urgentes seulement : prix, nouveau modèle, repo GitHub qui explose. Plan Pro requis."}
           </Text>
           {!isStandalonePwa() && status === "off" ? (
             <Text size="sm" tone="muted" className="mt-1">
