@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import {
+  Briefcase,
   FileText,
   LayoutDashboard,
   Lock,
@@ -29,6 +30,7 @@ const SHELL_COPY = {
     overview: "Aperçu",
     ai: "AI",
     cv: "CV",
+    jobs: "Offres",
     settings: "Réglages",
     signOut: "Se déconnecter",
   },
@@ -36,6 +38,7 @@ const SHELL_COPY = {
     overview: "Overview",
     ai: "AI",
     cv: "CV",
+    jobs: "Jobs",
     settings: "Settings",
     signOut: "Sign out",
   },
@@ -144,7 +147,7 @@ export function AppShell({
         className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden"
         style={{ paddingBottom: "var(--dh-safe-bottom)" }}
       >
-        <div className="mx-auto grid max-w-lg grid-cols-4 gap-[var(--dh-space-1)] px-[var(--dh-space-2)] py-[var(--dh-space-2)]">
+        <div className="mx-auto grid max-w-lg grid-cols-5 gap-[var(--dh-space-1)] px-[var(--dh-space-2)] py-[var(--dh-space-2)]">
           <BottomNavItem
             href="/app/overview"
             label={copy.overview}
@@ -152,6 +155,7 @@ export function AppShell({
           />
           <BottomNavItem href="/app/ai" label={copy.ai} icon={Sparkles} />
           <BottomNavItem href="/app/cv" label={copy.cv} icon={FileText} />
+          <BottomNavItem href="/app/jobs" label={copy.jobs} icon={Briefcase} />
           <BottomNavItem
             href="/app/settings"
             label={copy.settings}

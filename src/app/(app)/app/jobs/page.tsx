@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { FileText, Lock } from "lucide-react";
+import { Briefcase, Lock } from "lucide-react";
 import { getHubUser } from "@/core/auth/get-user";
 import { hasEntitlement } from "@/core/entitlements";
 import {
@@ -14,35 +14,36 @@ import {
   Stack,
   Text,
 } from "@/design-system";
-import { defaultCvDocument } from "@/modules/cv-builder/defaults";
-import { getCvDocumentById, listCvDocuments } from "@/modules/cv-builder/queries";
-import { CvBuilderWorkspace } from "@/modules/cv-builder/ui/cv-builder-workspace";
+import { listCvDocuments } from "@/modules/cv-builder/queries";
+import { listJobApplications } from "@/modules/job-tracker/queries";
+import { JobTrackerWorkspace } from "@/modules/job-tracker/ui/job-tracker-workspace";
 
-export const metadata = { title: "CV Builder" };
+export const metadata = { title: "Suivi candidatures" };
 
-export default async function CvBuilderPage() {
+export default async function JobsPage() {
   const user = await getHubUser();
   if (!user) redirect("/sign-in");
 
-  const entitled = hasEntitlement(user.entitlements, "module:cv");
+  const entitled = hasEntitlement(user.entitlements, "module:jobs");
 
   if (!entitled) {
     return (
       <>
         <PageHeader
-          title="CV Builder"
-          description="Crée et exporte ton CV développeur en quelques minutes."
+          title="Suivi candidatures"
+          description="Pipeline de candidatures, relances et CV associés."
           action={<Badge tone="warning">Pro</Badge>}
         />
         <Card>
           <Atmosphere variant="module" />
           <Cluster gap={3} align="start">
-            <IconBox icon={FileText} size="lg" />
+            <IconBox icon={Briefcase} size="lg" />
             <Stack gap={4} className="flex-1">
               <div>
                 <Heading level={3}>Disponible avec Pro</Heading>
                 <Text size="sm" tone="muted" className="mt-[var(--dh-space-2)]">
-                  Plusieurs CV, adaptation à l&apos;offre, export PDF / Markdown.
+                  Suivez vos candidatures de l&apos;offre à l&apos;entretien, liez un CV
+                  adapté à chaque poste.
                 </Text>
               </div>
               <LinkButton href="/app/settings/billing">
@@ -56,20 +57,18 @@ export default async function CvBuilderPage() {
     );
   }
 
-  const documents = await listCvDocuments(user.id).catch(() => []);
-  const activeId = documents[0]?.id;
-  const saved = activeId
-    ? await getCvDocumentById(user.id, activeId).catch(() => null)
-    : null;
-  const initialDoc = saved ?? defaultCvDocument();
+  const [jobs, cvDocuments] = await Promise.all([
+    listJobApplications(user.id).catch(() => []),
+    listCvDocuments(user.id).catch(() => []),
+  ]);
 
   return (
     <>
       <PageHeader
-        title="CV Builder"
-        description="Plusieurs CV, adaptation automatique à l'offre, export PDF."
+        title="Suivi candidatures"
+        description="Kanban de vos candidatures : à postuler, envoyées, entretiens, offres."
       />
-      <CvBuilderWorkspace initialDoc={initialDoc} initialDocuments={documents} />
+      <JobTrackerWorkspace initialJobs={jobs} cvDocuments={cvDocuments} />
     </>
   );
 }

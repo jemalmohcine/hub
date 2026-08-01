@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Download,
   Eye,
@@ -18,20 +18,31 @@ import {
   useAsyncAction,
   useToast,
 } from "@/design-system";
-import { saveCvDocument } from "@/modules/cv-builder/actions";
+import {
+  createCvDocument,
+  deleteCvDocument,
+  duplicateCvDocument,
+  loadCvDocument,
+  saveCvDocument,
+} from "@/modules/cv-builder/actions";
 import { defaultCvDocument } from "@/modules/cv-builder/defaults";
 import {
   exportCvJson,
   exportCvMarkdown,
   exportCvPdf,
 } from "@/modules/cv-builder/export";
-import type { CvDocument } from "@/modules/cv-builder/types";
+import type { CvDocument, CvDocumentSummary } from "@/modules/cv-builder/types";
+import {
+  CvDocumentPicker,
+  cvSummaryFromDoc,
+} from "@/modules/cv-builder/ui/cv-document-picker";
 import {
   CvForm,
   CvFormTabs,
   type CvFormSection,
 } from "@/modules/cv-builder/ui/cv-form";
 import { CvPreview } from "@/modules/cv-builder/ui/cv-preview";
+import { JobTailorCard } from "@/modules/cv-builder/ui/job-tailor-card";
 import { ThemePicker } from "@/modules/cv-builder/ui/theme-picker";
 import { cn } from "@/lib/utils";
 
@@ -39,26 +50,112 @@ type WorkspacePanel = "edit" | "preview" | "themes" | "export";
 
 export function CvBuilderWorkspace({
   initialDoc,
+  initialDocuments,
 }: {
-  initialDoc: CvDocument | null;
+  initialDoc: CvDocument;
+  initialDocuments: CvDocumentSummary[];
 }) {
-  const [doc, setDoc] = useState<CvDocument>(initialDoc ?? defaultCvDocument());
+  const [documents, setDocuments] = useState(initialDocuments);
+  const [doc, setDoc] = useState<CvDocument>(initialDoc);
   const [formSection, setFormSection] = useState<CvFormSection>("profile");
   const [panel, setPanel] = useState<WorkspacePanel>("edit");
-  const [saved, setSaved] = useState(true);
+  const [saved, setSaved] = useState(Boolean(initialDoc.id));
   const { run, pending } = useAsyncAction();
 
-  function update(next: CvDocument) {
+  const update = useCallback((next: CvDocument) => {
     setDoc(next);
     setSaved(false);
+  }, []);
+
+  function upsertSummary(savedDoc: CvDocument) {
+    const summary = cvSummaryFromDoc(savedDoc);
+    if (!summary) return;
+    setDocuments((prev) => {
+      const idx = prev.findIndex((d) => d.id === summary.id);
+      if (idx === -1) return [summary, ...prev];
+      const next = [...prev];
+      next[idx] = { ...summary, updatedAt: new Date().toISOString() };
+      return next.sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
+    });
   }
 
   function handleSave() {
     void run(() => saveCvDocument(doc), {
       success: "CV sauvegardé",
       error: "Impossible de sauvegarder le CV",
-      onSuccess: () => setSaved(true),
+      onSuccess: (savedDoc) => {
+        setDoc(savedDoc);
+        setSaved(true);
+        upsertSummary(savedDoc);
+      },
     });
+  }
+
+  function handleSelect(id: string) {
+    if (id === doc.id) return;
+    void run(() => loadCvDocument(id), {
+      error: "Impossible de charger le CV",
+      onSuccess: (loaded) => {
+        setDoc(loaded);
+        setSaved(true);
+        setFormSection("profile");
+      },
+    });
+  }
+
+  function handleCreate() {
+    void run(() => createCvDocument(), {
+      success: "Nouveau CV créé",
+      error: "Impossible de créer le CV",
+      onSuccess: (created) => {
+        setDoc(created);
+        setSaved(true);
+        upsertSummary(created);
+        setFormSection("profile");
+      },
+    });
+  }
+
+  function handleDuplicate(id: string) {
+    void run(() => duplicateCvDocument(id), {
+      success: "CV dupliqué",
+      error: "Impossible de dupliquer",
+      onSuccess: (copy) => {
+        setDoc(copy);
+        setSaved(true);
+        upsertSummary(copy);
+      },
+    });
+  }
+
+  function handleDelete(id: string) {
+    void run(() => deleteCvDocument(id), {
+      success: "CV supprimé",
+      error: "Impossible de supprimer",
+      onSuccess: () => {
+        setDocuments((prev) => {
+          const next = prev.filter((d) => d.id !== id);
+          if (doc.id !== id) return next;
+          if (next.length === 0) {
+            const fresh = defaultCvDocument();
+            setDoc(fresh);
+            setSaved(false);
+            return next;
+          }
+          void handleSelect(next[0].id);
+          return next;
+        });
+      },
+    });
+  }
+
+  function handleTailored(tailored: CvDocument) {
+    setDoc(tailored);
+    setSaved(true);
+    upsertSummary(tailored);
+    setFormSection("profile");
   }
 
   const mobileTabs: Array<{
@@ -77,6 +174,9 @@ export function CvBuilderWorkspace({
       <Cluster gap={2} className="flex-wrap justify-between">
         <Text size="sm" tone="muted">
           {saved ? "Sauvegardé" : "Modifications non sauvegardées"}
+          {doc.isTailored && doc.targetJobTitle
+            ? ` · Adapté pour ${doc.targetJobTitle}`
+            : null}
         </Text>
         <Button
           type="button"
@@ -117,7 +217,19 @@ export function CvBuilderWorkspace({
         })}
       </div>
 
-      <div className="hidden gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="hidden gap-6 lg:grid lg:grid-cols-[220px_minmax(0,1fr)_minmax(0,1fr)]">
+        <Stack gap={3}>
+          <CvDocumentPicker
+            documents={documents}
+            activeId={doc.id}
+            onSelect={handleSelect}
+            onCreate={handleCreate}
+            onDuplicate={handleDuplicate}
+            onDelete={handleDelete}
+            disabled={pending}
+          />
+          <JobTailorCard sourceDoc={doc} onTailored={handleTailored} />
+        </Stack>
         <Stack gap={3}>
           <CvFormTabs active={formSection} onChange={setFormSection} />
           <CvForm doc={doc} onChange={update} section={formSection} />
@@ -147,6 +259,16 @@ export function CvBuilderWorkspace({
       <div className="lg:hidden">
         {panel === "edit" ? (
           <Stack gap={3}>
+            <CvDocumentPicker
+              documents={documents}
+              activeId={doc.id}
+              onSelect={handleSelect}
+              onCreate={handleCreate}
+              onDuplicate={handleDuplicate}
+              onDelete={handleDelete}
+              disabled={pending}
+            />
+            <JobTailorCard sourceDoc={doc} onTailored={handleTailored} />
             <CvFormTabs active={formSection} onChange={setFormSection} />
             <CvForm doc={doc} onChange={update} section={formSection} />
           </Stack>
