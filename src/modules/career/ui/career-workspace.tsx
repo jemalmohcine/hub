@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FileText, Briefcase } from "lucide-react";
-import { Cluster, Stack } from "@/design-system";
+import { Stack } from "@/design-system";
 import type { CvDocument, CvDocumentSummary } from "@/modules/cv-builder/types";
 import { CvBuilderWorkspace } from "@/modules/cv-builder/ui/cv-builder-workspace";
 import type { JobApplication } from "@/modules/job-tracker/types";
