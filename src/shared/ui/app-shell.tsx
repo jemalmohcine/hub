@@ -131,9 +131,9 @@ export function AppShell({
         </div>
       </aside>
 
-      <div className="grid h-[100dvh] max-h-[100dvh] min-h-0 w-full grid-rows-[auto_1fr_auto] bg-background lg:ml-[var(--dh-sidebar-w)] lg:block lg:h-auto lg:max-h-none lg:min-h-dvh">
+      <div className="flex min-h-dvh w-full flex-1 flex-col lg:ml-[var(--dh-sidebar-w)]">
         <header
-          className="z-20 border-b border-border bg-card/90 px-[var(--dh-space-4)] backdrop-blur lg:hidden"
+          className="z-20 shrink-0 border-b border-border bg-card/90 px-[var(--dh-space-4)] backdrop-blur lg:hidden"
           style={{ paddingTop: "var(--dh-safe-top)" }}
         >
           <div className="flex h-[var(--dh-topbar-h)] items-center justify-between">
@@ -147,13 +147,13 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="min-h-0 overflow-y-auto overscroll-y-contain lg:overflow-visible">
-          <div className="mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)]">
+        <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain lg:overflow-visible">
+          <div className="mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] pb-[calc(var(--dh-mobile-bottom-offset)+1.25rem)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)] lg:pb-[var(--dh-space-8)]">
             {children}
           </div>
         </main>
 
-        <MobileBottomNav labels={copy} className="lg:hidden" />
+        <MobileBottomNav labels={copy} />
       </div>
     </div>
   );

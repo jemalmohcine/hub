@@ -3,7 +3,6 @@
 import { Briefcase, LayoutDashboard, Settings, Sparkles } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { BottomNavItem } from "@/design-system";
-import { cn } from "@/lib/utils";
 
 type MobileBottomNavProps = {
   labels: {
@@ -12,7 +11,6 @@ type MobileBottomNavProps = {
     career: string;
     settings: string;
   };
-  className?: string;
 };
 
 const NAV_ITEMS = [
@@ -30,32 +28,33 @@ const NAV_ITEMS = [
   { href: "/app/settings", match: (path: string) => path.startsWith("/app/settings"), labelKey: "settings" as const, icon: Settings },
 ];
 
-export function MobileBottomNav({ labels, className }: MobileBottomNavProps) {
+export function MobileBottomNav({ labels }: MobileBottomNavProps) {
   const pathname = usePathname();
 
   return (
     <nav
       aria-label="Navigation principale"
-      className={cn(
-        "shrink-0 border-t border-border bg-card pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_24px_rgba(0,0,0,0.08)]",
-        className,
-      )}
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card lg:hidden"
     >
       <div className="mx-auto grid h-[var(--dh-bottom-nav-h)] max-w-lg grid-cols-4 items-center px-1">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
-          const active = item.match(pathname);
           return (
             <BottomNavItem
               key={item.href}
               href={item.href}
               label={labels[item.labelKey]}
               icon={Icon}
-              active={active}
+              active={item.match(pathname)}
             />
           );
         })}
       </div>
+      <div
+        aria-hidden
+        className="bg-card"
+        style={{ height: "env(safe-area-inset-bottom, 0px)" }}
+      />
     </nav>
   );
 }

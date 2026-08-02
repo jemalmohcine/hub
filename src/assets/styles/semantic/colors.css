@@ -121,6 +121,7 @@
   --dh-sidebar-w: var(--sidebar-w);
   --dh-topbar-h: var(--topbar-h);
   --dh-bottom-nav-h: var(--bottom-nav-h);
+  --dh-mobile-bottom-offset: var(--mobile-bottom-offset);
   --dh-content-max: var(--content-max);
   --dh-auth-max: var(--auth-max);
   --dh-safe-top: var(--safe-top);
