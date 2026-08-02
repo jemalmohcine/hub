@@ -138,7 +138,7 @@ export function AppShell({
       </header>
 
       <main className="lg:pl-[var(--dh-sidebar-w)]">
-        <div className="mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] pb-[calc(var(--dh-bottom-nav-h)+var(--dh-safe-bottom)+2rem)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)] lg:pb-[var(--dh-space-8)]">
+        <div className="mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] pb-[calc(var(--dh-bottom-nav-measured,var(--dh-bottom-nav-h))+var(--dh-safe-bottom)+3rem)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)] lg:pb-[var(--dh-space-8)]">
           {children}
         </div>
       </main>
