@@ -216,7 +216,7 @@ export function SnippetsWorkspace({ initialSnippets }: { initialSnippets: DevSni
     : quickSearch;
 
   return (
-    <Stack gap={4} className="pb-8">
+    <Stack gap={4} className="pb-4 lg:pb-8">
       <Card className="p-4">
         <Stack gap={3}>
           <div>
