@@ -86,7 +86,7 @@ export function BottomNavItem({
     <Link
       href={href}
       className={cn(
-        "relative flex h-full min-h-[3.5rem] cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] leading-tight transition-opacity",
+        "relative flex h-full cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[10px] leading-none transition-opacity",
         active ? "text-primary" : "text-muted-foreground",
       )}
     >

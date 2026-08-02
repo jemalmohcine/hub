@@ -37,12 +37,11 @@ export function MobileBottomNav({ labels, className }: MobileBottomNavProps) {
     <nav
       aria-label="Navigation principale"
       className={cn(
-        "border-t border-border bg-card shadow-[0_-4px_24px_rgba(0,0,0,0.08)]",
+        "shrink-0 border-t border-border bg-card pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_24px_rgba(0,0,0,0.08)]",
         className,
       )}
-      style={{ paddingBottom: "var(--dh-safe-bottom)" }}
     >
-      <div className="mx-auto grid h-[var(--dh-bottom-nav-h)] max-w-lg grid-cols-4 items-stretch px-1">
+      <div className="mx-auto grid h-[var(--dh-bottom-nav-h)] max-w-lg grid-cols-4 items-center px-1">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = item.match(pathname);

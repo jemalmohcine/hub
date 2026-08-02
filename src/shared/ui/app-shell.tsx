@@ -131,7 +131,7 @@ export function AppShell({
         </div>
       </aside>
 
-      <div className="grid h-dvh min-h-0 w-full grid-rows-[auto_1fr_auto] lg:ml-[var(--dh-sidebar-w)] lg:block lg:h-auto lg:min-h-dvh">
+      <div className="grid h-[100dvh] max-h-[100dvh] min-h-0 w-full grid-rows-[auto_1fr_auto] bg-background lg:ml-[var(--dh-sidebar-w)] lg:block lg:h-auto lg:max-h-none lg:min-h-dvh">
         <header
           className="z-20 border-b border-border bg-card/90 px-[var(--dh-space-4)] backdrop-blur lg:hidden"
           style={{ paddingTop: "var(--dh-safe-top)" }}

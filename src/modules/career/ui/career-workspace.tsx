@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { FileText, Briefcase } from "lucide-react";
 import { Stack } from "@/design-system";
 import type { CvDocument, CvDocumentSummary } from "@/modules/cv-builder/types";
@@ -16,6 +16,12 @@ const TABS: Array<{ id: CareerTab; label: string; icon: typeof FileText }> = [
   { id: "cv", label: "CV Builder", icon: FileText },
   { id: "jobs", label: "Candidatures", icon: Briefcase },
 ];
+
+function tabFromParams(params: URLSearchParams, fallback: CareerTab): CareerTab {
+  const param = params.get("tab");
+  if (param === "jobs" || param === "cv") return param;
+  return fallback;
+}
 
 export function CareerWorkspace({
   initialTab,
@@ -32,20 +38,20 @@ export function CareerWorkspace({
   initialDocuments: CvDocumentSummary[];
   initialJobs: JobApplication[];
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<CareerTab>(() =>
+    tabFromParams(searchParams, initialTab),
+  );
 
-  const activeTab = useMemo<CareerTab>(() => {
-    if (pathname.startsWith("/app/jobs")) return "jobs";
-    if (pathname.startsWith("/app/cv")) return "cv";
-    const param = searchParams.get("tab");
-    if (param === "jobs" || param === "cv") return param;
-    return initialTab;
-  }, [pathname, searchParams, initialTab]);
+  useEffect(() => {
+    setActiveTab(tabFromParams(searchParams, initialTab));
+  }, [searchParams, initialTab]);
 
   function setTab(tab: CareerTab) {
-    router.replace(`/app/career?tab=${tab}`, { scroll: false });
+    if (tab === activeTab) return;
+    setActiveTab(tab);
+    const url = `/app/career?tab=${tab}`;
+    window.history.replaceState(window.history.state, "", url);
   }
 
   return (
@@ -77,12 +83,16 @@ export function CareerWorkspace({
         })}
       </div>
 
-      {activeTab === "cv" ? (
-        cvEntitled ? (
+      {cvEntitled ? (
+        <div className={activeTab === "cv" ? undefined : "hidden"} aria-hidden={activeTab !== "cv"}>
           <CvBuilderWorkspace initialDoc={initialDoc} initialDocuments={initialDocuments} />
-        ) : null
-      ) : jobsEntitled ? (
-        <JobTrackerWorkspace initialJobs={initialJobs} cvDocuments={initialDocuments} />
+        </div>
+      ) : null}
+
+      {jobsEntitled ? (
+        <div className={activeTab === "jobs" ? undefined : "hidden"} aria-hidden={activeTab !== "jobs"}>
+          <JobTrackerWorkspace initialJobs={initialJobs} cvDocuments={initialDocuments} />
+        </div>
       ) : null}
     </Stack>
   );
