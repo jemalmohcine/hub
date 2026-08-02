@@ -27,18 +27,14 @@ const SHELL_COPY = {
   fr: {
     overview: "Aperçu",
     ai: "AI",
-    cv: "CV",
-    jobs: "Offres",
-    snippets: "Snippets",
+    career: "Carrière",
     settings: "Réglages",
     signOut: "Se déconnecter",
   },
   en: {
     overview: "Overview",
     ai: "AI",
-    cv: "CV",
-    jobs: "Jobs",
-    snippets: "Snippets",
+    career: "Career",
     settings: "Settings",
     signOut: "Sign out",
   },
@@ -60,9 +56,22 @@ export function AppShell({
   const plan = user.subscription?.plan ?? "free";
   const copy = SHELL_COPY[locale];
 
+  function isModuleActive(href: string) {
+    const path = href.split("?")[0];
+    if (path === "/app/career") {
+      return (
+        pathname.startsWith("/app/career") ||
+        pathname.startsWith("/app/cv") ||
+        pathname.startsWith("/app/jobs")
+      );
+    }
+    return pathname.startsWith(path);
+  }
+
   return (
-    <div className="min-h-dvh bg-background">
+    <div className="min-h-dvh bg-background lg:flex">
       <ThemeSync theme={user.preferences?.theme ?? "system"} />
+
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[var(--dh-sidebar-w)] flex-col border-r border-border bg-card lg:flex">
         <div className="flex h-16 items-center gap-[var(--dh-space-2)] border-b border-border px-[var(--dh-space-5)]">
           <BrandMark withWordmark href="/app/overview" />
@@ -74,7 +83,7 @@ export function AppShell({
           </div>
         </div>
 
-        <nav className="flex-1 space-y-[var(--dh-space-1)] p-[var(--dh-space-3)]">
+        <nav className="flex-1 space-y-[var(--dh-space-1)] overflow-y-auto p-[var(--dh-space-3)]">
           {modules.map((mod) => {
             const locked =
               mod.status === "coming_soon" ||
@@ -85,7 +94,7 @@ export function AppShell({
                 href={mod.href}
                 label={mod.label}
                 icon={mod.icon}
-                active={pathname.startsWith(mod.href)}
+                active={isModuleActive(mod.href)}
                 trailing={
                   <>
                     {locked ? <Lock className="h-3.5 w-3.5 opacity-60" /> : null}
@@ -122,28 +131,30 @@ export function AppShell({
         </div>
       </aside>
 
-      <header
-        className="sticky top-0 z-20 border-b border-border bg-card/90 px-[var(--dh-space-4)] backdrop-blur lg:hidden"
-        style={{ paddingTop: "var(--dh-safe-top)" }}
-      >
-        <div className="flex h-[var(--dh-topbar-h)] items-center justify-between">
-          <BrandMark withWordmark href="/app/overview" size="sm" />
-          <div className="flex items-center gap-1">
-            <NotificationBell initialNotifications={notifications} />
-            <Badge tone="neutral" className="capitalize">
-              {plan}
-            </Badge>
+      <div className="grid h-dvh min-h-0 w-full grid-rows-[auto_1fr_auto] lg:ml-[var(--dh-sidebar-w)] lg:block lg:h-auto lg:min-h-dvh">
+        <header
+          className="z-20 border-b border-border bg-card/90 px-[var(--dh-space-4)] backdrop-blur lg:hidden"
+          style={{ paddingTop: "var(--dh-safe-top)" }}
+        >
+          <div className="flex h-[var(--dh-topbar-h)] items-center justify-between">
+            <BrandMark withWordmark href="/app/overview" size="sm" />
+            <div className="flex items-center gap-1">
+              <NotificationBell initialNotifications={notifications} />
+              <Badge tone="neutral" className="capitalize">
+                {plan}
+              </Badge>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="lg:pl-[var(--dh-sidebar-w)]">
-        <div className="mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] pb-[calc(var(--dh-bottom-nav-measured,var(--dh-bottom-nav-h))+var(--dh-safe-bottom)+3rem)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)] lg:pb-[var(--dh-space-8)]">
-          {children}
-        </div>
-      </main>
+        <main className="min-h-0 overflow-y-auto overscroll-y-contain lg:overflow-visible">
+          <div className="mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)]">
+            {children}
+          </div>
+        </main>
 
-      <MobileBottomNav labels={copy} />
+        <MobileBottomNav labels={copy} className="lg:hidden" />
+      </div>
     </div>
   );
 }
