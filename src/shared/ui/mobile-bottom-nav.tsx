@@ -1,105 +1,62 @@
 "use client";
 
-import { createPortal } from "react-dom";
-import { useEffect, useRef, useState } from "react";
-import {
-  Briefcase,
-  Code2,
-  FileText,
-  LayoutDashboard,
-  Settings,
-  Sparkles,
-} from "lucide-react";
+import { Briefcase, LayoutDashboard, Settings, Sparkles } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { BottomNavItem } from "@/design-system";
-
-const BOTTOM_NAV_HEIGHT_VAR = "--dh-bottom-nav-measured";
+import { cn } from "@/lib/utils";
 
 type MobileBottomNavProps = {
   labels: {
     overview: string;
     ai: string;
-    cv: string;
-    jobs: string;
-    snippets: string;
+    career: string;
     settings: string;
   };
+  className?: string;
 };
 
 const NAV_ITEMS = [
-  { href: "/app/overview", labelKey: "overview" as const, icon: LayoutDashboard },
-  { href: "/app/ai", labelKey: "ai" as const, icon: Sparkles },
-  { href: "/app/cv", labelKey: "cv" as const, icon: FileText },
-  { href: "/app/jobs", labelKey: "jobs" as const, icon: Briefcase },
-  { href: "/app/snippets", labelKey: "snippets" as const, icon: Code2 },
-  { href: "/app/settings", labelKey: "settings" as const, icon: Settings },
+  { href: "/app/overview", match: (path: string) => path.startsWith("/app/overview"), labelKey: "overview" as const, icon: LayoutDashboard },
+  { href: "/app/ai", match: (path: string) => path.startsWith("/app/ai"), labelKey: "ai" as const, icon: Sparkles },
+  {
+    href: "/app/career",
+    match: (path: string) =>
+      path.startsWith("/app/career") ||
+      path.startsWith("/app/cv") ||
+      path.startsWith("/app/jobs"),
+    labelKey: "career" as const,
+    icon: Briefcase,
+  },
+  { href: "/app/settings", match: (path: string) => path.startsWith("/app/settings"), labelKey: "settings" as const, icon: Settings },
 ];
 
-function syncBottomNavHeight(element: HTMLElement | null) {
-  if (!element) return;
-  document.documentElement.style.setProperty(
-    BOTTOM_NAV_HEIGHT_VAR,
-    `${element.offsetHeight}px`,
-  );
-}
+export function MobileBottomNav({ labels, className }: MobileBottomNavProps) {
+  const pathname = usePathname();
 
-export function MobileBottomNav({ labels }: MobileBottomNavProps) {
-  const navRef = useRef<HTMLElement>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    const node = navRef.current;
-    if (!node) return;
-
-    syncBottomNavHeight(node);
-
-    const observer = new ResizeObserver(() => {
-      syncBottomNavHeight(node);
-    });
-    observer.observe(node);
-
-    const onViewportChange = () => syncBottomNavHeight(node);
-    window.visualViewport?.addEventListener("resize", onViewportChange);
-    window.visualViewport?.addEventListener("scroll", onViewportChange);
-
-    return () => {
-      observer.disconnect();
-      window.visualViewport?.removeEventListener("resize", onViewportChange);
-      window.visualViewport?.removeEventListener("scroll", onViewportChange);
-      document.documentElement.style.removeProperty(BOTTOM_NAV_HEIGHT_VAR);
-    };
-  }, [mounted]);
-
-  if (!mounted) return null;
-
-  return createPortal(
+  return (
     <nav
-      ref={navRef}
       aria-label="Navigation principale"
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card shadow-[0_-4px_24px_rgba(0,0,0,0.12)] backdrop-blur supports-[backdrop-filter]:bg-card/95 lg:hidden"
-      style={{
-        paddingBottom: "var(--dh-safe-bottom)",
-      }}
+      className={cn(
+        "border-t border-border bg-card shadow-[0_-4px_24px_rgba(0,0,0,0.08)]",
+        className,
+      )}
+      style={{ paddingBottom: "var(--dh-safe-bottom)" }}
     >
-      <div className="mx-auto flex min-h-[var(--dh-bottom-nav-h)] max-w-lg items-center gap-1 overflow-x-auto px-2 py-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mx-auto grid h-[var(--dh-bottom-nav-h)] max-w-lg grid-cols-4 items-stretch px-1">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
+          const active = item.match(pathname);
           return (
-            <div key={item.href} className="min-w-[4.25rem] shrink-0">
-              <BottomNavItem
-                href={item.href}
-                label={labels[item.labelKey]}
-                icon={Icon}
-              />
-            </div>
+            <BottomNavItem
+              key={item.href}
+              href={item.href}
+              label={labels[item.labelKey]}
+              icon={Icon}
+              active={active}
+            />
           );
         })}
       </div>
-    </nav>,
-    document.body,
+    </nav>
   );
 }

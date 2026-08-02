@@ -72,13 +72,15 @@ export function BottomNavItem({
   href,
   label,
   icon: Icon,
+  active: activeOverride,
 }: {
   href: string;
   label: string;
   icon: LucideIcon;
+  active?: boolean;
 }) {
   const pathname = usePathname();
-  const active = pathname.startsWith(href);
+  const active = activeOverride ?? pathname.startsWith(href);
 
   return (
     <Link
