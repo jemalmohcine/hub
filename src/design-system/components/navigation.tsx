@@ -90,8 +90,8 @@ export function BottomNavItem({
         active ? "text-primary" : "text-muted-foreground",
       )}
     >
-      <Icon className="size-5 shrink-0" />
-      <span className="max-w-full truncate">{label}</span>
+      <Icon className="size-[1.125rem] shrink-0" />
+      <span className="max-w-full truncate text-[10px]">{label}</span>
       <span className="absolute top-1.5 right-2">
         <LinkPendingHint />
       </span>

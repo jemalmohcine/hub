@@ -8,10 +8,13 @@
 
   html {
     @apply h-full font-sans;
+    height: -webkit-fill-available;
   }
 
   body {
     @apply min-h-full bg-background text-foreground antialiased;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
     font-size: var(--text-md);
     line-height: var(--leading-normal);
     overflow-x: clip;

@@ -2,6 +2,7 @@
   --sidebar-w: 16rem;
   --topbar-h: 3.5rem;
   --bottom-nav-h: 3.5rem;
+  --mobile-bottom-offset: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));
   --content-max: 64rem;
   --auth-max: 28rem;
   --safe-top: env(safe-area-inset-top, 0px);
