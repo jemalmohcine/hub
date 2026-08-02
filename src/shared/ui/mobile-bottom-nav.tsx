@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import {
   Briefcase,
+  Code2,
   FileText,
   LayoutDashboard,
   Settings,
@@ -17,9 +18,19 @@ type MobileBottomNavProps = {
     ai: string;
     cv: string;
     jobs: string;
+    snippets: string;
     settings: string;
   };
 };
+
+const NAV_ITEMS = [
+  { href: "/app/overview", labelKey: "overview" as const, icon: LayoutDashboard },
+  { href: "/app/ai", labelKey: "ai" as const, icon: Sparkles },
+  { href: "/app/cv", labelKey: "cv" as const, icon: FileText },
+  { href: "/app/jobs", labelKey: "jobs" as const, icon: Briefcase },
+  { href: "/app/snippets", labelKey: "snippets" as const, icon: Code2 },
+  { href: "/app/settings", labelKey: "settings" as const, icon: Settings },
+];
 
 export function MobileBottomNav({ labels }: MobileBottomNavProps) {
   const [mounted, setMounted] = useState(false);
@@ -38,20 +49,19 @@ export function MobileBottomNav({ labels }: MobileBottomNavProps) {
         paddingBottom: "var(--dh-safe-bottom)",
       }}
     >
-      <div className="mx-auto grid h-[var(--dh-bottom-nav-h)] max-w-lg grid-cols-5 items-center gap-[var(--dh-space-1)] px-[var(--dh-space-2)]">
-        <BottomNavItem
-          href="/app/overview"
-          label={labels.overview}
-          icon={LayoutDashboard}
-        />
-        <BottomNavItem href="/app/ai" label={labels.ai} icon={Sparkles} />
-        <BottomNavItem href="/app/cv" label={labels.cv} icon={FileText} />
-        <BottomNavItem href="/app/jobs" label={labels.jobs} icon={Briefcase} />
-        <BottomNavItem
-          href="/app/settings"
-          label={labels.settings}
-          icon={Settings}
-        />
+      <div className="mx-auto flex h-[var(--dh-bottom-nav-h)] max-w-lg items-stretch gap-1 overflow-x-auto px-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div key={item.href} className="min-w-[4.5rem] shrink-0">
+              <BottomNavItem
+                href={item.href}
+                label={labels[item.labelKey]}
+                icon={Icon}
+              />
+            </div>
+          );
+        })}
       </div>
     </nav>,
     document.body,

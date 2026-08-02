@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Bot, Briefcase, FileText, LayoutDashboard } from "lucide-react";
+import { Bot, Briefcase, Code2, FileText, LayoutDashboard } from "lucide-react";
 import type { ModuleStatus } from "@/core/auth/types";
 
 export type ModuleDefinition = {
@@ -53,6 +53,16 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     requiredEntitlement: "module:jobs",
     status: "active",
     icon: Briefcase,
+  },
+  {
+    id: "snippets",
+    label: "Snippets",
+    description: "Snippets, notes et recherche doc",
+    href: "/app/snippets",
+    order: 30,
+    requiredEntitlement: "module:snippets",
+    status: "active",
+    icon: Code2,
   },
 ];
 
