@@ -9,6 +9,7 @@ import {
   resolveBrief,
 } from "@/modules/ai-intel/brief";
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
+import { readRepoMomentum } from "@/modules/ai-intel/repo-momentum";
 import { formatStars } from "@/modules/ai-intel/score";
 import type { AiIntelItem } from "@/modules/ai-intel/types";
 
@@ -81,7 +82,7 @@ export function buildEssentialRecap(
         };
 
   const stars = Number(meta.stars) || 0;
-  const starsToday = Number(meta.starsToday) || 0;
+  const { starsToday, starsWeek } = readRepoMomentum({ metadata: meta });
   const forks = Number(meta.forks) || 0;
   const language = readMeta(meta, "language");
   const pricing = readMeta(meta, "pricing");
@@ -93,6 +94,13 @@ export function buildEssentialRecap(
       locale === "fr"
         ? `+${formatStars(starsToday)} aujourd’hui`
         : `+${formatStars(starsToday)} today`,
+    );
+  }
+  if (starsWeek >= 500) {
+    signalLines.push(
+      locale === "fr"
+        ? `+${formatStars(starsWeek)} cette semaine`
+        : `+${formatStars(starsWeek)} this week`,
     );
   }
   if (forks) {
@@ -230,12 +238,17 @@ export function pushAlertTitle(
   const kind = detectContentKind(normalized);
   const explained = explainTitle(normalized, locale);
   const product = productOf(normalized);
-  const starsToday = Number(meta.starsToday) || 0;
+  const { starsToday, starsWeek } = readRepoMomentum({ metadata: meta });
   const short = explained.name.includes("/")
     ? explained.name.split("/").pop() || explained.name
     : explained.name;
 
-  if (kind === "repo" && starsToday >= 200) {
+  if (kind === "repo" && (starsToday >= 200 || starsWeek >= 1000)) {
+    if (starsWeek >= 1000) {
+      return locale === "fr"
+        ? `${short}: +${formatStars(starsToday)}/j · +${formatStars(starsWeek)}/sem`
+        : `${short}: +${formatStars(starsToday)}/day · +${formatStars(starsWeek)}/wk`;
+    }
     return locale === "fr"
       ? `${short}: +${formatStars(starsToday)} stars en 24h`
       : `${short}: +${formatStars(starsToday)} stars in 24h`;

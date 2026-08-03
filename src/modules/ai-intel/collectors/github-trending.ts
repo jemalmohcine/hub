@@ -49,6 +49,7 @@ export async function collectGithubTrending(
     repo: string;
     description: string;
     starsToday: number;
+    starsWeek: number;
     language: string | null;
     rank: number;
   }[] = [];
@@ -72,6 +73,8 @@ export async function collectGithubTrending(
     const todayText = $(el).text();
     const todayMatch = todayText.match(/([\d,]+)\s*stars?\s*today/i);
     const starsToday = todayMatch ? parseCount(todayMatch[1]) : 0;
+    const weekMatch = todayText.match(/([\d,]+)\s*stars?\s*this\s*week/i);
+    const starsWeek = weekMatch ? parseCount(weekMatch[1]) : 0;
     const language =
       $(el).find('[itemprop="programmingLanguage"]').first().text().trim() ||
       null;
@@ -80,6 +83,7 @@ export async function collectGithubTrending(
       repo,
       description,
       starsToday,
+      starsWeek,
       language,
       rank: idx + 1,
     });
@@ -102,6 +106,11 @@ export async function collectGithubTrending(
           description,
           stars ? `${formatStars(stars)} stars` : "",
           row.starsToday ? `+${formatStars(row.starsToday)} today` : "",
+          row.starsWeek
+            ? `+${formatStars(row.starsWeek)} this week`
+            : row.starsToday
+              ? `~${formatStars(row.starsToday * 5)} est. week`
+              : "",
           forks ? `${formatStars(forks)} forks` : "",
           language || "",
         ]
@@ -122,6 +131,8 @@ export async function collectGithubTrending(
             comments: description,
             stars,
             starsToday: row.starsToday,
+            starsWeek: row.starsWeek || (row.starsToday > 0 ? row.starsToday * 5 : 0),
+            starsWeekEstimate: row.starsWeek ? false : row.starsToday > 0,
             forks,
             language,
             topics,
