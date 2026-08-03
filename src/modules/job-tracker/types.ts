@@ -1,3 +1,8 @@
+import type {
+  FreelanceSubtype,
+  JobEmploymentCategory,
+} from "@/modules/job-board/types";
+
 export type JobApplicationStatus =
   | "to_apply"
   | "applied"
@@ -15,6 +20,12 @@ export type JobApplication = {
   cvDocumentId: string | null;
   appliedAt: string | null;
   followUpAt: string | null;
+  employmentCategory: JobEmploymentCategory | null;
+  freelanceSubtype: FreelanceSubtype | null;
+  listingId: string | null;
+  description: string | null;
+  location: string | null;
+  salaryHint: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -28,6 +39,12 @@ export type JobApplicationInput = {
   cvDocumentId?: string | null;
   appliedAt?: string | null;
   followUpAt?: string | null;
+  employmentCategory?: JobEmploymentCategory | null;
+  freelanceSubtype?: FreelanceSubtype | null;
+  listingId?: string | null;
+  description?: string | null;
+  location?: string | null;
+  salaryHint?: string | null;
 };
 
 export const JOB_STATUS_LABELS: Record<JobApplicationStatus, string> = {
