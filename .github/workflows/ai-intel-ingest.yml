@@ -1,9 +1,9 @@
 name: AI Intel Ingest
 
-# Daily scrape + post-merge on main (not Vercel Cron).
+# Triggered on every main merge via post-merge-main.yml (workflow_call).
+# Nightly schedule + manual dispatch. Not on Vercel Cron.
 on:
-  push:
-    branches: [main]
+  workflow_call:
   schedule:
     # 01:00 UTC every day
     - cron: "0 1 * * *"
@@ -35,7 +35,6 @@ jobs:
       VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
       VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
       NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
-      # Built-in token helps GitHub API rate limits for trending collectors
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
