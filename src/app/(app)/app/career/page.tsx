@@ -18,6 +18,7 @@ import {
 import { defaultCvDocument } from "@/modules/cv-builder/defaults";
 import { getCvDocumentById, listCvDocuments } from "@/modules/cv-builder/queries";
 import { CareerWorkspace } from "@/modules/career/ui/career-workspace";
+import { listJobListings } from "@/modules/job-board/queries";
 import { listJobApplications } from "@/modules/job-tracker/queries";
 
 export const metadata = { title: "Carrière" };
@@ -33,7 +34,12 @@ export default async function CareerPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const cvEntitled = hasEntitlement(user.entitlements, "module:cv");
   const jobsEntitled = hasEntitlement(user.entitlements, "module:jobs");
-  const initialTab = params.tab === "jobs" ? "jobs" : "cv";
+  const initialTab =
+    params.tab === "jobs"
+      ? "jobs"
+      : params.tab === "offers"
+        ? "offers"
+        : "cv";
 
   if (!cvEntitled && !jobsEntitled) {
     return (
@@ -65,9 +71,10 @@ export default async function CareerPage({ searchParams }: PageProps) {
     );
   }
 
-  const [documents, jobs] = await Promise.all([
+  const [documents, jobs, listings] = await Promise.all([
     cvEntitled ? listCvDocuments(user.id).catch(() => []) : Promise.resolve([]),
     jobsEntitled ? listJobApplications(user.id).catch(() => []) : Promise.resolve([]),
+    jobsEntitled ? listJobListings("all").catch(() => []) : Promise.resolve([]),
   ]);
 
   const activeId = documents[0]?.id;
@@ -81,7 +88,7 @@ export default async function CareerPage({ searchParams }: PageProps) {
     <>
       <PageHeader
         title="Carrière"
-        description="CV Builder et suivi des candidatures au même endroit."
+        description="CV Builder, offres d'emploi scrappées et suivi des candidatures."
       />
       <Suspense fallback={null}>
         <CareerWorkspace
@@ -91,6 +98,7 @@ export default async function CareerPage({ searchParams }: PageProps) {
           initialDoc={initialDoc}
           initialDocuments={documents}
           initialJobs={jobs}
+          initialListings={listings}
         />
       </Suspense>
     </>

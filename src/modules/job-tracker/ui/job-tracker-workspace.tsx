@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Briefcase,
   ExternalLink,
@@ -33,6 +33,10 @@ import {
   type JobApplication,
   type JobApplicationStatus,
 } from "@/modules/job-tracker/types";
+import {
+  EMPLOYMENT_CATEGORY_LABELS,
+  FREELANCE_SUBTYPE_LABELS,
+} from "@/modules/job-board/types";
 import type { CvDocumentSummary } from "@/modules/cv-builder/types";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +51,19 @@ const EMPTY_FORM = {
   followUpAt: "",
 };
 
+function employmentBadge(job: JobApplication) {
+  if (job.employmentCategory === "salaried") {
+    return EMPLOYMENT_CATEGORY_LABELS.salaried;
+  }
+  if (job.employmentCategory === "freelance") {
+    if (job.freelanceSubtype === "part_time") {
+      return FREELANCE_SUBTYPE_LABELS.part_time;
+    }
+    return FREELANCE_SUBTYPE_LABELS.full_time;
+  }
+  return null;
+}
+
 export function JobTrackerWorkspace({
   initialJobs,
   cvDocuments,
@@ -58,6 +75,10 @@ export function JobTrackerWorkspace({
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const { run, pending } = useAsyncAction();
+
+  useEffect(() => {
+    setJobs(initialJobs);
+  }, [initialJobs]);
 
   const jobsByStatus = useMemo(() => {
     const map: Record<JobApplicationStatus, JobApplication[]> = {
@@ -310,6 +331,18 @@ function JobCard({
           <Badge tone="info" className="w-fit text-[10px]">
             {cvTitle}
           </Badge>
+        ) : null}
+
+        {employmentBadge(job) ? (
+          <Badge tone="neutral" className="w-fit text-[10px]">
+            {employmentBadge(job)}
+          </Badge>
+        ) : null}
+
+        {job.location ? (
+          <Text size="sm" tone="muted" className="text-xs">
+            {job.location}
+          </Text>
         ) : null}
 
         {job.jobUrl ? (
