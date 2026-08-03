@@ -33,7 +33,7 @@ export async function ensureItemTranslation(itemId: string) {
     metadata: (data.metadata ?? {}) as Record<string, unknown>,
   };
 
-  const nextMeta = await enrichI18nMetadata(classified, { force: true });
+  const nextMeta = await enrichI18nMetadata(classified, { force: false });
   const takeaway =
     typeof nextMeta.takeaway === "string" ? nextMeta.takeaway : data.summary;
 

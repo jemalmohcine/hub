@@ -68,6 +68,8 @@ export const UI = {
     empty: "Rien d’urgent pour cette période",
     emptyHint: "Consultez GitHub, Outils ou Actus.",
     noData: "Aucun contenu",
+    emptySaved: "Aucun favori",
+    emptySavedHint: "Ouvre un article et appuie sur « Enregistrer » pour le retrouver ici.",
     emptyUrgent: "Aucune alerte urgente",
     emptyUrgentHint:
       "Changements qui demandent une action: prix, breaking, dépréciation.",
@@ -125,6 +127,8 @@ export const UI = {
     empty: "Nothing urgent for this period",
     emptyHint: "Browse GitHub, Tools, or News.",
     noData: "No content",
+    emptySaved: "No saved items",
+    emptySavedHint: "Open an item and tap Save to find it here.",
     emptyUrgent: "No urgent alerts",
     emptyUrgentHint:
       "Action-required changes only: pricing, breaking updates, deprecations.",

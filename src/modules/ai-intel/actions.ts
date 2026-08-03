@@ -5,20 +5,22 @@ import { getHubUser } from "@/core/auth/get-user";
 import { createClient } from "@/core/auth/supabase/server";
 import { hasEntitlement } from "@/core/entitlements";
 
-export async function toggleAiIntelSave(itemId: string) {
+export async function toggleAiIntelSave(itemId: string): Promise<{ saved: boolean }> {
   const user = await getHubUser();
-  if (!user) throw new Error("Unauthorized");
+  if (!user) throw new Error("Non connecté");
   if (!hasEntitlement(user.entitlements, "module:ai")) {
-    throw new Error("Pro entitlement required");
+    throw new Error("Abonnement Pro requis");
   }
 
   const supabase = await createClient();
-  const { data: existing } = await supabase
+  const { data: existing, error: readError } = await supabase
     .from("ai_intel_saves")
     .select("item_id")
     .eq("user_id", user.id)
     .eq("item_id", itemId)
     .maybeSingle();
+
+  if (readError) throw new Error(readError.message);
 
   if (existing) {
     const { error } = await supabase
@@ -27,15 +29,23 @@ export async function toggleAiIntelSave(itemId: string) {
       .eq("user_id", user.id)
       .eq("item_id", itemId);
     if (error) throw new Error(error.message);
-  } else {
-    const { error } = await supabase.from("ai_intel_saves").insert({
-      user_id: user.id,
-      item_id: itemId,
-    });
-    if (error) throw new Error(error.message);
+    revalidatePath("/app/ai");
+    return { saved: false };
+  }
+
+  const { error } = await supabase.from("ai_intel_saves").insert({
+    user_id: user.id,
+    item_id: itemId,
+  });
+  if (error) {
+    if (/foreign key|violates foreign key/i.test(error.message)) {
+      throw new Error("Cet élément n’est plus disponible");
+    }
+    throw new Error(error.message);
   }
 
   revalidatePath("/app/ai");
+  return { saved: true };
 }
 
 export async function markAiIntelRead(itemId: string) {

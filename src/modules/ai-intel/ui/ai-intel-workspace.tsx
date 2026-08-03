@@ -233,6 +233,12 @@ export function AiIntelWorkspace({
     void run(() => markAiIntelRead(item.id), { silent: true });
   }
 
+  function handleSavedChange(itemId: string, saved: boolean) {
+    setItems((prev) =>
+      prev.map((x) => (x.id === itemId ? { ...x, saved } : x)),
+    );
+  }
+
   function renderItems(list: AiIntelItem[], compact = false) {
     return list.map((item) => (
       <FeedItemRow
@@ -249,10 +255,14 @@ export function AiIntelWorkspace({
     tab === "urgent"
       ? copy.emptyUrgent
       : tab === "saved"
-        ? copy.noData
+        ? copy.emptySaved
         : copy.noData;
   const emptyHint =
-    tab === "urgent" ? copy.emptyUrgentHint : copy.emptyHint;
+    tab === "urgent"
+      ? copy.emptyUrgentHint
+      : tab === "saved"
+        ? copy.emptySavedHint
+        : copy.emptyHint;
 
   return (
     <Stack gap={4} className="pb-8">
@@ -319,12 +329,21 @@ export function AiIntelWorkspace({
           locale={locale}
         />
       ) : (
-        <div className="flex items-center gap-2 rounded-2xl border border-border/80 bg-card/60 px-4 py-3">
-          <Bookmark className="h-4 w-4 text-[var(--dh-brand)]" />
-          <Text weight="medium">{copy.tabSaved}</Text>
-          <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
-            {counts.saved}
-          </span>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 rounded-2xl border border-[var(--dh-brand)]/25 bg-[var(--dh-brand-soft)]/30 px-4 py-3">
+            <Bookmark className="h-4 w-4 fill-current text-[var(--dh-brand)]" />
+            <Text weight="medium">{copy.tabSaved}</Text>
+            <span className="rounded-full bg-background/80 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
+              {counts.saved}
+            </span>
+          </div>
+          <FeedStatsBar
+            counts={counts}
+            total={searchedPool.length}
+            activeTab="all"
+            onSelect={setTab}
+            locale={locale}
+          />
         </div>
       )}
 
@@ -417,6 +436,7 @@ export function AiIntelWorkspace({
             prev.map((x) => (x.id === id ? { ...x, metadata } : x)),
           );
         }}
+        onSavedChange={handleSavedChange}
       />
     </Stack>
   );
