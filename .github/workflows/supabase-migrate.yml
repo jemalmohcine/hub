@@ -1,12 +1,9 @@
 name: Supabase Migrate
 
+# Triggered on every main merge via post-merge-main.yml (workflow_call).
+# Manual dispatch also available.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "supabase/migrations/**"
-      - "supabase/config.toml"
-      - ".github/workflows/supabase-migrate.yml"
+  workflow_call:
   workflow_dispatch:
 
 concurrency:

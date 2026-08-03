@@ -1,12 +1,9 @@
 name: Job Board Ingest
 
+# Triggered on every main merge via post-merge-main.yml (workflow_call).
+# Nightly schedule + manual dispatch.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "src/modules/job-board/**"
-      - "scripts/job-board-ingest.ts"
-      - ".github/workflows/job-board-ingest.yml"
+  workflow_call:
   schedule:
     - cron: "30 2 * * *"
   workflow_dispatch:

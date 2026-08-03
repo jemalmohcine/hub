@@ -88,16 +88,22 @@ Module Pro `/app/ai` : digest multi-sources (4 piliers), merge cross-sites, save
    - `CRON_SECRET` (optionnel — trigger manuel local via `/api/cron/ai-intel`)
    - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` (+ `VAPID_SUBJECT`) pour les push PWA
    - `NEXT_PUBLIC_APP_URL` (URL prod, utilisée aussi pour les push)
-3. Scrape AI Intel : **GitHub Actions** (`.github/workflows/ai-intel-ingest.yml`)
-   - **À chaque merge sur `main`** (push)
-   - **Chaque matin** : schedule `0 1 * * *` UTC
+3. **À chaque merge sur `main`** : workflow **Post merge main** (`.github/workflows/post-merge-main.yml`) exécute dans l’ordre :
+   - migrations Supabase
+   - scrape AI Intel
+   - scrape offres d’emploi (job board)
+4. Scrape AI Intel (aussi en schedule) : `.github/workflows/ai-intel-ingest.yml`
+   - **Chaque matin** : `0 1 * * *` UTC
    - Manuel : Actions → « AI Intel Ingest » → Run workflow (`full` ou `i18n`)
-4. Notifications téléphone (PWA) :
+5. Scrape offres emploi : `.github/workflows/job-board-ingest.yml`
+   - **Chaque nuit** : `30 2 * * *` UTC
+   - Manuel : Actions → « Job Board Ingest »
+6. Notifications téléphone (PWA) :
    - Applique `supabase/migrations/007_push_subscriptions.sql`
    - Sur le téléphone : installer DevHub (Ajouter à l’écran d’accueil)
    - Settings → Langue & apparence → **Activer les alertes**
    - Après chaque scrape, s’il y a une alerte AI, une notif système est envoyée aux appareils Pro abonnés
-5. Test local :
+7. Test local :
    ```bash
    npm run ai-intel:ingest
    # ou

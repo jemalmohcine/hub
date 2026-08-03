@@ -1,0 +1,29 @@
+name: Post merge main
+
+# Runs ALL maintenance workflows on every push/merge to main,
+# regardless of path filters on the individual workflows.
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: post-merge-main
+  cancel-in-progress: false
+
+jobs:
+  supabase-migrate:
+    name: Supabase migrate
+    uses: ./.github/workflows/supabase-migrate.yml
+    secrets: inherit
+
+  ai-intel-ingest:
+    name: AI intel ingest
+    needs: supabase-migrate
+    uses: ./.github/workflows/ai-intel-ingest.yml
+    secrets: inherit
+
+  job-board-ingest:
+    name: Job board ingest
+    needs: supabase-migrate
+    uses: ./.github/workflows/job-board-ingest.yml
+    secrets: inherit
