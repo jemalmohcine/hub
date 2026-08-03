@@ -7,8 +7,8 @@ export const maxDuration = 300;
 
 /**
  * Manual / local trigger only.
- * Production daily scrape runs in GitHub Actions (`.github/workflows/ai-intel-ingest.yml`),
- * not via Vercel Cron.
+ * Production ingest runs in GitHub Actions (`.github/workflows/ai-intel-ingest.yml`)
+ * on every push to `main` and daily at 01:00 UTC — not via Vercel Cron.
  */
 function authorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
