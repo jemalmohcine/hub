@@ -88,9 +88,10 @@ Module Pro `/app/ai` : digest multi-sources (4 piliers), merge cross-sites, save
    - `CRON_SECRET` (optionnel — trigger manuel local via `/api/cron/ai-intel`)
    - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` (+ `VAPID_SUBJECT`) pour les push PWA
    - `NEXT_PUBLIC_APP_URL` (URL prod, utilisée aussi pour les push)
-3. Scrape quotidien : **GitHub Actions** (`.github/workflows/ai-intel-ingest.yml`)
-   - Schedule : `0 1 * * *` UTC
-   - Manual : Actions → « AI Intel Ingest » → Run workflow (`full` ou `i18n`)
+3. Scrape AI Intel : **GitHub Actions** (`.github/workflows/ai-intel-ingest.yml`)
+   - **À chaque merge sur `main`** (push)
+   - **Chaque matin** : schedule `0 1 * * *` UTC
+   - Manuel : Actions → « AI Intel Ingest » → Run workflow (`full` ou `i18n`)
 4. Notifications téléphone (PWA) :
    - Applique `supabase/migrations/007_push_subscriptions.sql`
    - Sur le téléphone : installer DevHub (Ajouter à l’écran d’accueil)
