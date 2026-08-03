@@ -1,6 +1,11 @@
 import { createAdminClient } from "@/core/auth/supabase/admin";
 import { collectFromSource } from "@/modules/ai-intel/collectors";
+import {
+  enrichClassifiedItem,
+  resetArticleScrapeBudget,
+} from "@/modules/ai-intel/enrich-classified";
 import { pushAlertTitle } from "@/modules/ai-intel/essential-recap";
+import { aiIntelItemHref } from "@/modules/ai-intel/item-link";
 import { mergeHits } from "@/modules/ai-intel/merge/merge-hits";
 import { scrapeDayIso } from "@/modules/ai-intel/scrape-date";
 import { discoverNewSources } from "@/modules/ai-intel/sources/discover";
@@ -9,9 +14,12 @@ import { isCriticalPushAlert } from "@/modules/ai-intel/ui/rank";
 import { mapPool } from "@/lib/async-pool";
 
 const SOURCE_CONCURRENCY = 8;
+const ENRICH_CONCURRENCY = 4;
 const MAX_PUSH_ALERTS = 8;
 
-async function notifyCriticalAlerts(insertedItems: ClassifiedItem[]) {
+type InsertedIntelItem = ClassifiedItem & { dbId: string };
+
+async function notifyCriticalAlerts(insertedItems: InsertedIntelItem[]) {
   const critical = insertedItems.filter(isCriticalPushAlert);
   if (critical.length === 0) {
     return {
@@ -32,6 +40,7 @@ async function notifyCriticalAlerts(insertedItems: ClassifiedItem[]) {
   for (const item of critical.slice(0, MAX_PUSH_ALERTS)) {
     const title = pushAlertTitle(item, "fr");
     const body = item.summary.slice(0, 180);
+    const href = aiIntelItemHref(item.dbId);
 
     try {
       await createNotification({
@@ -39,10 +48,14 @@ async function notifyCriticalAlerts(insertedItems: ClassifiedItem[]) {
         category: "ai",
         title,
         body,
-        href: "/app/ai",
+        href,
         severity: "urgent",
         dedupeKey: `ai:alert:${item.canonicalKey}`,
-        metadata: { canonicalKey: item.canonicalKey, alertKind: item.category },
+        metadata: {
+          itemId: item.dbId,
+          canonicalKey: item.canonicalKey,
+          alertKind: item.category,
+        },
         skipPush: true,
       });
       notifications += 1;
@@ -54,7 +67,7 @@ async function notifyCriticalAlerts(insertedItems: ClassifiedItem[]) {
       {
         title,
         body,
-        href: "/app/ai",
+        href,
         tag: `ai:${item.canonicalKey}`,
         severity: "urgent",
       },
@@ -134,11 +147,16 @@ export async function runAiIntelIngest() {
     const allHits = hitBatches.flat();
     const { items, stats: mergeStats } = mergeHits(allHits, sourcesById);
 
+    resetArticleScrapeBudget();
+    const enriched = await mapPool(items, ENRICH_CONCURRENCY, (item) =>
+      enrichClassifiedItem(item),
+    );
+
     let inserted = 0;
     let skipped = 0;
-    const insertedItems: ClassifiedItem[] = [];
+    const insertedItems: InsertedIntelItem[] = [];
 
-    for (const item of items) {
+    for (const item of enriched) {
       const { data, error } = await admin
         .from("ai_intel_items")
         .upsert(
@@ -164,7 +182,7 @@ export async function runAiIntelIngest() {
 
       if (data && data.length > 0) {
         inserted += 1;
-        insertedItems.push(item);
+        insertedItems.push({ ...item, dbId: data[0].id as string });
       } else {
         skipped += 1;
       }

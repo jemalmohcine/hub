@@ -1,4 +1,5 @@
 import { detectContentKind } from "@/modules/ai-intel/content-kind";
+import { isRepoExploding, readRepoMomentum } from "@/modules/ai-intel/repo-momentum";
 import type { AiIntelItem, AiUrgency } from "@/modules/ai-intel/types";
 
 export function itemVerdict(item: AiIntelItem): string {
@@ -36,7 +37,7 @@ export function isHotAlert(item: AiIntelItem): boolean {
   const starsToday = Number(meta.starsToday) || 0;
 
   if (kind === "repo") {
-    return starsToday >= 350 || isTrending(item);
+    return isRepoExploding(item);
   }
 
   if (kind === "pricing" || kind === "breaking" || kind === "security") {
@@ -65,19 +66,15 @@ export function isHotAlert(item: AiIntelItem): boolean {
   );
 }
 
-/** Trending = a repo that is really accelerating, not every listed repo. */
+/** Trending = accelerating repo with measurable daily growth. */
 export function isTrending(item: AiIntelItem): boolean {
   if (itemKind(item) !== "repo") return false;
+  const { starsToday, starsWeek, stars, rank } = readRepoMomentum(item);
 
-  const meta = (item.metadata ?? {}) as Record<string, unknown>;
-  const starsToday = Number(meta.starsToday) || 0;
-  const stars = Number(meta.stars) || 0;
-  const rank = Number(meta.rank) || 0;
-
-  if (starsToday >= 250) return true;
-  if (rank > 0 && rank <= 5 && starsToday >= 120) return true;
-  // Small repo exploding relative to its size
-  if (stars > 0 && starsToday >= 100 && starsToday >= stars * 0.15) return true;
+  if (starsToday >= 200) return true;
+  if (starsWeek >= 1000 && starsToday >= 80) return true;
+  if (rank > 0 && rank <= 5 && starsToday >= 150) return true;
+  if (stars > 0 && starsToday >= 100 && starsToday >= stars * 0.12) return true;
   return false;
 }
 
@@ -105,7 +102,7 @@ export function isCriticalPushAlert(item: AlertItem): boolean {
   const starsToday = Number(meta.starsToday) || 0;
 
   if (kind === "repo") {
-    return starsToday >= 350 || isTrending(intel);
+    return isRepoExploding(intel);
   }
 
   if (kind === "pricing" || kind === "breaking" || kind === "security") {

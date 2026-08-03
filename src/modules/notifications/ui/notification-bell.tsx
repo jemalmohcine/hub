@@ -30,8 +30,15 @@ import {
   type HubNotification,
   type NotificationCategory,
 } from "@/modules/notifications/types";
+import { resolveAiIntelDeepLink } from "@/modules/ai-intel/item-link";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+
+function notificationHref(n: HubNotification): string | null {
+  const deep = resolveAiIntelDeepLink(n.metadata);
+  if (deep) return deep;
+  return n.href || null;
+}
 
 const CATEGORIES: Array<NotificationCategory | "all"> = [
   "all",
@@ -115,7 +122,8 @@ export function NotificationBell({
           );
         }
         setOpen(false);
-        if (n.href) router.push(n.href);
+        const href = notificationHref(n);
+        if (href) router.push(href);
       },
       { silent: true },
     );

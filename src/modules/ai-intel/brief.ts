@@ -307,12 +307,17 @@ export function explainTitle(
   if (kind === "repo") {
     const short = repoShortName(name);
     const starsToday = Number(meta.starsToday) || 0;
-    if (starsToday >= 200) {
+    const starsWeek = Number(meta.starsWeek) || Number(meta.starsWeekEstimate) || 0;
+    if (starsToday >= 200 || starsWeek >= 1000) {
       return {
         title:
           locale === "fr"
-            ? `${short}: +${formatStars(starsToday)} stars en 24h`
-            : `${short}: +${formatStars(starsToday)} stars in 24h`,
+            ? starsWeek >= 1000
+              ? `${short}: +${formatStars(starsToday)}/j · +${formatStars(starsWeek)}/sem`
+              : `${short}: +${formatStars(starsToday)} stars en 24h`
+            : starsWeek >= 1000
+              ? `${short}: +${formatStars(starsToday)}/day · +${formatStars(starsWeek)}/wk`
+              : `${short}: +${formatStars(starsToday)} stars in 24h`,
         name,
         typeLabel,
         kind,

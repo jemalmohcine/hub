@@ -24,7 +24,12 @@ import { headers } from "next/headers";
 
 export const metadata = { title: "Intelligence AI" };
 
-export default async function AiModulePage() {
+type PageProps = {
+  searchParams: Promise<{ item?: string; key?: string }>;
+};
+
+export default async function AiModulePage({ searchParams }: PageProps) {
+  const params = await searchParams;
   const user = await getHubUser();
   if (!user) redirect("/sign-in");
 
@@ -96,6 +101,8 @@ export default async function AiModulePage() {
             : null
         }
         initialLocale={locale}
+        deepLinkItemId={params.item ?? null}
+        deepLinkCanonicalKey={params.key ?? null}
       />
     </>
   );

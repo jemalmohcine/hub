@@ -85,10 +85,14 @@ export function AiIntelWorkspace({
   initialItems,
   digestLabel,
   initialLocale = "fr",
+  deepLinkItemId = null,
+  deepLinkCanonicalKey = null,
 }: {
   initialItems: AiIntelItem[];
   digestLabel: string | null;
   initialLocale?: AiLocale;
+  deepLinkItemId?: string | null;
+  deepLinkCanonicalKey?: string | null;
 }) {
   const locale = initialLocale;
   const copy = t(locale);
@@ -99,6 +103,35 @@ export function AiIntelWorkspace({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [items, setItems] = useState(initialItems);
   const { run } = useAsyncAction();
+
+  useEffect(() => {
+    const targetId =
+      deepLinkItemId ??
+      (deepLinkCanonicalKey
+        ? initialItems.find((i) => i.canonical_key === deepLinkCanonicalKey)?.id
+        : null);
+    if (!targetId) return;
+
+    const found = initialItems.find((i) => i.id === targetId);
+    if (!found) return;
+
+    setSelectedId(found.id);
+    if (!found.read) {
+      setItems((prev) =>
+        prev.map((x) => (x.id === found.id ? { ...x, read: true } : x)),
+      );
+      void run(() => markAiIntelRead(found.id), { silent: true });
+    }
+
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("item");
+      url.searchParams.delete("key");
+      const next = `${url.pathname}${url.search}`;
+      window.history.replaceState({}, "", next);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open once from URL on mount
+  }, []);
 
   useEffect(() => {
     if (locale !== "fr") return;
