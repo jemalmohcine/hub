@@ -88,12 +88,14 @@ export function ItemDetailModal({
   locale,
   onOpenChange,
   onMetadataUpdate,
+  onSavedChange,
 }: {
   item: AiIntelItem | null;
   open: boolean;
   locale: AiLocale;
   onOpenChange: (open: boolean) => void;
   onMetadataUpdate?: (itemId: string, metadata: Record<string, unknown>) => void;
+  onSavedChange?: (itemId: string, saved: boolean) => void;
 }) {
   if (!item) return null;
 
@@ -105,6 +107,7 @@ export function ItemDetailModal({
       locale={locale}
       onOpenChange={onOpenChange}
       onMetadataUpdate={onMetadataUpdate}
+      onSavedChange={onSavedChange}
     />
   );
 }
@@ -115,17 +118,24 @@ function ItemDetailModalBody({
   locale,
   onOpenChange,
   onMetadataUpdate,
+  onSavedChange,
 }: {
   item: AiIntelItem;
   open: boolean;
   locale: AiLocale;
   onOpenChange: (open: boolean) => void;
   onMetadataUpdate?: (itemId: string, metadata: Record<string, unknown>) => void;
+  onSavedChange?: (itemId: string, saved: boolean) => void;
 }) {
   const copy = t(locale);
   const { run, pending } = useAsyncAction();
   const [localItem, setLocalItem] = useState(item);
   const [expandedPoint, setExpandedPoint] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLocalItem(item);
+    setExpandedPoint(null);
+  }, [item]);
 
   useEffect(() => {
     if (!open || !localItem) return;
@@ -278,6 +288,10 @@ function ItemDetailModalBody({
             itemId={localItem.id}
             saved={Boolean(localItem.saved)}
             locale={locale}
+            onSavedChange={(saved) => {
+              setLocalItem((prev) => ({ ...prev, saved }));
+              onSavedChange?.(localItem.id, saved);
+            }}
           />
           <Button
             size="sm"
