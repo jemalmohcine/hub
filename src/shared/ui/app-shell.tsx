@@ -65,6 +65,9 @@ export function AppShell({
         pathname.startsWith("/app/jobs")
       );
     }
+    if (path === "/app/expenses") {
+      return pathname.startsWith("/app/expenses");
+    }
     return pathname.startsWith(path);
   }
 
