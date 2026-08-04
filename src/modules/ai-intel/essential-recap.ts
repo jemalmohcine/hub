@@ -54,7 +54,12 @@ export function buildEssentialRecap(
     pickLocalized(i18n?.about, locale, "") ||
     readMeta(meta, "about") ||
     readMeta(meta, "description") ||
+    readMeta(meta, "purpose") ||
     "";
+
+  const storedPoints = Array.isArray(meta.essentialPoints)
+    ? (meta.essentialPoints as string[]).filter((p) => typeof p === "string" && p.trim())
+    : [];
 
   const L =
     locale === "fr"
@@ -134,11 +139,14 @@ export function buildEssentialRecap(
   if (kind === "security") signalLabel = L.securityIssue;
 
   const whatTeaser = brief.tldr || brief.title;
-  const whatDetail = [brief.title, brief.tldr, about]
-    .filter(Boolean)
-    .filter((line, idx, arr) => arr.indexOf(line) === idx)
-    .join("\n\n")
-    .slice(0, 900);
+  const whatDetail =
+    storedPoints.length > 0
+      ? [brief.title, brief.tldr, ...storedPoints].filter(Boolean).join("\n\n").slice(0, 1200)
+      : [brief.title, brief.tldr, about]
+          .filter(Boolean)
+          .filter((line, idx, arr) => arr.indexOf(line) === idx)
+          .join("\n\n")
+          .slice(0, 900);
 
   const signalTeaser =
     signalLines.slice(0, 3).join(" · ") ||
@@ -149,7 +157,10 @@ export function buildEssentialRecap(
     .join("\n\n")
     .slice(0, 700);
 
-  const impactLines = brief.why.slice(0, 3);
+  const impactLines =
+    storedPoints.length > 1
+      ? storedPoints.slice(1, 4)
+      : brief.why.slice(0, 3);
   if (impactLines.length === 0 && kind === "repo" && starsToday >= 200) {
     impactLines.push(
       locale === "fr"
@@ -238,21 +249,10 @@ export function pushAlertTitle(
   const kind = detectContentKind(normalized);
   const explained = explainTitle(normalized, locale);
   const product = productOf(normalized);
-  const { starsToday, starsWeek } = readRepoMomentum({ metadata: meta });
-  const short = explained.name.includes("/")
-    ? explained.name.split("/").pop() || explained.name
-    : explained.name;
 
-  if (kind === "repo" && (starsToday >= 200 || starsWeek >= 1000)) {
-    if (starsWeek >= 1000) {
-      return locale === "fr"
-        ? `${short}: +${formatStars(starsToday)}/j · +${formatStars(starsWeek)}/sem`
-        : `${short}: +${formatStars(starsToday)}/day · +${formatStars(starsWeek)}/wk`;
-    }
-    return locale === "fr"
-      ? `${short}: +${formatStars(starsToday)} stars en 24h`
-      : `${short}: +${formatStars(starsToday)} stars in 24h`;
-  }
+  const organized = readMeta(meta, "organizedTitle") || readMeta(meta, "displayTitle");
+  if (organized) return organized;
+
   if (kind === "pricing") {
     return product
       ? locale === "fr"

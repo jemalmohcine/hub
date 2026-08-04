@@ -230,6 +230,17 @@ export function explainTitle(
   const product = productOf(item);
   const name = pickLocalized(i18n?.title, locale, item.title);
 
+  const organizedTitle = readMeta(meta, "organizedTitle") || readMeta(meta, "displayTitle");
+  if (organizedTitle) {
+    return {
+      title: organizedTitle,
+      name,
+      typeLabel,
+      kind,
+      product,
+    };
+  }
+
   // News-like items: enrich headline by kind when possible.
   if (kind !== "repo" && kind !== "tool") {
     if (kind === "pricing") {
@@ -306,25 +317,7 @@ export function explainTitle(
 
   if (kind === "repo") {
     const short = repoShortName(name);
-    const starsToday = Number(meta.starsToday) || 0;
-    const starsWeek = Number(meta.starsWeek) || Number(meta.starsWeekEstimate) || 0;
-    if (starsToday >= 200 || starsWeek >= 1000) {
-      return {
-        title:
-          locale === "fr"
-            ? starsWeek >= 1000
-              ? `${short}: +${formatStars(starsToday)}/j · +${formatStars(starsWeek)}/sem`
-              : `${short}: +${formatStars(starsToday)} stars en 24h`
-            : starsWeek >= 1000
-              ? `${short}: +${formatStars(starsToday)}/day · +${formatStars(starsWeek)}/wk`
-              : `${short}: +${formatStars(starsToday)} stars in 24h`,
-        name,
-        typeLabel,
-        kind,
-        product,
-      };
-    }
-    if (what && !what.toLowerCase().startsWith(short.toLowerCase())) {
+    if (what) {
       return { title: `${short}: ${what}`, name, typeLabel, kind, product };
     }
     return {
@@ -469,9 +462,12 @@ export function resolveBrief(
   );
 
   const storedTakeaway = pickLocalized(i18n?.takeaway, locale, "");
+  const purposeLine = readMeta(meta, "purpose");
   const tldrCandidate = !isFluff(storedTakeaway)
     ? storedTakeaway
-    : firstClause(summary, 280) || cleanTakeaway(meta, locale);
+    : purposeLine && !isFluff(purposeLine)
+      ? purposeLine
+      : firstClause(summary, 280) || cleanTakeaway(meta, locale);
   const tldr = (tldrCandidate || firstClause(item.title, 160)).slice(0, 320);
 
   const reasonsI18n =
@@ -482,7 +478,16 @@ export function resolveBrief(
       : Array.isArray(meta.scoreReasons)
         ? (meta.scoreReasons as string[])
         : [];
-  const why = [...reasonsI18n, ...reasonsRaw]
+  const organizedPoints = Array.isArray(meta.essentialPoints)
+    ? (meta.essentialPoints as string[])
+        .map((p) => String(p).trim())
+        .filter((p) => p && !isFluff(p))
+    : [];
+  const why = [
+    ...organizedPoints.slice(1, 4),
+    ...reasonsI18n,
+    ...reasonsRaw,
+  ]
     .map((r) => String(r).trim())
     .filter((r) => r && !isFluff(r))
     .filter(
