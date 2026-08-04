@@ -3,7 +3,7 @@ import type { PlanId } from "@/core/auth/types";
 /** Plan → entitlement keys. Modules gate on these. */
 export const PLAN_ENTITLEMENTS: Record<PlanId, string[]> = {
   free: [],
-  pro: ["module:ai", "module:cv", "module:jobs", "module:snippets"],
+  pro: ["module:ai", "module:cv", "module:jobs", "module:snippets", "module:expenses"],
 };
 
 export function entitlementsForPlan(plan: PlanId | null | undefined): string[] {
@@ -31,6 +31,6 @@ export const PLAN_META: Record<
   pro: {
     label: "Pro",
     priceLabel: "19 € / mois",
-    description: "Tous les modules actifs (AI, CV, Candidatures, Snippets), alertes et features avancées.",
+    description: "Tous les modules actifs (AI, CV, Candidatures, Snippets, Dépenses), alertes et features avancées.",
   },
 };

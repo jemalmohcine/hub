@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Bot, Briefcase, Code2, FileText, LayoutDashboard } from "lucide-react";
+import { Bot, Briefcase, Code2, FileText, LayoutDashboard, PiggyBank } from "lucide-react";
 import type { ModuleStatus } from "@/core/auth/types";
 
 export type ModuleDefinition = {
@@ -63,6 +63,16 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     requiredEntitlement: "module:snippets",
     status: "active",
     icon: Code2,
+  },
+  {
+    id: "expenses",
+    label: "Dépenses dev",
+    description: "Budget stack, suivi mensuel et alternatives",
+    href: "/app/expenses",
+    order: 35,
+    requiredEntitlement: "module:expenses",
+    status: "active",
+    icon: PiggyBank,
   },
 ];
 
