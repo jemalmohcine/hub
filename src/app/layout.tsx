@@ -69,7 +69,7 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn("h-full antialiased", sora.variable, ibmPlexMono.variable)}
     >
-      <body className="min-h-full font-sans">
+      <body className="min-h-full font-sans max-lg:h-dvh max-lg:max-h-dvh max-lg:overflow-hidden">
         <ThemeProvider>
           <ToastProvider>
             <Suspense fallback={null}>

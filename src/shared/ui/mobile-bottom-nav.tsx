@@ -34,7 +34,7 @@ export function MobileBottomNav({ labels }: MobileBottomNavProps) {
   return (
     <nav
       aria-label="Navigation principale"
-      className="shrink-0 border-t border-border bg-card pb-[env(safe-area-inset-bottom,0px)] lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-1px_0_0_var(--border)] lg:hidden"
     >
       <div className="mx-auto grid h-[var(--dh-bottom-nav-h)] max-w-lg grid-cols-4 items-center px-1">
         {NAV_ITEMS.map((item) => {

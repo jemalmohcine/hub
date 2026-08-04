@@ -21,10 +21,19 @@
   }
 
   @media (max-width: 1023px) {
+    html {
+      overflow: hidden;
+      height: 100dvh;
+      height: -webkit-fill-available;
+      max-height: 100dvh;
+    }
+
     body {
       overflow: hidden;
       height: 100dvh;
       height: -webkit-fill-available;
+      max-height: 100dvh;
+      overscroll-behavior: none;
     }
   }
 

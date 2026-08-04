@@ -72,7 +72,9 @@ export function AppShell({
   }
 
   return (
-    <div className="flex h-dvh max-h-dvh overflow-hidden bg-background supports-[height:100dvh]:h-dvh lg:min-h-dvh lg:h-auto lg:max-h-none lg:overflow-visible lg:flex">
+    <div
+      className="flex h-dvh max-h-dvh overflow-hidden bg-background supports-[height:100dvh]:h-dvh max-lg:fixed max-lg:inset-0 max-lg:z-0 lg:static lg:min-h-dvh lg:h-auto lg:max-h-none lg:overflow-visible"
+    >
       <ThemeSync theme={user.preferences?.theme ?? "system"} />
 
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[var(--dh-sidebar-w)] flex-col border-r border-border bg-card lg:flex">
@@ -135,7 +137,7 @@ export function AppShell({
       </aside>
 
       <div
-        className="flex w-full flex-1 flex-col overflow-hidden supports-[height:100dvh]:h-dvh supports-[height:100dvh]:max-h-dvh lg:ml-[var(--dh-sidebar-w)] lg:h-auto lg:max-h-none lg:min-h-dvh lg:overflow-visible"
+        className="flex min-h-0 w-full flex-1 flex-col overflow-hidden supports-[height:100dvh]:h-dvh supports-[height:100dvh]:max-h-dvh lg:ml-[var(--dh-sidebar-w)] lg:h-auto lg:max-h-none lg:min-h-dvh lg:overflow-visible"
       >
         <header
           className="z-20 shrink-0 border-b border-border bg-card px-[var(--dh-space-4)] lg:hidden"
@@ -152,7 +154,9 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] lg:overflow-visible">
+        <main
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] max-lg:pb-[var(--dh-mobile-bottom-offset)] lg:overflow-visible lg:pb-0"
+        >
           <div className="mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] pb-[var(--dh-space-6)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)]">
             {children}
           </div>
