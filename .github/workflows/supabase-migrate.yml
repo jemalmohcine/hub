@@ -26,7 +26,11 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # v2.112.0 breaks `supabase link` (inserted_at SchemaError) — https://github.com/supabase/cli/issues/6115
+          version: 2.111.0
+
+      - name: Login to Supabase
+        run: supabase login --token "$SUPABASE_ACCESS_TOKEN"
 
       - name: Ensure config
         run: |
@@ -35,7 +39,7 @@ jobs:
           fi
 
       - name: Link project
-        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+        run: supabase link --project-ref "$SUPABASE_PROJECT_ID" --password "$SUPABASE_DB_PASSWORD"
 
       - name: Push migrations
         run: supabase db push --include-all --yes
