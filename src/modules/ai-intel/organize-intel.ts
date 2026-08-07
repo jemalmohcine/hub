@@ -1,5 +1,10 @@
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
 import { translateOnce } from "@/modules/ai-intel/i18n/translate";
+import {
+  firstCleanClause,
+  isGarbageText,
+  sanitizePlainText,
+} from "@/modules/ai-intel/html-to-text";
 
 export type OrganizedIntel = {
   title: string;
@@ -8,26 +13,20 @@ export type OrganizedIntel = {
   longAbout: string;
 };
 
-function stripMarkdown(text: string): string {
-  return text
-    .replace(/!\[[^\]]*\]\([^)]+\)/g, " ")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/`{1,3}[^`]+`{1,3}/g, " ")
-    .replace(/[#>*_~]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+function cleanLine(text: string): string {
+  return sanitizePlainText(text, 500);
 }
 
 function readmeParagraphs(readme: string): string[] {
   const blocks = readme
     .split(/\n{2,}/)
-    .map((b) => stripMarkdown(b))
-    .filter((b) => b.length >= 40);
+    .map((b) => cleanLine(b))
+    .filter((b) => b.length >= 40 && !isGarbageText(b));
 
   const skip =
-    /^(license|copyright|table of contents|contributing|installation only|build status|codecov)/i;
+    /^(license|copyright|table of contents|contributing|installation only|build status|codecov|arrêter|stop wasting)/i;
 
-  return blocks.filter((b) => !skip.test(b)).slice(0, 12);
+  return blocks.filter((b) => !skip.test(b)).slice(0, 8);
 }
 
 function extractBullets(readme: string): string[] {
@@ -46,19 +45,23 @@ function extractBullets(readme: string): string[] {
     }
     const bullet = trimmed.match(/^[-*•]\s+(.+)/);
     if (bullet) {
-      const text = stripMarkdown(bullet[1]);
-      if (text.length >= 12 && text.length <= 220) bullets.push(text);
+      const text = cleanLine(bullet[1]);
+      if (text.length >= 12 && text.length <= 200 && !isGarbageText(text)) {
+        bullets.push(text);
+      }
     }
   }
 
-  if (bullets.length >= 2) return bullets.slice(0, 6);
+  if (bullets.length >= 2) return bullets.slice(0, 5);
 
   for (const line of lines) {
     const bullet = line.trim().match(/^[-*•]\s+(.+)/);
     if (!bullet) continue;
-    const text = stripMarkdown(bullet[1]);
-    if (text.length >= 16 && text.length <= 220) bullets.push(text);
-    if (bullets.length >= 6) break;
+    const text = cleanLine(bullet[1]);
+    if (text.length >= 16 && text.length <= 200 && !isGarbageText(text)) {
+      bullets.push(text);
+    }
+    if (bullets.length >= 5) break;
   }
 
   return bullets;
@@ -72,29 +75,22 @@ function inferPurpose(
   const candidates = [description, ...paragraphs].filter(Boolean);
 
   for (const raw of candidates) {
-    const text = stripMarkdown(raw);
+    const text = cleanLine(raw);
+    if (!text) continue;
     const isMatch = text.match(
-      /\b(is an?|is the|provides?|lets you|allows you|enables?|helps? you|library for|tool for|framework for|designed to|built to|convert(s|ing)?|transcri(be|ption)|speech.to.text|voice.to.text)\b/i,
+      /\b(is an?|is the|provides?|lets you|allows you|enables?|helps? you|library for|tool for|framework for|designed to|built to|convert(s|ing)?|transcri(be|ption)|speech.to.text|voice.to.text|graphe|graph for|identity provider|fournisseur)\b/i,
     );
     if (isMatch) {
-      return firstSentence(text, 200);
+      return firstCleanClause(text, 160);
     }
   }
 
   for (const raw of candidates) {
-    const text = firstSentence(stripMarkdown(raw), 200);
-    if (text.length >= 30) return text;
+    const text = firstCleanClause(raw, 160);
+    if (text.length >= 24) return text;
   }
 
-  return description ? firstSentence(description, 160) : name;
-}
-
-function firstSentence(text: string, max: number): string {
-  const clean = text.replace(/\s+/g, " ").trim();
-  if (!clean) return "";
-  const sentence = clean.split(/(?<=[.!?])\s+/)[0]?.trim() || clean;
-  if (sentence.length <= max) return sentence;
-  return `${sentence.slice(0, max - 1).trim()}…`;
+  return description ? firstCleanClause(description, 140) : shortName(name);
 }
 
 function shortName(name: string): string {
@@ -102,16 +98,18 @@ function shortName(name: string): string {
   return name;
 }
 
+/** Short title: name + concise what-it-does (never a wall of text). */
 function buildTitle(name: string, purpose: string, locale: AiLocale): string {
   const short = shortName(name);
-  const purposeClause = firstSentence(purpose, 120);
+  const purposeClause = firstCleanClause(purpose, 72);
   if (!purposeClause) {
-    return locale === "fr" ? `${short}: dépôt open source` : `${short}: open-source repo`;
+    return locale === "fr" ? `${short} — outil dev` : `${short} — dev tool`;
   }
   const lowerPurpose = purposeClause.toLowerCase();
-  if (lowerPurpose.startsWith(short.toLowerCase())) return purposeClause;
-  if (lowerPurpose.length < 24) return `${short}: ${purposeClause}`;
-  return `${short}: ${firstSentence(purposeClause, 100)}`;
+  if (lowerPurpose.startsWith(short.toLowerCase())) {
+    return purposeClause.length <= 90 ? purposeClause : firstCleanClause(purposeClause, 88);
+  }
+  return `${short} — ${purposeClause}`;
 }
 
 /** Turn scraped content into a human title + essential points (no star-count titles). */
@@ -126,7 +124,7 @@ export function organizeIntel(input: {
   locale?: AiLocale;
 }): OrganizedIntel {
   const locale = input.locale ?? "fr";
-  const description = (input.description || "").trim();
+  const description = cleanLine((input.description || "").trim());
   const readme = input.readme || "";
   const articleBody = input.articleBody || "";
   const paragraphs = readme
@@ -144,43 +142,38 @@ export function organizeIntel(input: {
 
   const bullets = extractBullets(readme || articleBody);
   for (const bullet of bullets) {
-    if (!essentialPoints.some((p) => p.toLowerCase() === bullet.toLowerCase())) {
+    if (
+      !essentialPoints.some(
+        (p) => p.toLowerCase() === bullet.toLowerCase() || p.includes(bullet.slice(0, 24)),
+      )
+    ) {
       essentialPoints.push(bullet);
     }
-    if (essentialPoints.length >= 5) break;
+    if (essentialPoints.length >= 4) break;
   }
 
   for (const para of paragraphs) {
-    const sentence = firstSentence(para, 180);
+    const sentence = firstCleanClause(para, 140);
     if (
       sentence.length >= 40 &&
-      !essentialPoints.some((p) => p.toLowerCase().includes(sentence.slice(0, 30).toLowerCase()))
+      !essentialPoints.some((p) =>
+        p.toLowerCase().includes(sentence.slice(0, 28).toLowerCase()),
+      )
     ) {
       essentialPoints.push(sentence);
     }
-    if (essentialPoints.length >= 5) break;
+    if (essentialPoints.length >= 4) break;
   }
 
-  if (input.topics?.length) {
-    essentialPoints.push(
-      locale === "fr"
-        ? `Sujets : ${input.topics.slice(0, 6).join(", ")}`
-        : `Topics: ${input.topics.slice(0, 6).join(", ")}`,
-    );
-  }
-
-  if (input.language) {
-    essentialPoints.push(
-      locale === "fr" ? `Langage principal : ${input.language}` : `Main language: ${input.language}`,
-    );
-  }
-
-  const longAbout = [purpose, ...paragraphs.slice(0, 4)].filter(Boolean).join("\n\n").slice(0, 2400);
+  const longAbout = [purpose, ...paragraphs.slice(0, 3)]
+    .filter(Boolean)
+    .join("\n\n")
+    .slice(0, 1800);
 
   return {
     title,
     purpose,
-    essentialPoints: essentialPoints.slice(0, 6),
+    essentialPoints: essentialPoints.slice(0, 4),
     longAbout,
   };
 }
@@ -204,27 +197,29 @@ export async function organizeIntelLocalized(input: {
   }
 
   const titleFr =
-    (await translateOnce(base.title, "en", "fr")) || buildTitle(input.name, base.purpose, "fr");
+    (await translateOnce(base.title, "en", "fr")) ||
+    buildTitle(input.name, base.purpose, "fr");
 
-  const purposeFr = (await translateOnce(base.purpose, "en", "fr")) || base.purpose;
+  const purposeFr =
+    (await translateOnce(base.purpose, "en", "fr")) || base.purpose;
 
   const pointsFr: string[] = [];
   for (const point of base.essentialPoints) {
-    if (/^(Sujets|Topics|Langage|Main language)/i.test(point)) {
-      pointsFr.push(point);
-      continue;
-    }
     const translated = await translateOnce(point, "en", "fr");
-    pointsFr.push(translated || point);
+    const next = sanitizePlainText(translated || point, 220);
+    if (next && !isGarbageText(next)) pointsFr.push(next);
   }
 
-  const longFr = (await translateOnce(base.longAbout.slice(0, 900), "en", "fr")) || base.longAbout;
+  const longFr =
+    (await translateOnce(base.longAbout.slice(0, 700), "en", "fr")) ||
+    base.longAbout;
+  const longClean = sanitizePlainText(longFr, 1800);
 
   return {
-    title: titleFr,
-    purpose: purposeFr,
+    title: sanitizePlainText(titleFr, 120) || base.title,
+    purpose: sanitizePlainText(purposeFr, 200) || base.purpose,
     essentialPoints: pointsFr,
-    longAbout: longFr,
+    longAbout: longClean || base.longAbout,
     locale,
   };
 }

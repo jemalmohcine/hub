@@ -1,5 +1,7 @@
 export type DevVerdict = "use_it" | "watch" | "skip";
 
+import { firstCleanClause, sanitizePlainText } from "@/modules/ai-intel/html-to-text";
+
 export type ScoreResult = {
   score: number;
   verdict: DevVerdict;
@@ -77,7 +79,7 @@ export function scoreGithubRepo(input: {
   const stars = input.stars || 0;
   const starsToday = input.starsToday || 0;
   const forks = input.forks || 0;
-  const desc = (input.description || "").trim();
+  const desc = sanitizePlainText((input.description || "").trim(), 500);
   const lang = (input.language || "").toLowerCase();
   const topics = (input.topics || []).join(" ");
   const blob = `${input.title ?? ""} ${desc} ${topics} ${lang}`;
@@ -103,7 +105,8 @@ export function scoreGithubRepo(input: {
 
   if (desc.length >= 24) score += 6;
   if (desc.length >= 80) score += 4;
-  if (desc) reasons.push(desc.length > 90 ? `${desc.slice(0, 87)}…` : desc);
+  const descClause = firstCleanClause(desc, 90);
+  if (descClause.length >= 24) reasons.push(descClause);
 
   if (hasDevSignal) {
     score += 22;

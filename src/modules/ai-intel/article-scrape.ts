@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import { fetchText } from "@/modules/ai-intel/collectors/fetch";
+import { decodeHtmlEntities, sanitizePlainText } from "@/modules/ai-intel/html-to-text";
 
 export type ScrapedArticle = {
   title: string | null;
@@ -9,17 +10,14 @@ export type ScrapedArticle = {
 };
 
 function cleanText(raw: string): string {
-  return raw
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, "$1")
-    .replace(/<(script|style|nav|footer|header|aside)[\s\S]*?<\/\1>/gi, " ")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|li|h[1-6]|div|section|article)>/gi, "\n")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/\s+\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/[ \t]{2,}/g, " ")
-    .trim();
+  return sanitizePlainText(
+    decodeHtmlEntities(raw)
+      .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, "$1")
+      .replace(/<(script|style|nav|footer|header|aside)[\s\S]*?<\/\1>/gi, " ")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(p|li|h[1-6]|div|section|article)>/gi, "\n"),
+    4000,
+  );
 }
 
 function metaContent($: cheerio.CheerioAPI, key: string): string | null {

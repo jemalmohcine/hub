@@ -4,11 +4,11 @@ import {
 } from "@/modules/ai-intel/content-kind";
 import {
   explainTitle,
-  getItemI18n,
   readMeta,
   resolveBrief,
 } from "@/modules/ai-intel/brief";
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
+import { sanitizePlainText } from "@/modules/ai-intel/html-to-text";
 import { readRepoMomentum } from "@/modules/ai-intel/repo-momentum";
 import { formatStars } from "@/modules/ai-intel/score";
 import type { AiIntelItem } from "@/modules/ai-intel/types";
@@ -19,15 +19,6 @@ export type EssentialPoint = {
   teaser: string;
   detail: string;
 };
-
-function pickLocalized(
-  bag: { en?: string; fr?: string } | undefined,
-  locale: AiLocale,
-  fallback: string,
-): string {
-  if (!bag) return fallback;
-  return (bag[locale] || bag.fr || bag.en || fallback).trim();
-}
 
 /** Three factual bullets — enough to understand without opening the source. */
 export function buildEssentialRecap(
@@ -47,18 +38,17 @@ export function buildEssentialRecap(
   locale: AiLocale,
 ): EssentialPoint[] {
   const meta = (item.metadata ?? {}) as Record<string, unknown>;
-  const i18n = getItemI18n(meta);
   const brief = resolveBrief(item, locale);
   const kind = detectContentKind(item);
-  const about =
-    pickLocalized(i18n?.about, locale, "") ||
-    readMeta(meta, "about") ||
-    readMeta(meta, "description") ||
-    readMeta(meta, "purpose") ||
-    "";
+  const purpose = sanitizePlainText(
+    readMeta(meta, "purpose") || readMeta(meta, "description") || "",
+    300,
+  );
 
   const storedPoints = Array.isArray(meta.essentialPoints)
-    ? (meta.essentialPoints as string[]).filter((p) => typeof p === "string" && p.trim())
+    ? (meta.essentialPoints as string[])
+        .map((p) => sanitizePlainText(String(p), 280))
+        .filter((p) => p.length > 0)
     : [];
 
   const L =
@@ -138,29 +128,25 @@ export function buildEssentialRecap(
   if (kind === "breaking") signalLabel = L.breakingChange;
   if (kind === "security") signalLabel = L.securityIssue;
 
-  const whatTeaser = brief.tldr || brief.title;
+  const whatTeaser = purpose || brief.tldr || brief.title;
   const whatDetail =
     storedPoints.length > 0
-      ? [brief.title, brief.tldr, ...storedPoints].filter(Boolean).join("\n\n").slice(0, 1200)
-      : [brief.title, brief.tldr, about]
-          .filter(Boolean)
-          .filter((line, idx, arr) => arr.indexOf(line) === idx)
-          .join("\n\n")
-          .slice(0, 900);
+      ? storedPoints.slice(0, 3).join("\n\n").slice(0, 900)
+      : [purpose || brief.tldr].filter(Boolean).join("\n\n").slice(0, 600);
 
   const signalTeaser =
     signalLines.slice(0, 3).join(" · ") ||
     factGrid.split("\n").slice(0, 2).join(" · ") ||
     brief.typeLabel;
-  const signalDetail = [signalLines.join(" · "), factGrid]
-    .filter(Boolean)
-    .join("\n\n")
-    .slice(0, 700);
+  const signalDetail = signalLines.join(" · ").slice(0, 400);
 
   const impactLines =
     storedPoints.length > 1
       ? storedPoints.slice(1, 4)
-      : brief.why.slice(0, 3);
+      : brief.why
+          .map((r) => sanitizePlainText(r, 200))
+          .filter(Boolean)
+          .slice(0, 3);
   if (impactLines.length === 0 && kind === "repo" && starsToday >= 200) {
     impactLines.push(
       locale === "fr"

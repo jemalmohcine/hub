@@ -1,6 +1,9 @@
 import { scrapeArticlePage } from "@/modules/ai-intel/article-scrape";
+import { urgencyFromScore } from "@/modules/ai-intel/classify";
+import { sanitizePlainText } from "@/modules/ai-intel/html-to-text";
 import { organizeIntelLocalized } from "@/modules/ai-intel/organize-intel";
 import { scrapeGithubRepo } from "@/modules/ai-intel/scrape-github-repo";
+import { attachScoreToRaw } from "@/modules/ai-intel/score";
 import type { ClassifiedItem } from "@/modules/ai-intel/types";
 
 const MAX_ARTICLE_SCRAPES = 18;
@@ -31,64 +34,94 @@ export function resetArticleScrapeBudget() {
   toolScrapeBudget = MAX_TOOL_SCRAPES;
 }
 
+function needsReorganize(meta: Record<string, unknown>): boolean {
+  const points = meta.essentialPoints;
+  if (!Array.isArray(points) || points.length === 0) return true;
+  return points.some(
+    (p) =>
+      typeof p === "string" &&
+      (/<[a-z]/i.test(p) || /&lt;|align\s*=/i.test(p)),
+  );
+}
+
+/** Re-organize from stored readme/about without hitting scrape budgets. */
+export async function reorganizeClassifiedItem(
+  item: ClassifiedItem,
+): Promise<ClassifiedItem> {
+  return enrichClassifiedItem(item, { skipScrape: true });
+}
+
 /** Full scrape + organized title/summary/essential points before DB insert. */
-export async function enrichClassifiedItem(item: ClassifiedItem): Promise<ClassifiedItem> {
+export async function enrichClassifiedItem(
+  item: ClassifiedItem,
+  opts: { skipScrape?: boolean } = {},
+): Promise<ClassifiedItem> {
   const meta: Record<string, unknown> = { ...item.metadata };
   const kind = itemKind(meta);
+  const skipScrape = opts.skipScrape === true;
 
-  if (kind === "repo" && repoScrapeBudget > 0) {
+  if (!skipScrape && kind === "repo" && repoScrapeBudget > 0) {
     const slug = repoSlug(item, meta);
     if (slug) {
       repoScrapeBudget -= 1;
       const scraped = await scrapeGithubRepo(slug);
       if (scraped) {
-        if (scraped.description) meta.description = scraped.description;
+        if (scraped.description) {
+          meta.description = sanitizePlainText(scraped.description, 500);
+        }
         if (scraped.readme) {
           meta.readme = scraped.readme.slice(0, 12_000);
-          meta.about = scraped.readme.slice(0, 2000);
         }
         if (scraped.topics.length) meta.topics = scraped.topics;
         if (scraped.language) meta.language = scraped.language;
         if (scraped.license) meta.license = scraped.license;
         if (scraped.homepage) meta.website = scraped.homepage;
+        if (scraped.stars) meta.stars = scraped.stars;
+        if (scraped.forks) meta.forks = scraped.forks;
         meta.fullRepoScraped = true;
       }
     }
   }
 
   if (
+    !skipScrape &&
     kind === "tool" &&
     toolScrapeBudget > 0 &&
     item.url &&
-    (!meta.about || String(meta.description || "").length < 80)
+    (!meta.readme || String(meta.description || "").length < 80)
   ) {
     toolScrapeBudget -= 1;
     const scraped = await scrapeArticlePage(item.url);
     if (scraped) {
-      if (scraped.title) meta.scrapedTitle = scraped.title;
-      if (scraped.description) meta.description = scraped.description;
+      if (scraped.title) meta.scrapedTitle = sanitizePlainText(scraped.title, 200);
+      if (scraped.description) {
+        meta.description = sanitizePlainText(scraped.description, 500);
+      }
       if (scraped.content) {
-        meta.about = scraped.content.slice(0, 2000);
-        meta.articleExcerpt = scraped.content.slice(0, 500);
+        meta.articleBody = scraped.content.slice(0, 4000);
+        meta.articleExcerpt = sanitizePlainText(scraped.content, 500);
       }
       meta.fullPageScraped = true;
     }
   }
 
   if (
+    !skipScrape &&
     kind === "news" &&
     articleScrapeBudget > 0 &&
     item.url &&
-    (!meta.about || String(item.summary).length < 160)
+    (!meta.articleBody || String(item.summary).length < 160)
   ) {
     articleScrapeBudget -= 1;
     const scraped = await scrapeArticlePage(item.url);
     if (scraped) {
-      if (scraped.title) meta.scrapedTitle = scraped.title;
-      if (scraped.description) meta.description = scraped.description;
+      if (scraped.title) meta.scrapedTitle = sanitizePlainText(scraped.title, 200);
+      if (scraped.description) {
+        meta.description = sanitizePlainText(scraped.description, 500);
+      }
       if (scraped.content) {
-        meta.about = scraped.content.slice(0, 2000);
-        meta.articleExcerpt = scraped.content.slice(0, 500);
+        meta.articleBody = scraped.content.slice(0, 4000);
+        meta.articleExcerpt = sanitizePlainText(scraped.content, 500);
       }
       if (scraped.siteName) meta.siteName = scraped.siteName;
       meta.fullPageScraped = true;
@@ -107,8 +140,9 @@ export async function enrichClassifiedItem(item: ClassifiedItem): Promise<Classi
       item.summary,
     readme: typeof meta.readme === "string" ? meta.readme : null,
     articleBody:
-      (typeof meta.about === "string" && meta.about) ||
+      (typeof meta.articleBody === "string" && meta.articleBody) ||
       (typeof meta.articleExcerpt === "string" && meta.articleExcerpt) ||
+      (typeof meta.about === "string" && meta.about) ||
       null,
     topics: Array.isArray(meta.topics) ? (meta.topics as string[]) : [],
     language: typeof meta.language === "string" ? meta.language : null,
@@ -118,14 +152,31 @@ export async function enrichClassifiedItem(item: ClassifiedItem): Promise<Classi
   const summary =
     organized.purpose ||
     organized.essentialPoints[0] ||
-    item.summary;
+    sanitizePlainText(item.summary, 240);
+
+  const rescored = attachScoreToRaw(kind, meta, {
+    title: organized.title,
+    summary,
+    urgency: item.urgency,
+  });
+
+  const urgency = urgencyFromScore({
+    base: item.urgency,
+    verdict: String(rescored.verdict ?? "skip"),
+    score: Number(rescored.score) || 0,
+    category: item.category,
+    kind,
+    starsToday: Number(meta.starsToday) || 0,
+  });
 
   return {
     ...item,
     title: organized.title,
     summary: summary.slice(0, 240),
+    urgency,
     metadata: {
       ...meta,
+      ...rescored,
       rawTitle: item.title,
       displayTitle: organized.title,
       organizedTitle: organized.title,
@@ -133,9 +184,14 @@ export async function enrichClassifiedItem(item: ClassifiedItem): Promise<Classi
       essentialPoints: organized.essentialPoints,
       organizedAt: new Date().toISOString(),
       longSummary: organized.longAbout.slice(0, 1200),
-      about: organized.longAbout.slice(0, 2000) || meta.about,
+      about: organized.longAbout.slice(0, 1800),
+      // Never keep raw readme HTML in about — readme stays in meta.readme for re-runs
     },
   };
+}
+
+export function itemNeedsContentRefresh(meta: Record<string, unknown>): boolean {
+  return needsReorganize(meta);
 }
 
 function readMetaString(meta: Record<string, unknown>, key: string): string | null {
