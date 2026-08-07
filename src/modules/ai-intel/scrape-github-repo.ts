@@ -1,4 +1,4 @@
-import { fetchJson, fetchText } from "@/modules/ai-intel/collectors/fetch";
+import { fetchJson, fetchText } from "@/lib/http/fetch-text";
 
 export type ScrapedGithubRepo = {
   fullName: string;

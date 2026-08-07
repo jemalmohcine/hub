@@ -1,44 +1,13 @@
-export type AiLocale = "fr" | "en";
-export type LocalePreference = "auto" | AiLocale;
+import type { HubLocale } from "@/core/i18n";
 
-export function normalizeLocale(value: string | null | undefined): AiLocale {
-  if (!value) return "fr";
-  const v = value.toLowerCase();
-  if (v.startsWith("en")) return "en";
-  if (v === "auto") return "fr";
-  return "fr";
-}
+export type { HubLocale, LocalePreference } from "@/core/i18n";
+export {
+  normalizeLocale,
+  normalizeLocalePreference,
+  resolveLocale,
+} from "@/core/i18n";
 
-export function normalizeLocalePreference(
-  value: string | null | undefined,
-): LocalePreference {
-  if (!value) return "auto";
-  const v = value.toLowerCase();
-  if (v === "auto") return "auto";
-  if (v.startsWith("en")) return "en";
-  if (v.startsWith("fr")) return "fr";
-  return "auto";
-}
-
-/** Resolve effective UI locale: settings override, else browser / Accept-Language. */
-export function resolveLocale(
-  preference: string | null | undefined,
-  browserLanguage: string | null | undefined,
-): AiLocale {
-  const pref = normalizeLocalePreference(preference);
-  if (pref === "fr" || pref === "en") return pref;
-
-  const hints = (browserLanguage || "")
-    .split(",")
-    .map((part) => part.trim().toLowerCase().split(";")[0]);
-
-  for (const hint of hints) {
-    if (hint.startsWith("en")) return "en";
-    if (hint.startsWith("fr")) return "fr";
-  }
-  return "fr";
-}
-
+/** Copy specific to the AI Intelligence feed. Shared UI strings live in `@/core/i18n`. */
 export const UI = {
   fr: {
     tabAll: "Tout",
@@ -69,13 +38,17 @@ export const UI = {
     emptyHint: "Consultez GitHub, Outils ou Actus.",
     noData: "Aucun contenu",
     emptySaved: "Aucun favori",
-    emptySavedHint: "Ouvre un article et appuie sur « Enregistrer » pour le retrouver ici.",
+    emptySavedHint:
+      "Ouvre un article et appuie sur « Enregistrer » pour le retrouver ici.",
     emptyUrgent: "Aucune alerte urgente",
     emptyUrgentHint:
       "Changements qui demandent une action: prix, breaking, dépréciation.",
     tldr: "Résumé",
     recapTitle: "L’essentiel en 3 points",
     essentials: "L’essentiel",
+    fullDetail: "En détail",
+    readMore: "Lire la suite",
+    readLess: "Réduire",
     why: "Points clés",
     impact: "Impact pour toi",
     scoreWhy: "Pourquoi ce score",
@@ -136,6 +109,9 @@ export const UI = {
     emptyUrgentHint:
       "Action-required changes only: pricing, breaking updates, deprecations.",
     tldr: "Summary",
+    fullDetail: "Full details",
+    readMore: "Read more",
+    readLess: "Show less",
     recapTitle: "Essentials in 3 points",
     essentials: "The essentials",
     why: "Key points",
@@ -166,8 +142,8 @@ export const UI = {
   },
 } as const;
 
-export type UiCopy = (typeof UI)[AiLocale];
+export type UiCopy = (typeof UI)[HubLocale];
 
-export function t(locale: AiLocale): UiCopy {
+export function t(locale: HubLocale): UiCopy {
   return UI[locale];
 }

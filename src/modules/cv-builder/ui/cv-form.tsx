@@ -98,7 +98,7 @@ export function CvFormTabs({
             )}
           >
             <span className="text-sm font-medium leading-none">{tab.label}</span>
-            <span className="mt-1 text-[10px] text-muted-foreground">
+            <span className="mt-1 text-[length:var(--dh-text-2xs)] text-muted-foreground">
               {tab.hint}
             </span>
           </button>

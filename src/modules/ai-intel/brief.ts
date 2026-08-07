@@ -5,10 +5,11 @@ import {
   productOf,
 } from "@/modules/ai-intel/content-kind";
 import { detectTextLang } from "@/modules/ai-intel/i18n/detect-lang";
-import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
+import type { HubLocale } from "@/core/i18n";
 import { translateOnce } from "@/modules/ai-intel/i18n/translate";
 import { sanitizePlainText } from "@/modules/ai-intel/html-to-text";
-import { formatStars } from "@/modules/ai-intel/score";
+import { formatCompactNumber } from "@/lib/numbers";
+import { truncateAtWord } from "@/lib/text";
 import type { AiIntelItem, ClassifiedItem } from "@/modules/ai-intel/types";
 
 export type LocalizedBrief = {
@@ -49,7 +50,7 @@ export function readMeta(meta: Record<string, unknown>, key: string): string | n
 
 function pickLocalized(
   bag: { en?: string; fr?: string } | undefined,
-  locale: AiLocale,
+  locale: HubLocale,
   fallback: string,
 ): string {
   if (!bag) return fallback;
@@ -144,7 +145,7 @@ function verdictKey(verdict: string): "use_it" | "watch" | "skip" {
 /** Factual one-liner from real metadata — never coach fluff. */
 export function cleanTakeaway(
   meta: Record<string, unknown>,
-  locale: AiLocale,
+  locale: HubLocale,
 ): string {
   const kind = itemKind(meta);
   const stars = Number(meta.stars) || 0;
@@ -156,12 +157,12 @@ export function cleanTakeaway(
   if (kind === "repo") {
     const parts: string[] = [];
     if (tagline) parts.push(firstClause(tagline, 120));
-    if (stars) parts.push(`${formatStars(stars)}★`);
+    if (stars) parts.push(`${formatCompactNumber(stars)}★`);
     if (starsToday) {
       parts.push(
         locale === "fr"
-          ? `+${formatStars(starsToday)}/j`
-          : `+${formatStars(starsToday)}/day`,
+          ? `+${formatCompactNumber(starsToday)}/j`
+          : `+${formatCompactNumber(starsToday)}/day`,
       );
     }
     if (language) parts.push(language);
@@ -180,7 +181,7 @@ export function cleanTakeaway(
 
 export function cleanVerdictLabel(
   meta: Record<string, unknown>,
-  locale: AiLocale,
+  locale: HubLocale,
 ): string {
   const kind = itemKind(meta);
   const verdict = verdictKey(String(meta.verdict ?? "watch"));
@@ -192,9 +193,11 @@ function firstClause(text: string, max = 78): string {
   const clean = text.replace(/\s+/g, " ").trim();
   if (!clean) return "";
   const clause = clean.split(/[.!?\n|·]/)[0]?.trim() || clean;
-  if (clause.length <= max) return clause;
-  return `${clause.slice(0, max - 1).trim()}…`;
+  return truncateAtWord(clause, max);
 }
+
+/** A title longer than this stops being a title and becomes a paragraph. */
+const MAX_TITLE = 100;
 
 function repoShortName(name: string): string {
   if (!name.includes("/")) return name;
@@ -216,7 +219,7 @@ export function explainTitle(
     | "category"
     | "primary_source"
   >,
-  locale: AiLocale,
+  locale: HubLocale,
 ): {
   title: string;
   name: string;
@@ -231,10 +234,11 @@ export function explainTitle(
   const product = productOf(item);
   const name = pickLocalized(i18n?.title, locale, item.title);
 
+  // Rows organised by earlier pipeline versions stored a whole paragraph here.
   const organizedTitle = readMeta(meta, "organizedTitle") || readMeta(meta, "displayTitle");
   if (organizedTitle) {
     return {
-      title: organizedTitle,
+      title: truncateAtWord(organizedTitle, MAX_TITLE),
       name,
       typeLabel,
       kind,
@@ -319,7 +323,13 @@ export function explainTitle(
   if (kind === "repo") {
     const short = repoShortName(name);
     if (what) {
-      return { title: `${short}: ${what}`, name, typeLabel, kind, product };
+      return {
+        title: truncateAtWord(`${short}: ${what}`, MAX_TITLE),
+        name,
+        typeLabel,
+        kind,
+        product,
+      };
     }
     return {
       title:
@@ -334,7 +344,13 @@ export function explainTitle(
   }
 
   if (what && what.toLowerCase() !== name.toLowerCase()) {
-    return { title: `${name}: ${what}`, name, typeLabel, kind, product };
+    return {
+      title: truncateAtWord(`${name}: ${what}`, MAX_TITLE),
+      name,
+      typeLabel,
+      kind,
+      product,
+    };
   }
   return {
     title: locale === "fr" ? `${name}: outil d’IA` : `${name}: AI tool`,
@@ -347,7 +363,7 @@ export function explainTitle(
 
 function buildFacts(
   meta: Record<string, unknown>,
-  locale: AiLocale,
+  locale: HubLocale,
 ): Array<{ label: string; value: string }> {
   const L =
     locale === "fr"
@@ -382,7 +398,7 @@ function buildFacts(
     const raw = readMeta(meta, k);
     if (!raw) return null;
     const n = Number(raw);
-    return Number.isFinite(n) && n > 0 ? formatStars(n) : raw;
+    return Number.isFinite(n) && n > 0 ? formatCompactNumber(n) : raw;
   };
 
   return [
@@ -435,7 +451,7 @@ export function resolveBrief(
     | "ingested_at"
     | "primary_source"
   >,
-  locale: AiLocale,
+  locale: HubLocale,
 ): LocalizedBrief {
   const meta = (item.metadata ?? {}) as Record<string, unknown>;
   const i18n = getItemI18n(meta);

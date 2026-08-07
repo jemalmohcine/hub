@@ -1,4 +1,4 @@
-import { fetchJson } from "@/modules/ai-intel/collectors/fetch";
+import { fetchJson } from "@/lib/http/fetch-text";
 import type { RawJobHit } from "@/modules/job-board/types";
 
 type RemoteOkRow = {

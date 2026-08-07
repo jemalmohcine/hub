@@ -1,16 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getHubUser } from "@/core/auth/get-user";
 import { createClient } from "@/core/auth/supabase/server";
-import { hasEntitlement } from "@/core/entitlements";
+import { assertEntitled } from "@/core/entitlements/assert-entitled";
+import { ENTITLEMENTS } from "@/core/entitlements/keys";
+
+/** Every action in this file requires the AI module. */
+const requireUser = () => assertEntitled(ENTITLEMENTS.ai);
 
 export async function toggleAiIntelSave(itemId: string): Promise<{ saved: boolean }> {
-  const user = await getHubUser();
-  if (!user) throw new Error("Non connecté");
-  if (!hasEntitlement(user.entitlements, "module:ai")) {
-    throw new Error("Abonnement Pro requis");
-  }
+  const user = await requireUser();
 
   const supabase = await createClient();
   const { data: existing, error: readError } = await supabase
@@ -49,11 +48,7 @@ export async function toggleAiIntelSave(itemId: string): Promise<{ saved: boolea
 }
 
 export async function markAiIntelRead(itemId: string) {
-  const user = await getHubUser();
-  if (!user) throw new Error("Unauthorized");
-  if (!hasEntitlement(user.entitlements, "module:ai")) {
-    throw new Error("Pro entitlement required");
-  }
+  const user = await requireUser();
 
   const supabase = await createClient();
   const { error } = await supabase.from("ai_intel_reads").upsert(

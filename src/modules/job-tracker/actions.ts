@@ -1,25 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getHubUser } from "@/core/auth/get-user";
 import { createClient } from "@/core/auth/supabase/server";
-import { hasEntitlement } from "@/core/entitlements";
+import { assertEntitled } from "@/core/entitlements/assert-entitled";
+import { ENTITLEMENTS } from "@/core/entitlements/keys";
 import type {
   JobApplication,
   JobApplicationInput,
   JobApplicationStatus,
 } from "@/modules/job-tracker/types";
 
-function assertEntitled() {
-  const user = getHubUser();
-  return user.then((u) => {
-    if (!u) throw new Error("Unauthorized");
-    if (!hasEntitlement(u.entitlements, "module:jobs")) {
-      throw new Error("Pro entitlement required");
-    }
-    return u;
-  });
-}
+/** Every action in this file requires the jobs module. */
+const requireUser = () => assertEntitled(ENTITLEMENTS.jobs);
 
 function mapRow(data: Record<string, unknown>): JobApplication {
   return {
@@ -47,7 +39,7 @@ const SELECT_FIELDS =
   "id, company, role, status, job_url, notes, cv_document_id, applied_at, follow_up_at, employment_category, freelance_subtype, listing_id, description, location, salary_hint, created_at, updated_at";
 
 export async function createJobApplication(input: JobApplicationInput) {
-  const user = await assertEntitled();
+  const user = await requireUser();
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -82,7 +74,7 @@ export async function updateJobApplication(
   id: string,
   input: Partial<JobApplicationInput>,
 ) {
-  const user = await assertEntitled();
+  const user = await requireUser();
   const supabase = await createClient();
 
   const patch: Record<string, unknown> = {};
@@ -119,7 +111,7 @@ export async function updateJobStatus(id: string, status: JobApplicationStatus) 
 }
 
 export async function deleteJobApplication(id: string) {
-  const user = await assertEntitled();
+  const user = await requireUser();
   const supabase = await createClient();
 
   const { error } = await supabase

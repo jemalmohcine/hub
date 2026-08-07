@@ -16,6 +16,7 @@ import {
   Button,
   Card,
   Cluster,
+  EmptyState,
   Field,
   Heading,
   Input,
@@ -41,24 +42,13 @@ import type {
   ServiceWithStats,
 } from "@/modules/dev-expenses/types";
 import { BILLING_LABELS, CATEGORY_LABELS } from "@/modules/dev-expenses/types";
+import { formatDate, toMonthKey } from "@/lib/dates";
+import { formatCurrencyCents } from "@/lib/numbers";
 import { cn } from "@/lib/utils";
 
-function formatEur(cents: number): string {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
-
-function currentMonthLabel(): string {
-  return new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-}
-
-function currentMonthValue(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
+const formatEur = (cents: number) => formatCurrencyCents(cents);
+const currentMonthLabel = () => formatDate(new Date(), "fr", "monthYear");
+const currentMonthValue = () => toMonthKey();
 
 const CATEGORIES = Object.keys(CATEGORY_LABELS) as ExpenseCategory[];
 
@@ -304,13 +294,11 @@ export function DevExpensesWorkspace({
           />
         ))}
         {services.length === 0 ? (
-          <Card className="border-dashed p-8 text-center">
-            <PiggyBank className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-            <Text size="sm" tone="muted">
-              Ajoute Vercel, OpenAI, Supabase… pour suivre ton budget dev et comparer les
-              alternatives.
-            </Text>
-          </Card>
+          <EmptyState
+            icon={PiggyBank}
+            title="Aucun service suivi"
+            hint="Ajoute Vercel, OpenAI, Supabase… pour suivre ton budget dev et comparer les alternatives."
+          />
         ) : null}
       </Stack>
 

@@ -1,75 +1,44 @@
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
-import { Briefcase, Lock } from "lucide-react";
-import { getHubUser } from "@/core/auth/get-user";
-import { hasEntitlement } from "@/core/entitlements";
-import {
-  Atmosphere,
-  Badge,
-  Card,
-  Cluster,
-  Heading,
-  IconBox,
-  LinkButton,
-  PageHeader,
-  Stack,
-  Text,
-} from "@/design-system";
+import { requirePageUser } from "@/core/auth/get-user";
+import { hasEntitlement, ENTITLEMENTS } from "@/core/entitlements";
+import { PageSkeleton } from "@/design-system";
 import { defaultCvDocument } from "@/modules/cv-builder/defaults";
 import { getCvDocumentById, listCvDocuments } from "@/modules/cv-builder/queries";
 import { CareerWorkspace } from "@/modules/career/ui/career-workspace";
 import { listJobListings } from "@/modules/job-board/queries";
 import { listJobApplications } from "@/modules/job-tracker/queries";
+import { ModulePage, isModulePageUnlocked } from "@/shared/ui/module-page";
 
 export const metadata = { title: "Carrière" };
+
+const CAREER_MODULES = ["cv", "jobs"] as const;
+
+const CAREER_COPY = {
+  title: "Carrière",
+  description: "CV Builder, offres d’emploi collectées et suivi des candidatures.",
+  upsell: "Crée tes CV, adapte-les aux offres et suis tes candidatures.",
+};
 
 type PageProps = {
   searchParams: Promise<{ tab?: string }>;
 };
 
+function resolveTab(tab: string | undefined) {
+  if (tab === "jobs") return "jobs" as const;
+  if (tab === "offers") return "offers" as const;
+  return "cv" as const;
+}
+
 export default async function CareerPage({ searchParams }: PageProps) {
-  const user = await getHubUser();
-  if (!user) redirect("/sign-in");
+  const user = await requirePageUser();
+
+  if (!isModulePageUnlocked(user, [...CAREER_MODULES])) {
+    return <ModulePage module={[...CAREER_MODULES]} user={user} {...CAREER_COPY} />;
+  }
 
   const params = await searchParams;
-  const cvEntitled = hasEntitlement(user.entitlements, "module:cv");
-  const jobsEntitled = hasEntitlement(user.entitlements, "module:jobs");
-  const initialTab =
-    params.tab === "jobs"
-      ? "jobs"
-      : params.tab === "offers"
-        ? "offers"
-        : "cv";
-
-  if (!cvEntitled && !jobsEntitled) {
-    return (
-      <>
-        <PageHeader
-          title="Carrière"
-          description="CV Builder et suivi des candidatures."
-          action={<Badge tone="warning">Pro</Badge>}
-        />
-        <Card>
-          <Atmosphere variant="module" />
-          <Cluster gap={3} align="start">
-            <IconBox icon={Briefcase} size="lg" />
-            <Stack gap={4} className="flex-1">
-              <div>
-                <Heading level={3}>Disponible avec Pro</Heading>
-                <Text size="sm" tone="muted" className="mt-[var(--dh-space-2)]">
-                  Créez vos CV, adaptez-les aux offres et suivez vos candidatures.
-                </Text>
-              </div>
-              <LinkButton href="/app/settings/billing">
-                <Lock className="h-4 w-4" />
-                Passer à Pro
-              </LinkButton>
-            </Stack>
-          </Cluster>
-        </Card>
-      </>
-    );
-  }
+  const cvEntitled = hasEntitlement(user.entitlements, ENTITLEMENTS.cv);
+  const jobsEntitled = hasEntitlement(user.entitlements, ENTITLEMENTS.jobs);
 
   const [documents, jobs, listings] = await Promise.all([
     cvEntitled ? listCvDocuments(user.id).catch(() => []) : Promise.resolve([]),
@@ -82,25 +51,20 @@ export default async function CareerPage({ searchParams }: PageProps) {
     cvEntitled && activeId
       ? await getCvDocumentById(user.id, activeId).catch(() => null)
       : null;
-  const initialDoc = saved ?? defaultCvDocument();
 
   return (
-    <>
-      <PageHeader
-        title="Carrière"
-        description="CV Builder, offres d'emploi scrappées et suivi des candidatures."
-      />
-      <Suspense fallback={null}>
+    <ModulePage module={[...CAREER_MODULES]} user={user} {...CAREER_COPY}>
+      <Suspense fallback={<PageSkeleton rows={3} withHeader={false} />}>
         <CareerWorkspace
-          initialTab={initialTab}
+          initialTab={resolveTab(params.tab)}
           cvEntitled={cvEntitled}
           jobsEntitled={jobsEntitled}
-          initialDoc={initialDoc}
+          initialDoc={saved ?? defaultCvDocument()}
           initialDocuments={documents}
           initialJobs={jobs}
           initialListings={listings}
         />
       </Suspense>
-    </>
+    </ModulePage>
   );
 }

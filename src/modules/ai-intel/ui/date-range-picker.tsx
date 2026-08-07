@@ -9,10 +9,14 @@ import {
   X,
 } from "lucide-react";
 import { Button, Text } from "@/design-system";
-import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
+import type { HubLocale } from "@/core/i18n";
+import { formatDate } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
-export type DatePreset = "today" | "week" | "month" | "year" | "range";
+export type DatePreset = "7d" | "month" | "year" | "range";
+
+/** Rolling window so the feed is never empty first thing in the morning. */
+const ROLLING_DAYS = 7;
 
 export type DateRangeValue = {
   preset: DatePreset;
@@ -44,13 +48,9 @@ export function rangeForPreset(preset: Exclude<DatePreset, "range">): {
   const now = startOfDay(new Date());
   const to = toIsoDate(now);
 
-  if (preset === "today") return { from: to, to };
-
-  if (preset === "week") {
-    const day = now.getDay();
-    const mondayOffset = day === 0 ? -6 : 1 - day;
+  if (preset === "7d") {
     const from = new Date(now);
-    from.setDate(now.getDate() + mondayOffset);
+    from.setDate(now.getDate() - (ROLLING_DAYS - 1));
     return { from: toIsoDate(from), to };
   }
 
@@ -68,27 +68,25 @@ export function rangeForPreset(preset: Exclude<DatePreset, "range">): {
 }
 
 export function defaultDateRange(): DateRangeValue {
-  const { from, to } = rangeForPreset("today");
-  return { preset: "today", from, to };
+  const { from, to } = rangeForPreset("7d");
+  return { preset: "7d", from, to };
 }
 
-function fmtShort(iso: string, locale: AiLocale) {
+function fmtShort(iso: string, locale: HubLocale) {
   const [, m, d] = iso.split("-");
   return locale === "fr" ? `${d}/${m}` : `${m}/${d}`;
 }
 
-function labelForRange(value: DateRangeValue, locale: AiLocale): string {
+function labelForRange(value: DateRangeValue, locale: HubLocale): string {
   const L =
     locale === "fr"
       ? {
-          today: "Aujourd’hui",
-          week: "Cette semaine",
+          "7d": "7 derniers jours",
           month: "Ce mois",
           year: "Cette année",
         }
       : {
-          today: "Today",
-          week: "This week",
+          "7d": "Last 7 days",
           month: "This month",
           year: "This year",
         };
@@ -98,12 +96,7 @@ function labelForRange(value: DateRangeValue, locale: AiLocale): string {
   return `${fmtShort(value.from, locale)} › ${fmtShort(value.to, locale)}`;
 }
 
-const PRESETS: Array<Exclude<DatePreset, "range">> = [
-  "today",
-  "week",
-  "month",
-  "year",
-];
+const PRESETS: Array<Exclude<DatePreset, "range">> = ["7d", "month", "year"];
 
 function monthMatrix(view: Date): Array<Date | null> {
   const year = view.getFullYear();
@@ -127,7 +120,7 @@ export function DateRangePicker({
 }: {
   value: DateRangeValue;
   onChange: (next: DateRangeValue) => void;
-  locale: AiLocale;
+  locale: HubLocale;
 }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState(() => parseIso(value.from));
@@ -139,8 +132,7 @@ export function DateRangePicker({
     () =>
       locale === "fr"
         ? {
-            today: "Aujourd’hui",
-            week: "Cette semaine",
+            "7d": "7 derniers jours",
             month: "Ce mois",
             year: "Cette année",
             custom: "Personnalisé",
@@ -153,8 +145,7 @@ export function DateRangePicker({
             clear: "Réinitialiser",
           }
         : {
-            today: "Today",
-            week: "This week",
+            "7d": "Last 7 days",
             month: "This month",
             year: "This year",
             custom: "Custom",
@@ -170,10 +161,7 @@ export function DateRangePicker({
   );
 
   const monthTitle = useMemo(() => {
-    return view.toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", {
-      month: "long",
-      year: "numeric",
-    });
+    return formatDate(view, locale, "monthYear");
   }, [view, locale]);
 
   const cells = useMemo(() => monthMatrix(view), [view]);
@@ -224,8 +212,8 @@ export function DateRangePicker({
     setOpen(false);
   }
 
-  function clearToToday() {
-    selectPreset("today");
+  function clearToDefault() {
+    selectPreset("7d");
   }
 
   function inDraftRange(iso: string) {
@@ -256,7 +244,7 @@ export function DateRangePicker({
           <button
             type="button"
             aria-label={copy.close}
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px]"
+            className="fixed inset-0 z-40 bg-overlay backdrop-blur-[1px]"
             onClick={() => setOpen(false)}
           />
           <div
@@ -340,7 +328,7 @@ export function DateRangePicker({
                 {copy.days.map((d, i) => (
                   <div
                     key={`${d}-${i}`}
-                    className="py-1 text-center text-[9px] font-semibold uppercase tracking-wide text-muted-foreground sm:text-[10px]"
+                    className="py-1 text-center text-[length:var(--dh-text-2xs)] font-semibold uppercase tracking-wide text-muted-foreground"
                   >
                     {d}
                   </div>
@@ -402,7 +390,7 @@ export function DateRangePicker({
             <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-3">
               <button
                 type="button"
-                onClick={clearToToday}
+                onClick={clearToDefault}
                 className="h-9 rounded-full px-3 text-sm font-medium text-muted-foreground hover:bg-muted"
               >
                 {copy.clear}

@@ -18,6 +18,7 @@ import {
   Button,
   Card,
   Cluster,
+  EmptyState,
   Field,
   Input,
   Select,
@@ -302,11 +303,11 @@ export function SnippetsWorkspace({ initialSnippets }: { initialSnippets: DevSni
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <Stack gap={2}>
           {filtered.length === 0 ? (
-            <Card className="border-dashed p-6">
-              <Text size="sm" tone="muted" className="text-center">
-                Aucun snippet. Créez votre première note ou extrait de code.
-              </Text>
-            </Card>
+            <EmptyState
+              icon={Code2}
+              title="Aucun snippet"
+              hint="Crée ta première note ou ton premier extrait de code."
+            />
           ) : (
             filtered.map((item) => (
               <button
@@ -542,10 +543,12 @@ export function SnippetsWorkspace({ initialSnippets }: { initialSnippets: DevSni
               </div>
             </Stack>
           ) : (
-            <Stack gap={2} className="items-center py-12 text-center">
-              <Code2 className="h-8 w-8 text-muted-foreground" />
-              <Text tone="muted">Sélectionnez un snippet ou créez-en un nouveau.</Text>
-            </Stack>
+            <EmptyState
+              variant="inline"
+              icon={Code2}
+              title="Aucun snippet sélectionné"
+              hint="Choisis un snippet dans la liste ou crées-en un nouveau."
+            />
           )}
         </Card>
       </div>

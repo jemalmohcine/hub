@@ -13,6 +13,7 @@ import {
   Button,
   Card,
   Cluster,
+  EmptyState,
   Field,
   Input,
   Select,
@@ -280,11 +281,7 @@ export function JobTrackerWorkspace({
                 />
               ))}
               {jobsByStatus[status].length === 0 ? (
-                <Card className="border-dashed p-3">
-                  <Text size="sm" tone="muted" className="text-center">
-                    Vide
-                  </Text>
-                </Card>
+                <EmptyState title="Vide" dense />
               ) : null}
             </Stack>
           </div>
@@ -328,13 +325,13 @@ function JobCard({
         </div>
 
         {cvTitle ? (
-          <Badge tone="info" className="w-fit text-[10px]">
+          <Badge tone="info" className="w-fit text-[length:var(--dh-text-2xs)]">
             {cvTitle}
           </Badge>
         ) : null}
 
         {employmentBadge(job) ? (
-          <Badge tone="neutral" className="w-fit text-[10px]">
+          <Badge tone="neutral" className="w-fit text-[length:var(--dh-text-2xs)]">
             {employmentBadge(job)}
           </Badge>
         ) : null}

@@ -30,6 +30,7 @@
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
   --color-brand-soft: var(--brand-soft);
+  --color-overlay: var(--overlay);
 
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);

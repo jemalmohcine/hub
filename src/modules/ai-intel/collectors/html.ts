@@ -2,7 +2,7 @@ import * as cheerio from "cheerio";
 import {
   absoluteUrl,
   fetchText,
-} from "@/modules/ai-intel/collectors/fetch";
+} from "@/lib/http/fetch-text";
 import type { RawHit } from "@/modules/ai-intel/types";
 
 export async function collectGenericHtmlList(

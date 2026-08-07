@@ -1,7 +1,7 @@
 import {
   decodeXmlEntities,
   fetchText,
-} from "@/modules/ai-intel/collectors/fetch";
+} from "@/lib/http/fetch-text";
 import type { RawHit } from "@/modules/ai-intel/types";
 
 function tagContent(block: string, tag: string): string {

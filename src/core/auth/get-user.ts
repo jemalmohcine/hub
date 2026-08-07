@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { redirect } from "next/navigation";
 import { createClient } from "@/core/auth/supabase/server";
 import { entitlementsForPlan } from "@/core/entitlements";
 import type {
@@ -65,6 +66,16 @@ export const getHubUser = cache(async (): Promise<HubUser | null> => {
     entitlements: entitlementsForPlan(plan),
   };
 });
+
+/**
+ * For server components under `(app)`: the layout already gates, this only
+ * narrows the type and covers the race where the session expires mid-render.
+ */
+export async function requirePageUser(): Promise<HubUser> {
+  const hubUser = await getHubUser();
+  if (!hubUser) redirect("/sign-in");
+  return hubUser;
+}
 
 export async function requireHubUser(): Promise<HubUser> {
   const hubUser = await getHubUser();

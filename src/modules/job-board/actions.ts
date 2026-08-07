@@ -1,21 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getHubUser } from "@/core/auth/get-user";
 import { createClient } from "@/core/auth/supabase/server";
-import { hasEntitlement } from "@/core/entitlements";
+import { assertEntitled } from "@/core/entitlements/assert-entitled";
+import { ENTITLEMENTS } from "@/core/entitlements/keys";
 import { getJobListingById } from "@/modules/job-board/queries";
 import { scrapeJobOfferPage } from "@/modules/job-board/scrape-offer";
 import type { JobApplication } from "@/modules/job-tracker/types";
 
-async function assertJobsEntitled() {
-  const user = await getHubUser();
-  if (!user) throw new Error("Non connecté");
-  if (!hasEntitlement(user.entitlements, "module:jobs")) {
-    throw new Error("Abonnement Pro requis");
-  }
-  return user;
-}
+/** Every action in this file requires the jobs module. */
+const requireUser = () => assertEntitled(ENTITLEMENTS.jobs);
 
 function mapApplication(row: {
   id: string;
@@ -62,7 +56,7 @@ export async function applyToJobListing(
   listingId: string,
   cvDocumentId?: string | null,
 ): Promise<JobApplication> {
-  const user = await assertJobsEntitled();
+  const user = await requireUser();
   const listing = await getJobListingById(listingId);
   if (!listing) throw new Error("Offre introuvable");
 
@@ -116,7 +110,7 @@ export async function importJobFromUrl(
   url: string,
   cvDocumentId?: string | null,
 ): Promise<JobApplication> {
-  const user = await assertJobsEntitled();
+  const user = await requireUser();
   const scraped = await scrapeJobOfferPage(url);
   if (!scraped?.title) {
     throw new Error("Impossible de lire cette page d’offre");
@@ -146,7 +140,7 @@ export async function importJobFromUrl(
 }
 
 export async function markJobApplicationApplied(id: string) {
-  const user = await assertJobsEntitled();
+  const user = await requireUser();
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
 

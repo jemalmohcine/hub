@@ -7,10 +7,10 @@ import {
   readMeta,
   resolveBrief,
 } from "@/modules/ai-intel/brief";
-import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
+import type { HubLocale } from "@/core/i18n";
 import { sanitizePlainText } from "@/modules/ai-intel/html-to-text";
 import { readRepoMomentum } from "@/modules/ai-intel/repo-momentum";
-import { formatStars } from "@/modules/ai-intel/score";
+import { formatCompactNumber } from "@/lib/numbers";
 import type { AiIntelItem } from "@/modules/ai-intel/types";
 
 export type EssentialPoint = {
@@ -35,7 +35,7 @@ export function buildEssentialRecap(
     | "published_at"
     | "ingested_at"
   >,
-  locale: AiLocale,
+  locale: HubLocale,
 ): EssentialPoint[] {
   const meta = (item.metadata ?? {}) as Record<string, unknown>;
   const brief = resolveBrief(item, locale);
@@ -83,26 +83,26 @@ export function buildEssentialRecap(
   const pricing = readMeta(meta, "pricing");
 
   const signalLines: string[] = [];
-  if (stars) signalLines.push(`${formatStars(stars)}★`);
+  if (stars) signalLines.push(`${formatCompactNumber(stars)}★`);
   if (starsToday) {
     signalLines.push(
       locale === "fr"
-        ? `+${formatStars(starsToday)} aujourd’hui`
-        : `+${formatStars(starsToday)} today`,
+        ? `+${formatCompactNumber(starsToday)} aujourd’hui`
+        : `+${formatCompactNumber(starsToday)} today`,
     );
   }
   if (starsWeek >= 500) {
     signalLines.push(
       locale === "fr"
-        ? `+${formatStars(starsWeek)} cette semaine`
-        : `+${formatStars(starsWeek)} this week`,
+        ? `+${formatCompactNumber(starsWeek)} cette semaine`
+        : `+${formatCompactNumber(starsWeek)} this week`,
     );
   }
   if (forks) {
     signalLines.push(
       locale === "fr"
-        ? `${formatStars(forks)} forks`
-        : `${formatStars(forks)} forks`,
+        ? `${formatCompactNumber(forks)} forks`
+        : `${formatCompactNumber(forks)} forks`,
     );
   }
   if (language) signalLines.push(language);
@@ -220,7 +220,7 @@ export function pushAlertTitle(
     primary_source?: string;
     primarySource?: string;
   },
-  locale: AiLocale = "fr",
+  locale: HubLocale = "fr",
 ): string {
   const normalized = {
     title: item.title,

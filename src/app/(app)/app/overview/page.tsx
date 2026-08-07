@@ -1,68 +1,61 @@
-import { redirect } from "next/navigation";
-import { getHubUser } from "@/core/auth/get-user";
+import { headers } from "next/headers";
+import { requirePageUser } from "@/core/auth/get-user";
 import { profileFullName } from "@/core/auth/types";
+import { resolveLocale } from "@/core/i18n";
 import { getSortedModules } from "@/core/module-registry";
-import { hasEntitlement, PLAN_META } from "@/core/entitlements";
-import {
-  Card,
-  Grid,
-  ModuleCard,
-  PageHeader,
-  PageSection,
-  Spacer,
-  Stat,
-} from "@/design-system";
+import { hasEntitlement } from "@/core/entitlements";
+import { formatDateTime } from "@/lib/dates";
+import { Grid, ModuleCard, PageHeader, PageSection, Spacer } from "@/design-system";
+import { PushEnableBanner } from "@/modules/notifications/ui/push-enable";
+import { getTodayDigest } from "@/modules/today/queries";
+import { TodayBoard } from "@/modules/today/ui/today-board";
 
 export const metadata = { title: "Overview" };
 
-export default async function OverviewPage() {
-  const user = await getHubUser();
-  if (!user) redirect("/sign-in");
+function greetingFor(hour: number): string {
+  if (hour < 6) return "Bonne nuit";
+  if (hour < 18) return "Bonjour";
+  return "Bonsoir";
+}
 
-  const plan = user.subscription?.plan ?? "free";
-  const modules = getSortedModules();
-  const greeting = profileFullName(user.profile);
+export default async function OverviewPage() {
+  const user = await requirePageUser();
+
+  const [headerStore, digest] = await Promise.all([
+    headers(),
+    getTodayDigest(user),
+  ]);
+
+  const locale = resolveLocale(
+    user.preferences?.locale,
+    headerStore.get("accept-language"),
+  );
+
+  const name = profileFullName(user.profile);
+  const greeting = greetingFor(new Date().getHours());
+  const lastRun = formatDateTime(digest.lastRunAt, locale);
 
   return (
     <>
       <PageHeader
-        title={`Bonjour${greeting ? `, ${greeting}` : ""}`}
-        description="Ton hub est prêt. Explore les modules et configure ton compte."
+        title={`${greeting}${name ? `, ${name}` : ""}`}
+        description={
+          lastRun
+            ? `Dernière veille · ${lastRun}`
+            : "Ton hub est prêt. Explore les modules et configure ton compte."
+        }
       />
 
-      <Grid cols={3} gap={3}>
-        <Card>
-          <Stat
-            label="Plan"
-            value={plan}
-            hint={PLAN_META[plan].description}
-          />
-        </Card>
-        <Card>
-          <Stat
-            label="Rôle"
-            value={user.profile.role}
-            hint={user.email}
-          />
-        </Card>
-        <Card>
-          <Stat
-            label="Entitlements"
-            value={user.entitlements.length}
-            hint={
-              user.entitlements.length
-                ? user.entitlements.join(", ")
-                : "Aucun module payant débloqué"
-            }
-          />
-        </Card>
-      </Grid>
+      <TodayBoard digest={digest} />
+
+      <Spacer size={4} />
+      <PushEnableBanner />
 
       <Spacer size={6} />
 
       <PageSection title="Modules">
         <Grid cols={2} gap={3}>
-          {modules.map((mod) => {
+          {getSortedModules().map((mod) => {
             const entitled = hasEntitlement(
               user.entitlements,
               mod.requiredEntitlement,

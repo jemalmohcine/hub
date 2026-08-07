@@ -34,10 +34,10 @@ export function FeedSection({
       <div className="flex items-start justify-between gap-3 border-b border-border/60 px-4 py-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <Text weight="medium" className="text-[15px]">
+            <Text weight="medium" className="text-[length:var(--dh-text-sm)]">
               {title}
             </Text>
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[length:var(--dh-text-2xs)] font-semibold tabular-nums text-muted-foreground">
               {count}
             </span>
           </div>

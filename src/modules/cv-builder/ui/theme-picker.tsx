@@ -85,7 +85,7 @@ export function ThemePicker({
             </div>
             <div className="border-t border-border/60 bg-card/80 px-3 py-2.5">
               <div className="text-sm font-medium">{theme.label}</div>
-              <div className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+              <div className="mt-0.5 text-[length:var(--dh-text-2xs)] leading-snug text-muted-foreground">
                 {theme.description}
               </div>
             </div>

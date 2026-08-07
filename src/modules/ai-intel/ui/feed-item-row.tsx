@@ -5,7 +5,8 @@ import { Check, ChevronRight } from "lucide-react";
 import { Text } from "@/design-system";
 import { resolveBrief } from "@/modules/ai-intel/brief";
 import { contentKindTone } from "@/modules/ai-intel/content-kind";
-import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
+import type { HubLocale } from "@/core/i18n";
+import { formatDate } from "@/lib/dates";
 import { t } from "@/modules/ai-intel/i18n/locale";
 import {
   isHotAlert,
@@ -17,22 +18,12 @@ import {
 import { readMetaString } from "@/modules/ai-intel/ui/verdict";
 import type { AiIntelItem } from "@/modules/ai-intel/types";
 import { cn } from "@/lib/utils";
-import { formatStars } from "@/modules/ai-intel/score";
+import { formatCompactNumber } from "@/lib/numbers";
 
 function prettyCount(value: string | null): string | null {
   if (!value) return null;
   const n = Number(value);
-  return Number.isFinite(n) && n > 0 ? formatStars(n) : value;
-}
-
-function formatCardDate(iso: string | null | undefined, locale: AiLocale): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", {
-    day: "2-digit",
-    month: "short",
-  });
+  return Number.isFinite(n) && n > 0 ? formatCompactNumber(n) : value;
 }
 
 function Chip({
@@ -45,7 +36,7 @@ function Chip({
   return (
     <span
       className={cn(
-        "rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+        "rounded-md px-1.5 py-0.5 text-[length:var(--dh-text-2xs)] font-semibold uppercase tracking-wide",
         tone === "urgent" &&
           "bg-[var(--dh-danger-soft)] text-[var(--dh-danger)]",
         tone === "ok" && "bg-[var(--dh-brand-soft)] text-[var(--dh-brand)]",
@@ -66,7 +57,7 @@ export function FeedItemRow({
   compact = false,
 }: {
   item: AiIntelItem;
-  locale: AiLocale;
+  locale: HubLocale;
   onOpen: (item: AiIntelItem) => void;
   compact?: boolean;
 }) {
@@ -82,7 +73,7 @@ export function FeedItemRow({
   const hot = isHotAlert(item);
   const trending = isTrending(item);
   const isRead = Boolean(item.read);
-  const publishedLabel = formatCardDate(item.published_at, locale);
+  const publishedLabel = formatDate(item.published_at, locale, "dayMonth");
 
   const metricParts: string[] = [];
   if (kind === "repo") {
@@ -134,13 +125,15 @@ export function FeedItemRow({
           weight="medium"
           className={cn(
             "text-balance leading-snug",
-            compact ? "line-clamp-2 text-[14px]" : "line-clamp-3 text-[15px]",
+            compact
+              ? "line-clamp-2 text-[length:var(--dh-text-sm)]"
+              : "line-clamp-3 text-[length:var(--dh-text-sm)]",
           )}
         >
           {brief.title}
         </Text>
 
-        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[length:var(--dh-text-2xs)] text-muted-foreground">
           <span>{item.primary_source}</span>
           {publishedLabel ? <span>· {publishedLabel}</span> : null}
           {metricParts.length > 0 ? (

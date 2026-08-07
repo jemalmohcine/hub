@@ -11,15 +11,13 @@ import {
   Shield,
   X,
 } from "lucide-react";
-import { Button, Text, useAsyncAction } from "@/design-system";
 import {
-  Dialog,
-  DialogDescription,
-  DialogOverlay,
-  DialogPortal,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Dialog as DialogPrimitive } from "radix-ui";
+  Button,
+  EmptyState,
+  IconButton,
+  Sheet,
+  useAsyncAction,
+} from "@/design-system";
 import {
   markAllNotificationsRead,
   markNotificationRead,
@@ -31,6 +29,8 @@ import {
   type NotificationCategory,
 } from "@/modules/notifications/types";
 import { resolveAiIntelDeepLink } from "@/modules/ai-intel/item-link";
+import type { HubLocale } from "@/core/i18n";
+import { formatRelativeTime } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
@@ -63,31 +63,21 @@ function CategoryIcon({
 }
 
 function categoryAccent(category: NotificationCategory) {
-  if (category === "ai") return "bg-[var(--dh-brand-soft)] text-[var(--dh-brand)]";
-  if (category === "billing") return "bg-[var(--dh-warning-soft)] text-[var(--dh-warning)]";
-  if (category === "account") return "bg-[var(--dh-info-soft)] text-[var(--dh-info)]";
+  if (category === "ai")
+    return "bg-[var(--dh-brand-soft)] text-[var(--dh-brand)]";
+  if (category === "billing")
+    return "bg-[var(--dh-warning-soft)] text-[var(--dh-warning)]";
+  if (category === "account")
+    return "bg-[var(--dh-info-soft)] text-[var(--dh-info)]";
   return "bg-muted text-muted-foreground";
-}
-
-function relativeTime(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.floor(diff / 60_000);
-  if (min < 1) return "À l’instant";
-  if (min < 60) return `Il y a ${min} min`;
-  const h = Math.floor(min / 60);
-  if (h < 24) return `Il y a ${h} h`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `Il y a ${d} j`;
-  return new Date(iso).toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "short",
-  });
 }
 
 export function NotificationBell({
   initialNotifications,
+  locale = "fr",
 }: {
   initialNotifications: HubNotification[];
+  locale?: HubLocale;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -98,9 +88,7 @@ export function NotificationBell({
   const unread = useMemo(() => items.filter((n) => !n.read), [items]);
   const filtered = useMemo(
     () =>
-      category === "all"
-        ? items
-        : items.filter((n) => n.category === category),
+      category === "all" ? items : items.filter((n) => n.category === category),
     [items, category],
   );
 
@@ -166,72 +154,44 @@ export function NotificationBell({
           )}
         />
         {unread.length > 0 ? (
-          <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--dh-danger)] px-1 text-[10px] font-semibold leading-none text-white">
+          <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--dh-danger)] px-1 text-[length:var(--dh-text-2xs)] font-semibold leading-none text-white">
             {unread.length > 9 ? "9+" : unread.length}
           </span>
         ) : null}
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogPortal>
-          <DialogOverlay className="bg-black/55 backdrop-blur-[2px]" />
-          <DialogPrimitive.Content
-            aria-describedby={undefined}
-            className={cn(
-              "fixed z-50 flex flex-col bg-card shadow-2xl outline-none",
-              "duration-300 data-[state=closed]:animate-out data-[state=open]:animate-in",
-              // Mobile-first: bottom sheet
-              "inset-x-0 bottom-0 max-h-[min(92dvh,40rem)] w-full rounded-t-[1.5rem] border border-border border-b-0",
-              "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
-              "pb-[calc(var(--dh-safe-bottom)+0.75rem)]",
-              // Desktop: floating panel
-              "lg:inset-auto lg:top-20 lg:right-6 lg:bottom-auto lg:max-h-[min(80dvh,36rem)] lg:w-[24rem] lg:rounded-2xl lg:border-b",
-              "lg:data-[state=closed]:fade-out-0 lg:data-[state=closed]:zoom-out-95 lg:data-[state=open]:fade-in-0 lg:data-[state=open]:zoom-in-95 lg:data-[state=closed]:slide-out-to-bottom-0 lg:data-[state=open]:slide-in-from-bottom-0",
-            )}
-          >
-            <div className="flex justify-center pt-2.5 lg:hidden">
-              <div className="h-1 w-10 rounded-full bg-muted-foreground/35" />
-            </div>
-
-            <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-2 lg:pt-4">
-              <div className="min-w-0">
-                <DialogTitle className="text-lg font-semibold tracking-tight">
-                  Notifications
-                </DialogTitle>
-                <DialogDescription className="mt-0.5 text-sm text-muted-foreground">
-                  {unread.length > 0
-                    ? `${unread.length} non lue${unread.length > 1 ? "s" : ""}`
-                    : "Tout est à jour"}
-                </DialogDescription>
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-                {unread.length > 0 ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={pending}
-                    onClick={markAll}
-                    className="h-9 gap-1.5 px-2.5 text-xs"
-                  >
-                    <CheckCheck className="h-4 w-4" />
-                    Tout marquer comme lu
-                  </Button>
-                ) : null}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Fermer"
-                  onClick={() => setOpen(false)}
-                  className="h-9 w-9 rounded-xl p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="-mx-0 border-b border-border px-4 pb-3">
+      <Sheet
+        open={open}
+        onOpenChange={setOpen}
+        title="Notifications"
+        description={
+          unread.length > 0
+            ? `${unread.length} non lue${unread.length > 1 ? "s" : ""}`
+            : "Tout est à jour"
+        }
+        headerActions={
+          <>
+            {unread.length > 0 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={pending}
+                onClick={markAll}
+                className="h-9 gap-1.5 px-2.5 text-xs"
+              >
+                <CheckCheck className="h-4 w-4" />
+                Tout marquer comme lu
+              </Button>
+            ) : null}
+            <IconButton label="Fermer" size="sm" onClick={() => setOpen(false)}>
+              <X className="h-4 w-4" />
+            </IconButton>
+          </>
+        }
+        subheader={
+          <>
+            <div className="border-b border-border px-4 pb-3">
               <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {CATEGORIES.map((c) => {
                   const active = category === c;
@@ -255,7 +215,7 @@ export function NotificationBell({
                       {count > 0 ? (
                         <span
                           className={cn(
-                            "rounded-full px-1.5 text-[11px] tabular-nums",
+                            "rounded-full px-1.5 text-[length:var(--dh-text-2xs)] tabular-nums",
                             active
                               ? "bg-background/20 text-background"
                               : "bg-background/60 text-foreground",
@@ -270,77 +230,69 @@ export function NotificationBell({
               </div>
             </div>
 
-            <PushEnableBanner />
-
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
-              {filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-2 px-4 py-14 text-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
-                    <Bell className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <Text size="sm" weight="medium">
-                    Aucune notification
-                  </Text>
-                  <Text size="sm" tone="muted">
-                    Les alertes liées à l’AI, à la facturation et au compte
-                    apparaîtront ici.
-                  </Text>
-                </div>
-              ) : (
-                <ul className="space-y-2">
-                  {filtered.map((n) => (
-                    <li key={n.id}>
-                      <button
-                        type="button"
-                        onClick={() => openAndMark(n)}
-                        className={cn(
-                          "flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition-colors active:scale-[0.99]",
-                          n.read
-                            ? "border-transparent bg-muted/35"
-                            : "border-[var(--dh-brand)]/25 bg-[var(--dh-brand-soft)]/25",
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-                            categoryAccent(n.category),
-                          )}
-                        >
-                          <CategoryIcon category={n.category} />
+            <PushEnableBanner className="mx-3 mb-2" />
+          </>
+        }
+      >
+        {filtered.length === 0 ? (
+          <EmptyState
+            variant="inline"
+            icon={Bell}
+            title="Aucune notification"
+            hint="Les alertes liées à l’AI, à la facturation et au compte apparaîtront ici."
+          />
+        ) : (
+          <ul className="space-y-2">
+            {filtered.map((n) => (
+              <li key={n.id}>
+                <button
+                  type="button"
+                  onClick={() => openAndMark(n)}
+                  className={cn(
+                    "flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition-colors active:scale-[0.99]",
+                    n.read
+                      ? "border-transparent bg-muted/35"
+                      : "border-[var(--dh-brand)]/25 bg-[var(--dh-brand-soft)]/25",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                      categoryAccent(n.category),
+                    )}
+                  >
+                    <CategoryIcon category={n.category} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="mb-1 flex items-center gap-2">
+                      {n.category !== "ai" ? (
+                        <span className="text-[length:var(--dh-text-2xs)] font-medium uppercase tracking-wide text-muted-foreground">
+                          {NOTIFICATION_CATEGORY_LABELS[n.category]}
                         </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="mb-1 flex items-center gap-2">
-                            {n.category !== "ai" ? (
-                              <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                                {NOTIFICATION_CATEGORY_LABELS[n.category]}
-                              </span>
-                            ) : null}
-                            {!n.read ? (
-                              <span className="h-1.5 w-1.5 rounded-full bg-[var(--dh-brand)]" />
-                            ) : null}
-                            <span className="ml-auto text-[11px] text-muted-foreground">
-                              {relativeTime(n.created_at)}
-                            </span>
-                          </span>
-                          <span className="line-clamp-2 text-[15px] font-medium leading-snug text-foreground">
-                            {n.title}
-                          </span>
-                          {n.body ? (
-                            <span className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-                              {n.body}
-                            </span>
-                          ) : null}
-                        </span>
-                        <ChevronRight className="mt-2.5 h-4 w-4 shrink-0 text-muted-foreground/70" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </DialogPrimitive.Content>
-        </DialogPortal>
-      </Dialog>
+                      ) : null}
+                      {!n.read ? (
+                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--dh-brand)]" />
+                      ) : null}
+                      <span className="ml-auto text-[length:var(--dh-text-2xs)] text-muted-foreground">
+                        {formatRelativeTime(n.created_at, locale)}
+                      </span>
+                    </span>
+                    <span className="line-clamp-2 text-[length:var(--dh-text-sm)] font-medium leading-snug text-foreground">
+                      {n.title}
+                    </span>
+                    {n.body ? (
+                      <span className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+                        {n.body}
+                      </span>
+                    ) : null}
+                  </span>
+                  <ChevronRight className="mt-2.5 h-4 w-4 shrink-0 text-muted-foreground/70" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Sheet>
     </>
   );
 }

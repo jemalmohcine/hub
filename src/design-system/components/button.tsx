@@ -68,4 +68,41 @@ export function Button({
   );
 }
 
+const iconSizeMap: Record<ButtonSize, string> = {
+  sm: "h-9 w-9",
+  md: "h-10 w-10",
+  lg: "h-11 w-11",
+};
+
+/**
+ * Square, icon-only button. `label` is mandatory so these never ship
+ * without an accessible name — modules used to hand-roll raw `<button>`s.
+ */
+export function IconButton({
+  label,
+  className,
+  variant = "ghost",
+  size = "md",
+  children,
+  ...props
+}: Omit<ComponentProps<typeof ShadcnButton>, "variant" | "size"> & {
+  label: string;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  children?: ReactNode;
+}) {
+  return (
+    <ShadcnButton
+      aria-label={label}
+      title={label}
+      variant={variantMap[variant]}
+      size="icon"
+      className={cn("shrink-0 rounded-xl p-0", iconSizeMap[size], className)}
+      {...props}
+    >
+      {children}
+    </ShadcnButton>
+  );
+}
+
 export { buttonVariants };

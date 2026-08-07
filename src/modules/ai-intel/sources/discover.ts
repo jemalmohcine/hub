@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/core/auth/supabase/admin";
-import { fetchText } from "@/modules/ai-intel/collectors/fetch";
+import { fetchText } from "@/lib/http/fetch-text";
 import type { AiPillar, SourceKind } from "@/modules/ai-intel/types";
 
 type DiscoveredCandidate = {

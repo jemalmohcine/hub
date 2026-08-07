@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
-import { fetchText } from "@/modules/ai-intel/collectors/fetch";
-import { formatStars } from "@/modules/ai-intel/score";
+import { fetchText } from "@/lib/http/fetch-text";
+import { formatCompactNumber } from "@/lib/numbers";
 import type { RawHit } from "@/modules/ai-intel/types";
 
 type ListItem = { position?: number; url?: string; name?: string };
@@ -83,8 +83,8 @@ async function enrichGitTrendRepo(
 
   const summary = [
     description,
-    stars ? `${formatStars(stars)} stars` : "",
-    forks ? `${formatStars(forks)} forks` : "",
+    stars ? `${formatCompactNumber(stars)} stars` : "",
+    forks ? `${formatCompactNumber(forks)} forks` : "",
     language ? language : "",
   ]
     .filter(Boolean)

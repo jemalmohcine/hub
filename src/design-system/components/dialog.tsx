@@ -1,0 +1,102 @@
+"use client";
+
+import { type ComponentProps, type ReactNode } from "react";
+import {
+  Dialog as ShadcnDialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogOverlay,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { cn } from "@/design-system/lib/cn";
+
+export type DialogSize = "sm" | "md" | "lg";
+
+const sizeClass: Record<DialogSize, string> = {
+  sm: "sm:max-w-md",
+  md: "sm:max-w-lg",
+  lg: "sm:max-w-2xl",
+};
+
+export type DialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: ReactNode;
+  /** Rendered above the title — badges, chips, breadcrumbs. */
+  headerAbove?: ReactNode;
+  /** Pass `srOnlyDescription` when it only exists for screen readers. */
+  description?: ReactNode;
+  srOnlyDescription?: boolean;
+  size?: DialogSize;
+  footer?: ReactNode;
+  className?: string;
+  children: ReactNode;
+};
+
+/**
+ * The single modal surface for the app. Full-height sheet on mobile,
+ * centered dialog from `sm` up, so modules never re-implement a sheet.
+ */
+export function Dialog({
+  open,
+  onOpenChange,
+  title,
+  headerAbove,
+  description,
+  srOnlyDescription,
+  size = "md",
+  footer,
+  className,
+  children,
+}: DialogProps) {
+  return (
+    <ShadcnDialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className={cn(
+          "max-h-[90dvh] w-[calc(100%-1.5rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden p-0",
+          sizeClass[size],
+          className,
+        )}
+      >
+        <DialogHeader className="border-b border-border px-5 py-4">
+          {headerAbove}
+          <DialogTitle>{title}</DialogTitle>
+          {description ? (
+            <DialogDescription className={cn(srOnlyDescription && "sr-only")}>
+              {description}
+            </DialogDescription>
+          ) : null}
+        </DialogHeader>
+
+        <div className="overflow-y-auto overscroll-contain px-5 py-4">
+          {children}
+        </div>
+
+        {footer ? (
+          <DialogFooter className="border-t border-border px-5 py-3 pb-[calc(var(--dh-safe-bottom)+0.75rem)] sm:pb-3">
+            {footer}
+          </DialogFooter>
+        ) : null}
+      </DialogContent>
+    </ShadcnDialog>
+  );
+}
+
+export type DialogRootProps = ComponentProps<typeof ShadcnDialog>;
+
+/** Escape hatch for fully custom modal layouts (rare). */
+export {
+  ShadcnDialog as DialogRoot,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogOverlay,
+  DialogTitle,
+  DialogTrigger,
+};

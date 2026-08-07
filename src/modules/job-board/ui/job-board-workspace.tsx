@@ -14,6 +14,7 @@ import {
   Button,
   Card,
   Cluster,
+  EmptyState,
   Field,
   Input,
   Select,
@@ -27,7 +28,6 @@ import {
 } from "@/modules/job-board/actions";
 import {
   EMPLOYMENT_CATEGORY_LABELS,
-  FREELANCE_SUBTYPE_LABELS,
   JOB_LISTING_FILTER_LABELS,
   type JobListing,
   type JobListingFilter,
@@ -297,11 +297,11 @@ export function JobBoardWorkspace({
         })}
 
         {filtered.length === 0 ? (
-          <Card className="border-dashed p-6 text-center">
-            <Text size="sm" tone="muted">
-              Aucune offre pour ce filtre. Le scrape quotidien alimentera cette liste.
-            </Text>
-          </Card>
+          <EmptyState
+            icon={Briefcase}
+            title="Aucune offre pour ce filtre"
+            hint="Le scrape quotidien alimentera cette liste."
+          />
         ) : null}
       </Stack>
     </Stack>

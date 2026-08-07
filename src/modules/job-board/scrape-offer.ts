@@ -1,5 +1,7 @@
 import * as cheerio from "cheerio";
-import { fetchText } from "@/modules/ai-intel/collectors/fetch";
+import { fetchText, HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
+import { extractMainText, metaContent, readOpenGraph } from "@/lib/scrape/page";
+import { clampField, collapseWhitespace } from "@/lib/text";
 
 export type ScrapedJobOffer = {
   title: string | null;
@@ -9,64 +11,34 @@ export type ScrapedJobOffer = {
   salaryHint: string | null;
 };
 
-function cleanText(raw: string): string {
-  return raw.replace(/\s+/g, " ").trim();
-}
+const DESCRIPTION_SELECTORS = [
+  "[data-testid='job-description']",
+  ".job-description",
+  ".description",
+  "article",
+  "main",
+];
 
-function metaContent($: cheerio.CheerioAPI, key: string): string | null {
-  const value =
-    $(`meta[property="${key}"]`).attr("content") ||
-    $(`meta[name="${key}"]`).attr("content");
-  return value?.trim() || null;
-}
+const DESCRIPTION_MAX = 6000;
+const SHORT_FIELD_MAX = 120;
 
 /** Fetch readable job posting content from a URL. */
 export async function scrapeJobOfferPage(url: string): Promise<ScrapedJobOffer | null> {
   try {
     const html = await fetchText(url, {
-      timeoutMs: 14_000,
+      timeoutMs: HTTP_TIMEOUTS.page,
       headers: { Accept: "text/html,application/xhtml+xml" },
     });
     const $ = cheerio.load(html);
 
-    const title =
-      metaContent($, "og:title") ||
-      $("h1").first().text().trim() ||
-      $("title").first().text().trim() ||
-      null;
+    const og = readOpenGraph($);
+    const body = extractMainText($, {
+      selectors: DESCRIPTION_SELECTORS,
+      minLength: 120,
+      maxParagraphs: 10,
+    });
 
-    const description =
-      metaContent($, "og:description") ||
-      metaContent($, "description") ||
-      null;
-
-    const contentSelectors = [
-      "[data-testid='job-description']",
-      ".job-description",
-      ".description",
-      "article",
-      "main",
-    ];
-
-    let body = "";
-    for (const selector of contentSelectors) {
-      const block = $(selector).first();
-      if (block.length === 0) continue;
-      const text = cleanText(block.text());
-      if (text.length >= 120) {
-        body = text;
-        break;
-      }
-    }
-
-    if (!body) {
-      body = $("p")
-        .toArray()
-        .map((el) => cleanText($(el).text()))
-        .filter((p) => p.length >= 40)
-        .slice(0, 10)
-        .join("\n\n");
-    }
+    if (!og.title && !og.description && !body) return null;
 
     const location =
       metaContent($, "job:location") ||
@@ -74,19 +46,22 @@ export async function scrapeJobOfferPage(url: string): Promise<ScrapedJobOffer |
       null;
 
     const salaryHint =
-      $("[class*='salary'], [class*='compensation']")
-        .first()
-        .text()
-        .trim() || null;
-
-    if (!title && !description && !body) return null;
+      $("[class*='salary'], [class*='compensation']").first().text().trim() ||
+      null;
 
     return {
-      title: title ? cleanText(title).slice(0, 240) : null,
+      title: og.title ? clampField(collapseWhitespace(og.title), "title") : null,
       company: null,
-      description: cleanText(body || description || "").slice(0, 6000),
-      location: location ? cleanText(location).slice(0, 120) : null,
-      salaryHint: salaryHint ? cleanText(salaryHint).slice(0, 120) : null,
+      description: collapseWhitespace(body || og.description || "").slice(
+        0,
+        DESCRIPTION_MAX,
+      ),
+      location: location
+        ? collapseWhitespace(location).slice(0, SHORT_FIELD_MAX)
+        : null,
+      salaryHint: salaryHint
+        ? collapseWhitespace(salaryHint).slice(0, SHORT_FIELD_MAX)
+        : null,
     };
   } catch {
     return null;

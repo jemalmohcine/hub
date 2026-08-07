@@ -74,7 +74,7 @@ export function CvDocumentPicker({
                   </Text>
                   <Cluster gap={2} className="mt-0.5">
                     {item.isTailored ? (
-                      <Badge tone="info" className="text-[10px]">
+                      <Badge tone="info" className="text-[length:var(--dh-text-2xs)]">
                         Adapté
                       </Badge>
                     ) : null}

@@ -56,6 +56,10 @@ export async function backfillAiIntelI18n(limit = 120) {
           const { error: upErr } = await admin
             .from("ai_intel_items")
             .update({
+              // Re-analysis can change what the item turned out to be, so the
+              // filter columns move with it.
+              pillar: reorganized.pillar,
+              category: reorganized.category,
               title: reorganized.title,
               summary: String(takeaway).slice(0, 220),
               urgency: reorganized.urgency,

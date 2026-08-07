@@ -1,6 +1,6 @@
 "use client";
 
-import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
+import type { HubLocale } from "@/core/i18n";
 import { t } from "@/modules/ai-intel/i18n/locale";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +17,7 @@ export function FeedStatsBar({
   total: number;
   activeTab: FeedTabId;
   onSelect: (tab: FeedTabId) => void;
-  locale: AiLocale;
+  locale: HubLocale;
 }) {
   const copy = t(locale);
 
@@ -64,7 +64,7 @@ export function FeedStatsBar({
             >
               {stat.count}
             </div>
-            <div className="mt-1 text-[11px] font-medium text-muted-foreground">
+            <div className="mt-1 text-[length:var(--dh-text-2xs)] font-medium text-muted-foreground">
               {stat.label}
             </div>
           </button>

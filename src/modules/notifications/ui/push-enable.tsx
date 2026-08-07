@@ -219,7 +219,7 @@ export function PushEnableCard() {
   );
 }
 
-/** Compact banner inside the notifications panel. */
+/** Compact banner — notifications panel and overview. Renders nothing once enabled. */
 export function PushEnableBanner({ className }: { className?: string }) {
   const { status, setStatus, vapidKey } = usePushStatus();
   const { run, pending } = useAsyncAction();
@@ -231,7 +231,7 @@ export function PushEnableBanner({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "mx-3 mb-2 flex items-center gap-2 rounded-xl border border-[var(--dh-brand)]/20 bg-[var(--dh-brand-soft)]/30 px-3 py-2.5",
+        "flex items-center gap-2 rounded-xl border border-[var(--dh-brand)]/20 bg-[var(--dh-brand-soft)]/30 px-3 py-2.5",
         className,
       )}
     >

@@ -1,6 +1,12 @@
-export type DevVerdict = "use_it" | "watch" | "skip";
-
+import { formatCompactNumber, formatNumber } from "@/lib/numbers";
+import {
+  detectHardSignal,
+  hardSignalScoreFloor,
+} from "@/modules/ai-intel/hard-signals";
 import { firstCleanClause, sanitizePlainText } from "@/modules/ai-intel/html-to-text";
+import type { ClassifiedItem } from "@/modules/ai-intel/types";
+
+export type DevVerdict = "use_it" | "watch" | "skip";
 
 export type ScoreResult = {
   score: number;
@@ -93,12 +99,12 @@ export function scoreGithubRepo(input: {
   const todayPts = logPoints(starsToday, hasDevSignal ? 36 : 14, 350);
   score += todayPts;
   if (starsToday >= 150 && hasDevSignal) {
-    reasons.push(`+${starsToday.toLocaleString("fr-FR")} stars aujourd’hui`);
+    reasons.push(`+${formatNumber(starsToday)} stars aujourd’hui`);
   }
 
   score += logPoints(stars, hasDevSignal ? 22 : 10, 6000);
   if (stars >= 2000 && hasDevSignal) {
-    reasons.push(`${formatStars(stars)} stars`);
+    reasons.push(`${formatCompactNumber(stars)} stars`);
   }
 
   score += logPoints(forks, 6, 1200);
@@ -297,11 +303,6 @@ export function verdictFromScore(score: number): DevVerdict {
   return "skip";
 }
 
-export function formatStars(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10_000 ? 0 : 1)}k`;
-  return String(n);
-}
 
 export function attachScoreToRaw(
   kind: "repo" | "tool" | "news",
@@ -353,6 +354,34 @@ export function attachScoreToRaw(
     scoreReasons: scored.reasons,
     beneficial: scored.beneficial,
   };
+}
+
+/**
+ * Cheap ranking computed before any network call.
+ *
+ * Scraping and LLM analysis are budgeted, so processing items in merge order
+ * meant the budget was often spent on the noisiest feed while genuinely
+ * important items fell through to raw heuristics. Sorting by this first sends
+ * the budget where it pays off.
+ */
+export function preEnrichPriority(item: ClassifiedItem): number {
+  const meta = item.metadata ?? {};
+  const kind =
+    meta.kind === "repo" ? "repo" : meta.kind === "tool" ? "tool" : "news";
+
+  const scored = attachScoreToRaw(kind, meta, {
+    title: item.title,
+    summary: item.summary,
+    urgency: item.urgency,
+  });
+
+  const hardSignal = detectHardSignal(`${item.title}\n${item.summary}`);
+  const confirmations = Math.min(Number(meta.confirmations) || 1, 4);
+
+  return Math.max(
+    Number(scored.score) || 0,
+    hardSignalScoreFloor(hardSignal),
+  ) + confirmations * 4;
 }
 
 /** Keep only items worth a developer's time (or multi-confirmed). */

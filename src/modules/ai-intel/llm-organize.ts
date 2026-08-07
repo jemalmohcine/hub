@@ -2,7 +2,7 @@ import { google } from "@ai-sdk/google";
 import { generateText, Output, type LanguageModel } from "ai";
 import { z } from "zod";
 import { sanitizePlainText } from "@/modules/ai-intel/html-to-text";
-import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
+import type { HubLocale } from "@/core/i18n";
 import type { OrganizedIntel } from "@/modules/ai-intel/organize-intel";
 
 export const LLM_CONTENT_KINDS = [
@@ -154,7 +154,7 @@ function buildPrompt(input: {
   description?: string;
   metrics?: string;
   sourceText: string;
-  locale: AiLocale;
+  locale: HubLocale;
 }): string {
   const lang =
     input.locale === "fr"
@@ -266,7 +266,7 @@ export async function llmOrganizeIntel(input: {
   url?: string | null;
   source?: string | null;
   publishedAt?: string | null;
-  locale?: AiLocale;
+  locale?: HubLocale;
 }): Promise<LlmIntelDecision | null> {
   if (!isLlmOrganizeAvailable() || llmBudget <= 0) return null;
 

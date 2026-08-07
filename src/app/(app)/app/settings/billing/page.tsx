@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
-import { getHubUser } from "@/core/auth/get-user";
+import { requirePageUser } from "@/core/auth/get-user";
+import { formatDate } from "@/lib/dates";
 import { getPaymentProvider } from "@/core/billing";
 import { PLAN_META } from "@/core/entitlements";
 import { BillingForm } from "@/shared/ui/settings-forms";
@@ -17,8 +17,7 @@ import {
 export const metadata = { title: "Abonnement" };
 
 export default async function BillingSettingsPage() {
-  const user = await getHubUser();
-  if (!user) redirect("/sign-in");
+  const user = await requirePageUser();
 
   const provider = getPaymentProvider();
   const sub = user.subscription;
@@ -55,9 +54,7 @@ export default async function BillingSettingsPage() {
             {sub?.current_period_end ? (
               <SettingsMetaRow
                 label="Période"
-                value={new Date(sub.current_period_end).toLocaleDateString(
-                  "fr-FR",
-                )}
+                value={formatDate(sub.current_period_end, "fr", "short")}
               />
             ) : null}
           </div>

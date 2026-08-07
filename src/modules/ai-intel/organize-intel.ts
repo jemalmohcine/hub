@@ -1,4 +1,4 @@
-import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
+import type { HubLocale } from "@/core/i18n";
 import { translateOnce } from "@/modules/ai-intel/i18n/translate";
 import {
   isLlmOrganizeAvailable,
@@ -104,7 +104,7 @@ function shortName(name: string): string {
 }
 
 /** Short title: name + concise what-it-does (never a wall of text). */
-function buildTitle(name: string, purpose: string, locale: AiLocale): string {
+function buildTitle(name: string, purpose: string, locale: HubLocale): string {
   const short = shortName(name);
   const purposeClause = firstCleanClause(purpose, 72);
   if (!purposeClause) {
@@ -126,7 +126,7 @@ export function organizeIntel(input: {
   articleBody?: string | null;
   topics?: string[];
   language?: string | null;
-  locale?: AiLocale;
+  locale?: HubLocale;
 }): OrganizedIntel {
   const locale = input.locale ?? "fr";
   const description = cleanLine((input.description || "").trim());
@@ -192,14 +192,14 @@ export async function organizeIntelLocalized(input: {
   articleBody?: string | null;
   topics?: string[];
   language?: string | null;
-  locale?: AiLocale;
+  locale?: HubLocale;
   metrics?: string | null;
   url?: string | null;
   source?: string | null;
   publishedAt?: string | null;
 }): Promise<
   OrganizedIntel & {
-    locale: AiLocale;
+    locale: HubLocale;
     organizedBy?: "llm" | "heuristic";
     llmModel?: string;
     decision?: LlmIntelDecision;

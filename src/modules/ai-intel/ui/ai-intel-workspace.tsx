@@ -32,7 +32,7 @@ import {
   isNoise,
   sortForDeveloper,
 } from "@/modules/ai-intel/ui/rank";
-import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
+import type { HubLocale } from "@/core/i18n";
 import { t } from "@/modules/ai-intel/i18n/locale";
 import type { AiIntelItem } from "@/modules/ai-intel/types";
 import { cn } from "@/lib/utils";
@@ -90,7 +90,7 @@ export function AiIntelWorkspace({
 }: {
   initialItems: AiIntelItem[];
   digestLabel: string | null;
-  initialLocale?: AiLocale;
+  initialLocale?: HubLocale;
   deepLinkItemId?: string | null;
   deepLinkCanonicalKey?: string | null;
 }) {
@@ -333,7 +333,7 @@ export function AiIntelWorkspace({
           <div className="flex items-center gap-2 rounded-2xl border border-[var(--dh-brand)]/25 bg-[var(--dh-brand-soft)]/30 px-4 py-3">
             <Bookmark className="h-4 w-4 fill-current text-[var(--dh-brand)]" />
             <Text weight="medium">{copy.tabSaved}</Text>
-            <span className="rounded-full bg-background/80 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
+            <span className="rounded-full bg-background/80 px-2 py-0.5 text-[length:var(--dh-text-2xs)] font-semibold tabular-nums text-muted-foreground">
               {counts.saved}
             </span>
           </div>

@@ -1,8 +1,12 @@
 import { scrapeArticlePage } from "@/modules/ai-intel/article-scrape";
 import { detectHardSignal, hardSignalScoreFloor } from "@/modules/ai-intel/hard-signals";
 import { sanitizePlainText } from "@/modules/ai-intel/html-to-text";
+import { isNearDuplicate } from "@/lib/text";
 import type { LlmContentKind } from "@/modules/ai-intel/llm-organize";
-import { resetLlmOrganizeBudget } from "@/modules/ai-intel/llm-organize";
+import {
+  isLlmOrganizeAvailable,
+  resetLlmOrganizeBudget,
+} from "@/modules/ai-intel/llm-organize";
 import { organizeIntelLocalized } from "@/modules/ai-intel/organize-intel";
 import { isRepoExploding } from "@/modules/ai-intel/repo-momentum";
 import { scrapeGithubRepo } from "@/modules/ai-intel/scrape-github-repo";
@@ -41,14 +45,34 @@ export function resetArticleScrapeBudget() {
   resetLlmOrganizeBudget();
 }
 
+/** A title this long is a paragraph the pipeline failed to summarise. */
+const MAX_STORED_TITLE = 110;
+
 function needsReorganize(meta: Record<string, unknown>): boolean {
   const points = meta.essentialPoints;
   if (!Array.isArray(points) || points.length === 0) return true;
-  return points.some(
-    (p) =>
-      typeof p === "string" &&
-      (/<[a-z]/i.test(p) || /&lt;|align\s*=/i.test(p)),
-  );
+
+  // Leftover markup from an early scraping pass.
+  if (
+    points.some(
+      (p) =>
+        typeof p === "string" && (/<[a-z]/i.test(p) || /&lt;|align\s*=/i.test(p)),
+    )
+  ) {
+    return true;
+  }
+
+  // The heuristic path copies `purpose` into the first bullet, which is what
+  // made the detail view print the same sentence three times.
+  const purpose = typeof meta.purpose === "string" ? meta.purpose : "";
+  const first = typeof points[0] === "string" ? points[0] : "";
+  if (purpose && first && isNearDuplicate(first, purpose)) return true;
+
+  const title = typeof meta.organizedTitle === "string" ? meta.organizedTitle : "";
+  if (title.length > MAX_STORED_TITLE) return true;
+
+  // Rows organised before an LLM key was configured deserve a real analysis.
+  return meta.organizedBy !== "llm" && isLlmOrganizeAvailable();
 }
 
 /** Re-organize from stored readme/about without hitting scrape budgets. */

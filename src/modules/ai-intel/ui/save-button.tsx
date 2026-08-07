@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Bookmark, Loader2 } from "lucide-react";
 import { Button, useAsyncAction } from "@/design-system";
 import { toggleAiIntelSave } from "@/modules/ai-intel/actions";
-import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
+import type { HubLocale } from "@/core/i18n";
 import { t } from "@/modules/ai-intel/i18n/locale";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +16,7 @@ export function SaveButton({
 }: {
   itemId: string;
   saved: boolean;
-  locale?: AiLocale;
+  locale?: HubLocale;
   onSavedChange?: (saved: boolean) => void;
 }) {
   const { run, pending } = useAsyncAction();

@@ -1,60 +1,194 @@
 "use client";
 
-import { Briefcase, LayoutDashboard, Settings, Sparkles } from "lucide-react";
+import { useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BottomNavItem } from "@/design-system";
+import type { LucideIcon } from "lucide-react";
+import {
+  Briefcase,
+  Code2,
+  LayoutDashboard,
+  MoreHorizontal,
+  Settings,
+  Shield,
+  Sparkles,
+} from "lucide-react";
+import { getModule } from "@/core/module-registry";
+import { BottomNavItem, FormSubmit, Sheet, Text } from "@/design-system";
+import { signOut } from "@/core/auth/actions";
+import { cn } from "@/design-system/lib/cn";
 
-type MobileBottomNavProps = {
-  labels: {
-    overview: string;
-    ai: string;
-    career: string;
-    settings: string;
-  };
+export type MobileNavLabels = {
+  overview: string;
+  ai: string;
+  career: string;
+  snippets: string;
+  more: string;
+  settings: string;
+  signOut: string;
 };
 
-const NAV_ITEMS = [
-  { href: "/app/overview", match: (path: string) => path.startsWith("/app/overview"), labelKey: "overview" as const, icon: LayoutDashboard },
-  { href: "/app/ai", match: (path: string) => path.startsWith("/app/ai"), labelKey: "ai" as const, icon: Sparkles },
+type Tab = {
+  href: string;
+  labelKey: keyof MobileNavLabels;
+  icon: LucideIcon;
+  matches: (path: string) => boolean;
+};
+
+const TABS: Tab[] = [
+  {
+    href: "/app/overview",
+    labelKey: "overview",
+    icon: LayoutDashboard,
+    matches: (path) => path.startsWith("/app/overview"),
+  },
+  {
+    href: "/app/ai",
+    labelKey: "ai",
+    icon: Sparkles,
+    matches: (path) => path.startsWith("/app/ai"),
+  },
   {
     href: "/app/career",
-    match: (path: string) =>
+    labelKey: "career",
+    icon: Briefcase,
+    matches: (path) =>
       path.startsWith("/app/career") ||
       path.startsWith("/app/cv") ||
       path.startsWith("/app/jobs"),
-    labelKey: "career" as const,
-    icon: Briefcase,
   },
-  { href: "/app/settings", match: (path: string) => path.startsWith("/app/settings"), labelKey: "settings" as const, icon: Settings },
+  {
+    href: "/app/snippets",
+    labelKey: "snippets",
+    icon: Code2,
+    matches: (path) => path.startsWith("/app/snippets"),
+  },
 ];
 
-export function MobileBottomNav({ labels }: MobileBottomNavProps) {
+/** Destinations that don't fit in the bar, reachable through "Plus". */
+const OVERFLOW_PATHS = ["/app/expenses", "/app/settings", "/admin"];
+
+function SheetLink({
+  href,
+  label,
+  icon: Icon,
+  onNavigate,
+}: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  onNavigate: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onNavigate}
+      className="flex items-center gap-3 rounded-2xl px-3 py-3 transition-colors active:bg-muted"
+    >
+      <span
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground"
+        aria-hidden
+      >
+        <Icon className="h-5 w-5" />
+      </span>
+      <Text as="span" size="sm" weight="medium">
+        {label}
+      </Text>
+    </Link>
+  );
+}
+
+export function MobileBottomNav({
+  labels,
+  isAdmin = false,
+}: {
+  labels: MobileNavLabels;
+  isAdmin?: boolean;
+}) {
   const pathname = usePathname();
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  const expenses = getModule("expenses");
+  const inOverflow = OVERFLOW_PATHS.some((path) => pathname.startsWith(path));
+  const closeSheet = () => setMoreOpen(false);
 
   return (
-    <nav
-      aria-label="Navigation principale"
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card lg:hidden"
-    >
-      <div className="mx-auto grid h-[var(--dh-bottom-nav-h)] max-w-lg grid-cols-4 items-center px-1">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          return (
+    <>
+      <nav
+        aria-label="Navigation principale"
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card lg:hidden"
+      >
+        <div className="mx-auto grid h-[var(--dh-bottom-nav-h)] max-w-lg grid-cols-5 items-center px-1">
+          {TABS.map((tab) => (
             <BottomNavItem
-              key={item.href}
-              href={item.href}
-              label={labels[item.labelKey]}
-              icon={Icon}
-              active={item.match(pathname)}
+              key={tab.href}
+              href={tab.href}
+              label={labels[tab.labelKey]}
+              icon={tab.icon}
+              active={tab.matches(pathname)}
             />
-          );
-        })}
-      </div>
-      <div
-        aria-hidden
-        className="bg-card"
-        style={{ height: "env(safe-area-inset-bottom, 0px)" }}
-      />
-    </nav>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => setMoreOpen(true)}
+            aria-label={labels.more}
+            aria-expanded={moreOpen}
+            className={cn(
+              "flex h-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
+              inOverflow || moreOpen
+                ? "text-[var(--dh-brand)]"
+                : "text-muted-foreground",
+            )}
+          >
+            <MoreHorizontal className="h-5 w-5" aria-hidden />
+            <span className="text-[length:var(--dh-text-2xs)] leading-none font-medium">
+              {labels.more}
+            </span>
+          </button>
+        </div>
+        <div
+          aria-hidden
+          className="bg-card"
+          style={{ height: "env(safe-area-inset-bottom, 0px)" }}
+        />
+      </nav>
+
+      <Sheet
+        open={moreOpen}
+        onOpenChange={setMoreOpen}
+        title={labels.more}
+        desktop="full"
+      >
+        <div className="space-y-1">
+          <SheetLink
+            href={expenses.href}
+            label={expenses.label}
+            icon={expenses.icon}
+            onNavigate={closeSheet}
+          />
+          <SheetLink
+            href="/app/settings"
+            label={labels.settings}
+            icon={Settings}
+            onNavigate={closeSheet}
+          />
+          {isAdmin ? (
+            <SheetLink
+              href="/admin"
+              label="Admin"
+              icon={Shield}
+              onNavigate={closeSheet}
+            />
+          ) : null}
+
+          <form action={signOut} className="pt-2">
+            <FormSubmit variant="ghost" className="w-full justify-start px-3">
+              {labels.signOut}
+            </FormSubmit>
+          </form>
+        </div>
+      </Sheet>
+    </>
   );
 }

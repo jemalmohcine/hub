@@ -20,7 +20,7 @@ import {
 } from "@/design-system";
 import { NotificationBell } from "@/modules/notifications/ui/notification-bell";
 import type { HubNotification } from "@/modules/notifications/types";
-import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
+import type { HubLocale } from "@/core/i18n";
 import { MobileBottomNav } from "@/shared/ui/mobile-bottom-nav";
 
 const SHELL_COPY = {
@@ -28,6 +28,8 @@ const SHELL_COPY = {
     overview: "Aperçu",
     ai: "AI",
     career: "Carrière",
+    snippets: "Snippets",
+    more: "Plus",
     settings: "Réglages",
     signOut: "Se déconnecter",
   },
@@ -35,6 +37,8 @@ const SHELL_COPY = {
     overview: "Overview",
     ai: "AI",
     career: "Career",
+    snippets: "Snippets",
+    more: "More",
     settings: "Settings",
     signOut: "Sign out",
   },
@@ -48,7 +52,7 @@ export function AppShell({
 }: {
   user: HubUser;
   notifications?: HubNotification[];
-  locale?: AiLocale;
+  locale?: HubLocale;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -79,7 +83,7 @@ export function AppShell({
         <div className="flex h-16 items-center gap-[var(--dh-space-2)] border-b border-border px-[var(--dh-space-5)]">
           <BrandMark withWordmark href="/app/overview" />
           <div className="ml-auto flex items-center gap-1">
-            <NotificationBell initialNotifications={notifications} />
+            <NotificationBell initialNotifications={notifications} locale={locale} />
             <Badge tone="neutral" className="capitalize">
               {plan}
             </Badge>
@@ -142,7 +146,7 @@ export function AppShell({
           <div className="flex h-[var(--dh-topbar-h)] items-center justify-between">
             <BrandMark withWordmark href="/app/overview" size="sm" />
             <div className="flex items-center gap-1">
-              <NotificationBell initialNotifications={notifications} />
+              <NotificationBell initialNotifications={notifications} locale={locale} />
               <Badge tone="neutral" className="capitalize">
                 {plan}
               </Badge>
@@ -156,7 +160,10 @@ export function AppShell({
           </div>
         </main>
 
-        <MobileBottomNav labels={copy} />
+        <MobileBottomNav
+          labels={copy}
+          isAdmin={user.profile.role === "admin"}
+        />
       </div>
     </div>
   );

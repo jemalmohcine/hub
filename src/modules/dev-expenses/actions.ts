@@ -1,23 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getHubUser } from "@/core/auth/get-user";
 import { createClient } from "@/core/auth/supabase/server";
-import { hasEntitlement } from "@/core/entitlements";
+import { assertEntitled } from "@/core/entitlements/assert-entitled";
+import { ENTITLEMENTS } from "@/core/entitlements/keys";
 import type {
   BillingCycle,
   DevExpenseService,
   ExpenseCategory,
 } from "@/modules/dev-expenses/types";
 
-async function assertEntitled() {
-  const user = await getHubUser();
-  if (!user) throw new Error("Non connecté");
-  if (!hasEntitlement(user.entitlements, "module:expenses")) {
-    throw new Error("Abonnement Pro requis");
-  }
-  return user;
-}
+/** Every action in this file requires the expenses module. */
+const requireUser = () => assertEntitled(ENTITLEMENTS.expenses);
 
 function mapService(row: Record<string, unknown>): DevExpenseService {
   return {
@@ -45,7 +39,7 @@ export async function createDevExpenseService(input: {
   websiteUrl?: string | null;
   notes?: string | null;
 }) {
-  const user = await assertEntitled();
+  const user = await requireUser();
   const supabase = await createClient();
   const cents = Math.round(input.plannedAmountEur * 100);
 
@@ -82,7 +76,7 @@ export async function updateDevExpenseService(
     isActive: boolean;
   }>,
 ) {
-  const user = await assertEntitled();
+  const user = await requireUser();
   const supabase = await createClient();
   const patch: Record<string, unknown> = {};
 
@@ -111,7 +105,7 @@ export async function updateDevExpenseService(
 }
 
 export async function deleteDevExpenseService(id: string) {
-  const user = await assertEntitled();
+  const user = await requireUser();
   const supabase = await createClient();
   const { error } = await supabase
     .from("dev_expense_services")
@@ -128,7 +122,7 @@ export async function upsertMonthlyEntry(input: {
   amountEur: number;
   notes?: string | null;
 }) {
-  const user = await assertEntitled();
+  const user = await requireUser();
   const supabase = await createClient();
   const monthDate = input.month.slice(0, 7) + "-01";
   const cents = Math.round(input.amountEur * 100);

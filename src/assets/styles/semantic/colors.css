@@ -40,6 +40,9 @@
   --surface: var(--primitive-neutral-0);
   --surface-muted: var(--primitive-neutral-100);
 
+  /* Scrim behind dialogs, sheets, and popovers. */
+  --overlay: oklch(0.15 0.02 260 / 0.45);
+
   /* Charts */
   --chart-1: var(--primitive-brand-600);
   --chart-2: var(--primitive-brand-400);
@@ -100,6 +103,7 @@
   --dh-radius-xl: var(--radius-xl);
   --dh-radius-2xl: var(--radius-2xl);
   --dh-radius-full: var(--radius-full);
+  --dh-text-2xs: var(--text-2xs);
   --dh-text-xs: var(--text-xs);
   --dh-text-sm: var(--text-sm);
   --dh-text-md: var(--text-md);
@@ -159,6 +163,7 @@
   --brand-soft: var(--primitive-brand-900);
   --surface: var(--primitive-neutral-900);
   --surface-muted: var(--primitive-neutral-800);
+  --overlay: oklch(0.08 0.01 260 / 0.65);
 
   --sidebar: var(--primitive-neutral-900);
   --sidebar-foreground: var(--primitive-neutral-50);

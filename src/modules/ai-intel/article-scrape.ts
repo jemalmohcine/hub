@@ -1,5 +1,7 @@
 import * as cheerio from "cheerio";
-import { fetchText } from "@/modules/ai-intel/collectors/fetch";
+import { fetchText, HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
+import { extractMainText, readOpenGraph } from "@/lib/scrape/page";
+import { FIELD_LIMITS, clampField } from "@/lib/text";
 import { decodeHtmlEntities, sanitizePlainText } from "@/modules/ai-intel/html-to-text";
 
 export type ScrapedArticle = {
@@ -9,6 +11,17 @@ export type ScrapedArticle = {
   siteName: string | null;
 };
 
+const CONTENT_SELECTORS = [
+  "article",
+  "main article",
+  "[role='main']",
+  "main",
+  ".post-content",
+  ".article-content",
+  ".entry-content",
+  "#content",
+];
+
 function cleanText(raw: string): string {
   return sanitizePlainText(
     decodeHtmlEntities(raw)
@@ -16,76 +29,35 @@ function cleanText(raw: string): string {
       .replace(/<(script|style|nav|footer|header|aside)[\s\S]*?<\/\1>/gi, " ")
       .replace(/<br\s*\/?>/gi, "\n")
       .replace(/<\/(p|li|h[1-6]|div|section|article)>/gi, "\n"),
-    4000,
+    FIELD_LIMITS.body,
   );
-}
-
-function metaContent($: cheerio.CheerioAPI, key: string): string | null {
-  const value =
-    $(`meta[property="${key}"]`).attr("content") ||
-    $(`meta[name="${key}"]`).attr("content");
-  return value?.trim() || null;
 }
 
 /** Fetch and extract readable article content from a URL. */
 export async function scrapeArticlePage(url: string): Promise<ScrapedArticle | null> {
   try {
     const html = await fetchText(url, {
-      timeoutMs: 12_000,
+      timeoutMs: HTTP_TIMEOUTS.api,
       headers: { Accept: "text/html,application/xhtml+xml" },
     });
     const $ = cheerio.load(html);
 
-    const title =
-      metaContent($, "og:title") ||
-      $("title").first().text().trim() ||
-      $("h1").first().text().trim() ||
-      null;
+    const og = readOpenGraph($);
+    const content = extractMainText($, {
+      selectors: CONTENT_SELECTORS,
+      minLength: 200,
+      clean: cleanText,
+    });
 
-    const description =
-      metaContent($, "og:description") ||
-      metaContent($, "description") ||
-      null;
-
-    const siteName = metaContent($, "og:site_name");
-
-    const contentSelectors = [
-      "article",
-      "main article",
-      "[role='main']",
-      "main",
-      ".post-content",
-      ".article-content",
-      ".entry-content",
-      "#content",
-    ];
-
-    let content = "";
-    for (const selector of contentSelectors) {
-      const block = $(selector).first();
-      if (block.length === 0) continue;
-      const text = cleanText(block.text());
-      if (text.length >= 200) {
-        content = text;
-        break;
-      }
-    }
-
-    if (!content) {
-      const paragraphs = $("p")
-        .toArray()
-        .map((el) => cleanText($(el).text()))
-        .filter((p) => p.length >= 40);
-      content = paragraphs.slice(0, 8).join("\n\n");
-    }
-
-    if (!title && !description && !content) return null;
+    if (!og.title && !og.description && !content) return null;
 
     return {
-      title: title ? cleanText(title).slice(0, 240) : null,
-      description: description ? cleanText(description).slice(0, 500) : null,
-      content: content ? content.slice(0, 4000) : null,
-      siteName: siteName ? cleanText(siteName).slice(0, 80) : null,
+      title: og.title ? clampField(cleanText(og.title), "title") : null,
+      description: og.description
+        ? cleanText(og.description).slice(0, 500)
+        : null,
+      content: content ? content.slice(0, FIELD_LIMITS.body) : null,
+      siteName: og.siteName ? clampField(cleanText(og.siteName), "name") : null,
     };
   } catch {
     return null;

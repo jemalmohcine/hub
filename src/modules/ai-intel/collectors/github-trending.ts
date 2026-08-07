@@ -1,6 +1,10 @@
 import * as cheerio from "cheerio";
-import { fetchJson, fetchText } from "@/modules/ai-intel/collectors/fetch";
-import { DEV_SIGNAL_RE, formatStars } from "@/modules/ai-intel/score";
+import { formatCompactNumber } from "@/lib/numbers";
+import {
+  fetchJson,
+  fetchText } from "@/lib/http/fetch-text";
+import { DEV_SIGNAL_RE,
+} from "@/modules/ai-intel/score";
 import type { RawHit } from "@/modules/ai-intel/types";
 
 type GhRepo = {
@@ -104,14 +108,14 @@ export async function collectGithubTrending(
 
         const summary = [
           description,
-          stars ? `${formatStars(stars)} stars` : "",
-          row.starsToday ? `+${formatStars(row.starsToday)} today` : "",
+          stars ? `${formatCompactNumber(stars)} stars` : "",
+          row.starsToday ? `+${formatCompactNumber(row.starsToday)} today` : "",
           row.starsWeek
-            ? `+${formatStars(row.starsWeek)} this week`
+            ? `+${formatCompactNumber(row.starsWeek)} this week`
             : row.starsToday
-              ? `~${formatStars(row.starsToday * 5)} est. week`
+              ? `~${formatCompactNumber(row.starsToday * 5)} est. week`
               : "",
-          forks ? `${formatStars(forks)} forks` : "",
+          forks ? `${formatCompactNumber(forks)} forks` : "",
           language || "",
         ]
           .filter(Boolean)

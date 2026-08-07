@@ -1,20 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getHubUser } from "@/core/auth/get-user";
 import { createClient } from "@/core/auth/supabase/server";
-import { hasEntitlement } from "@/core/entitlements";
+import { assertEntitled } from "@/core/entitlements/assert-entitled";
+import { ENTITLEMENTS } from "@/core/entitlements/keys";
 import type { DevSnippetInput } from "@/modules/dev-snippets/types";
 
-function assertEntitled() {
-  return getHubUser().then((user) => {
-    if (!user) throw new Error("Unauthorized");
-    if (!hasEntitlement(user.entitlements, "module:snippets")) {
-      throw new Error("Pro entitlement required");
-    }
-    return user;
-  });
-}
+/** Every action in this file requires the snippets module. */
+const requireUser = () => assertEntitled(ENTITLEMENTS.snippets);
 
 function normalizeTags(tags?: string[]): string[] {
   if (!tags) return [];
@@ -38,7 +31,7 @@ function rowFromInput(input: DevSnippetInput, userId: string) {
 }
 
 export async function createDevSnippet(input: DevSnippetInput) {
-  const user = await assertEntitled();
+  const user = await requireUser();
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -67,7 +60,7 @@ export async function createDevSnippet(input: DevSnippetInput) {
 }
 
 export async function updateDevSnippet(id: string, input: Partial<DevSnippetInput>) {
-  const user = await assertEntitled();
+  const user = await requireUser();
   const supabase = await createClient();
 
   const patch: Record<string, unknown> = {};
@@ -90,7 +83,7 @@ export async function updateDevSnippet(id: string, input: Partial<DevSnippetInpu
 }
 
 export async function deleteDevSnippet(id: string) {
-  const user = await assertEntitled();
+  const user = await requireUser();
   const supabase = await createClient();
 
   const { error } = await supabase

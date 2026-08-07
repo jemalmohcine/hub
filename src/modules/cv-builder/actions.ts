@@ -1,24 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getHubUser } from "@/core/auth/get-user";
 import { createClient } from "@/core/auth/supabase/server";
-import { hasEntitlement } from "@/core/entitlements";
+import { assertEntitled } from "@/core/entitlements/assert-entitled";
+import { ENTITLEMENTS } from "@/core/entitlements/keys";
 import { defaultCvDocument } from "@/modules/cv-builder/defaults";
 import { getCvDocumentById } from "@/modules/cv-builder/queries";
 import { tailorCvForJob } from "@/modules/cv-builder/tailor";
 import type { CvDocument } from "@/modules/cv-builder/types";
 
-function assertEntitled() {
-  const user = getHubUser();
-  return user.then((u) => {
-    if (!u) throw new Error("Unauthorized");
-    if (!hasEntitlement(u.entitlements, "module:cv")) {
-      throw new Error("Pro entitlement required");
-    }
-    return u;
-  });
-}
+/** Every action in this file requires the CV module. */
+const requireUser = () => assertEntitled(ENTITLEMENTS.cv);
 
 function docToPayload(doc: CvDocument, userId: string) {
   return {
@@ -43,14 +35,14 @@ function docToPayload(doc: CvDocument, userId: string) {
 }
 
 export async function loadCvDocument(documentId: string): Promise<CvDocument> {
-  const user = await assertEntitled();
+  const user = await requireUser();
   const doc = await getCvDocumentById(user.id, documentId);
   if (!doc) throw new Error("CV introuvable");
   return doc;
 }
 
 export async function saveCvDocument(doc: CvDocument): Promise<CvDocument> {
-  const user = await assertEntitled();
+  const user = await requireUser();
   const supabase = await createClient();
   const payload = docToPayload(doc, user.id);
 
@@ -80,14 +72,14 @@ export async function saveCvDocument(doc: CvDocument): Promise<CvDocument> {
 }
 
 export async function createCvDocument(title?: string): Promise<CvDocument> {
-  await assertEntitled();
+  await requireUser();
   const doc = defaultCvDocument();
   if (title) doc.title = title;
   return saveCvDocument(doc);
 }
 
 export async function deleteCvDocument(documentId: string): Promise<void> {
-  const user = await assertEntitled();
+  const user = await requireUser();
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -102,7 +94,7 @@ export async function deleteCvDocument(documentId: string): Promise<void> {
 }
 
 export async function duplicateCvDocument(documentId: string): Promise<CvDocument> {
-  const user = await assertEntitled();
+  const user = await requireUser();
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -147,7 +139,7 @@ export async function tailorCvFromJobDescription(
   sourceDocumentId: string,
   jobDescription: string,
 ): Promise<CvDocument> {
-  const user = await assertEntitled();
+  const user = await requireUser();
   const supabase = await createClient();
 
   const { data, error } = await supabase

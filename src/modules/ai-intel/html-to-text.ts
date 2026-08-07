@@ -1,3 +1,5 @@
+import { truncateAtWord } from "@/lib/text";
+
 /** Decode common HTML entities (including double-encoded fragments from READMEs). */
 export function decodeHtmlEntities(text: string): string {
   return text
@@ -55,6 +57,5 @@ export function firstCleanClause(text: string, max = 120): string {
   const clean = sanitizePlainText(text, max * 2);
   if (!clean) return "";
   const clause = clean.split(/(?<=[.!?])\s+/)[0]?.trim() || clean;
-  if (clause.length <= max) return clause;
-  return `${clause.slice(0, max - 1).trim()}…`;
+  return truncateAtWord(clause, max);
 }

@@ -86,12 +86,12 @@ export function BottomNavItem({
     <Link
       href={href}
       className={cn(
-        "relative flex h-full cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[10px] leading-none transition-opacity",
+        "relative flex h-full cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[length:var(--dh-text-2xs)] leading-none transition-opacity",
         active ? "text-primary" : "text-muted-foreground",
       )}
     >
       <Icon className="size-[1.125rem] shrink-0" />
-      <span className="max-w-full truncate text-[10px]">{label}</span>
+      <span className="max-w-full truncate text-[length:var(--dh-text-2xs)]">{label}</span>
       <span className="absolute top-1.5 right-2">
         <LinkPendingHint />
       </span>

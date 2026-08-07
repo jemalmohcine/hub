@@ -7,7 +7,7 @@ import {
 import { pushAlertTitle } from "@/modules/ai-intel/essential-recap";
 import { aiIntelItemHref } from "@/modules/ai-intel/item-link";
 import { mergeHits } from "@/modules/ai-intel/merge/merge-hits";
-import { isWorthKeeping } from "@/modules/ai-intel/score";
+import { isWorthKeeping, preEnrichPriority } from "@/modules/ai-intel/score";
 import { scrapeDayIso } from "@/modules/ai-intel/scrape-date";
 import { discoverNewSources } from "@/modules/ai-intel/sources/discover";
 import type { AiIntelSource, ClassifiedItem, RawHit } from "@/modules/ai-intel/types";
@@ -149,7 +149,10 @@ export async function runAiIntelIngest() {
     const { items, stats: mergeStats } = mergeHits(allHits, sourcesById);
 
     resetArticleScrapeBudget();
-    const enriched = await mapPool(items, ENRICH_CONCURRENCY, (item) =>
+    const ranked = [...items].sort(
+      (a, b) => preEnrichPriority(b) - preEnrichPriority(a),
+    );
+    const enriched = await mapPool(ranked, ENRICH_CONCURRENCY, (item) =>
       enrichClassifiedItem(item),
     );
 

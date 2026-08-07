@@ -2,7 +2,17 @@ import { type ReactNode } from "react";
 import { cn } from "@/design-system/lib/cn";
 
 export type TextTone = "default" | "muted" | "subtle" | "brand" | "danger" | "success" | "warning" | "inverse";
-export type TextSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl";
+export type TextSize =
+  | "2xs"
+  | "xs"
+  | "sm"
+  | "md"
+  | "lg"
+  | "xl"
+  | "2xl"
+  | "3xl"
+  | "4xl"
+  | "5xl";
 export type TextWeight = "regular" | "medium" | "semibold" | "bold";
 
 const toneClass: Record<TextTone, string> = {
@@ -17,6 +27,7 @@ const toneClass: Record<TextTone, string> = {
 };
 
 const sizeClass: Record<TextSize, string> = {
+  "2xs": "text-[length:var(--dh-text-2xs)]",
   xs: "text-[length:var(--dh-text-xs)]",
   sm: "text-[length:var(--dh-text-sm)]",
   md: "text-[length:var(--dh-text-md)]",

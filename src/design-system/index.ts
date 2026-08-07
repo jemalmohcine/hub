@@ -1,8 +1,24 @@
 export { cn } from "@/design-system/lib/cn";
 export * from "@/design-system/tokens";
 
-export { Button } from "@/design-system/components/button";
+export { Button, IconButton } from "@/design-system/components/button";
 export type { ButtonVariant, ButtonSize } from "@/design-system/components/button";
+
+export {
+  Dialog,
+  DialogRoot,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/design-system/components/dialog";
+export type { DialogProps, DialogSize } from "@/design-system/components/dialog";
+
+export { Sheet } from "@/design-system/components/sheet";
+export type { SheetProps } from "@/design-system/components/sheet";
 
 export {
   Label,
@@ -40,6 +56,8 @@ export {
 
 export { Card, CardHeader } from "@/design-system/components/card";
 export { Badge, Alert } from "@/design-system/components/feedback";
+export { EmptyState } from "@/design-system/components/empty-state";
+export type { EmptyStateProps } from "@/design-system/components/empty-state";
 
 export {
   BrandMark,
