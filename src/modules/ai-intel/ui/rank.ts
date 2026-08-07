@@ -17,6 +17,16 @@ export function itemKind(item: AiIntelItem): "repo" | "tool" | "news" {
   return "news";
 }
 
+/** Technical labels produced by the analysis pass (empty for legacy rows). */
+export function itemTags(item: AiIntelItem): string[] {
+  const raw = (item.metadata ?? {}).tags;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((tag) => String(tag).trim())
+    .filter((tag) => tag.length >= 2)
+    .slice(0, 4);
+}
+
 export function isBeneficial(item: AiIntelItem): boolean {
   return item.metadata?.beneficial === true || itemVerdict(item) === "use_it";
 }
@@ -30,11 +40,16 @@ export function isNoise(item: AiIntelItem): boolean {
 
 /** Action required now: pricing, breaking, security, exploding repos. */
 export function isHotAlert(item: AiIntelItem): boolean {
+  const meta = (item.metadata ?? {}) as Record<string, unknown>;
+
+  // Signals produced by the analysis pass win over any headline heuristic.
+  if (meta.hardSignal) return true;
+  if (meta.exploding === true) return true;
+  if (meta.actionRequired === true && item.urgency === "urgent") return true;
+
   if (itemVerdict(item) === "skip") return false;
 
   const kind = detectContentKind(item);
-  const meta = (item.metadata ?? {}) as Record<string, unknown>;
-  const starsToday = Number(meta.starsToday) || 0;
 
   if (kind === "repo") {
     return isRepoExploding(item);
@@ -91,34 +106,25 @@ function asIntelItem(item: AlertItem): AiIntelItem {
 }
 
 /**
- * Phone + bell alerts only for high-signal events:
- * exploding repos, pricing, new models, breaking/security.
+ * Phone + bell alerts only when something demands attention today:
+ * a security issue, a pricing or deprecation change, or a repo really taking off.
+ * A plain new-model announcement is interesting, not interrupting.
  */
 export function isCriticalPushAlert(item: AlertItem): boolean {
-  const intel = asIntelItem(item);
   const meta = (item.metadata ?? {}) as Record<string, unknown>;
+
+  if (meta.hardSignal) return true;
+  if (meta.exploding === true) return true;
+  if (meta.actionRequired === true && item.urgency === "urgent") return true;
+
+  // Analysed items have already been judged above; only legacy rows fall through.
+  if (meta.contentKind) return false;
+
+  const intel = asIntelItem(item);
   const kind = detectContentKind(intel);
-  const category = String(item.category || "");
-  const starsToday = Number(meta.starsToday) || 0;
 
-  if (kind === "repo") {
-    return isRepoExploding(intel);
-  }
-
-  if (kind === "pricing" || kind === "breaking" || kind === "security") {
-    return true;
-  }
-
-  if (kind === "model") {
-    return (
-      category === "new_model" ||
-      category === "upgrade" ||
-      category === "capacity" ||
-      item.urgency === "urgent"
-    );
-  }
-
-  return false;
+  if (kind === "repo") return isRepoExploding(intel);
+  return kind === "pricing" || kind === "breaking" || kind === "security";
 }
 
 export type PricingKind = "free" | "freemium" | "paid" | null;

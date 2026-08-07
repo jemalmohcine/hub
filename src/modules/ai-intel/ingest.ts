@@ -7,6 +7,7 @@ import {
 import { pushAlertTitle } from "@/modules/ai-intel/essential-recap";
 import { aiIntelItemHref } from "@/modules/ai-intel/item-link";
 import { mergeHits } from "@/modules/ai-intel/merge/merge-hits";
+import { isWorthKeeping } from "@/modules/ai-intel/score";
 import { scrapeDayIso } from "@/modules/ai-intel/scrape-date";
 import { discoverNewSources } from "@/modules/ai-intel/sources/discover";
 import type { AiIntelSource, ClassifiedItem, RawHit } from "@/modules/ai-intel/types";
@@ -152,11 +153,18 @@ export async function runAiIntelIngest() {
       enrichClassifiedItem(item),
     );
 
+    // The real quality filter runs here, once the content has been scraped and
+    // read — never on the RSS headline alone.
+    const keepers = enriched.filter((item) =>
+      isWorthKeeping(item.metadata, Number(item.metadata.confirmations) || 1),
+    );
+    const droppedAfterEnrich = enriched.length - keepers.length;
+
     let inserted = 0;
     let skipped = 0;
     const insertedItems: InsertedIntelItem[] = [];
 
-    for (const item of enriched) {
+    for (const item of keepers) {
       const { data, error } = await admin
         .from("ai_intel_items")
         .upsert(
@@ -205,7 +213,13 @@ export async function runAiIntelIngest() {
         status,
         discovery,
         source_stats: sourceStats,
-        merge_stats: { ...mergeStats, inserted, skipped, notify },
+        merge_stats: {
+          ...mergeStats,
+          droppedAfterEnrich,
+          inserted,
+          skipped,
+          notify,
+        },
       })
       .eq("id", runId);
 
@@ -214,7 +228,13 @@ export async function runAiIntelIngest() {
       status,
       discovery,
       sourceStats,
-      mergeStats: { ...mergeStats, inserted, skipped, notify },
+      mergeStats: {
+        ...mergeStats,
+        droppedAfterEnrich,
+        inserted,
+        skipped,
+        notify,
+      },
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

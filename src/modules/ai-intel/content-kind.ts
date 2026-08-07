@@ -90,10 +90,28 @@ export function productOf(item: ItemLike): string | null {
   return null;
 }
 
+const CONTENT_KINDS = new Set<ContentKind>([
+  "repo",
+  "tool",
+  "feature",
+  "model",
+  "pricing",
+  "breaking",
+  "security",
+  "policy",
+  "news",
+]);
+
 export function detectContentKind(item: ItemLike): ContentKind {
   const meta = (item.metadata ?? {}) as Record<string, unknown>;
   const text = `${item.title} ${item.summary ?? ""}`;
   const category = String(item.category || "");
+
+  // Decided while reading the scraped content — more reliable than any regex.
+  const analysed = meta.contentKind;
+  if (typeof analysed === "string" && CONTENT_KINDS.has(analysed as ContentKind)) {
+    return analysed as ContentKind;
+  }
 
   if (item.pillar === "opensource" || meta.kind === "repo") return "repo";
 

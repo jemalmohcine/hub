@@ -286,6 +286,17 @@ export function scoreGenericNews(input: {
   );
 }
 
+/** Clearly outside a developer's scope, whatever the LLM thinks. */
+export function isOffTopic(text: string): boolean {
+  return NON_DEV_RE.test(text) && !DEV_SIGNAL_RE.test(text);
+}
+
+export function verdictFromScore(score: number): DevVerdict {
+  if (score >= 68) return "use_it";
+  if (score >= 46) return "watch";
+  return "skip";
+}
+
 export function formatStars(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1000) return `${(n / 1000).toFixed(n >= 10_000 ? 0 : 1)}k`;
@@ -346,6 +357,9 @@ export function attachScoreToRaw(
 
 /** Keep only items worth a developer's time (or multi-confirmed). */
 export function isWorthKeeping(meta: Record<string, unknown>, confirmations = 1): boolean {
+  // Security, pricing and deprecation always survive the filter.
+  if (meta.hardSignal || meta.actionRequired === true) return true;
+
   const score = Number(meta.score) || 0;
   const verdict = meta.verdict;
   if (verdict === "use_it") return true;

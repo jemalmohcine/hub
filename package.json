@@ -7,8 +7,8 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "ai-intel:ingest": "tsx --tsconfig tsconfig.json scripts/ai-intel-ingest.ts",
-    "job-board:ingest": "tsx --tsconfig tsconfig.json scripts/job-board-ingest.ts"
+    "ai-intel:ingest": "node --env-file-if-exists=.env.local --import tsx scripts/ai-intel-ingest.ts",
+    "job-board:ingest": "node --env-file-if-exists=.env.local --import tsx scripts/job-board-ingest.ts"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.44",

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ChevronDown, ExternalLink, Languages, Loader2 } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { ExternalLink, Languages, Loader2 } from "lucide-react";
 import {
   Badge,
   Button,
@@ -21,71 +21,31 @@ import {
 import { SaveButton } from "@/modules/ai-intel/ui/save-button";
 import { ensureItemTranslation } from "@/modules/ai-intel/actions-i18n";
 import { getItemI18n, resolveBrief } from "@/modules/ai-intel/brief";
-import {
-  buildEssentialRecap,
-  type EssentialPoint,
-} from "@/modules/ai-intel/essential-recap";
+import { buildEssentialRecap } from "@/modules/ai-intel/essential-recap";
 import { contentKindTone } from "@/modules/ai-intel/content-kind";
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
 import { t } from "@/modules/ai-intel/i18n/locale";
-import { isHotAlert } from "@/modules/ai-intel/ui/rank";
+import { isHotAlert, itemTags } from "@/modules/ai-intel/ui/rank";
 import { readMetaString, verdictTone } from "@/modules/ai-intel/ui/verdict";
 import { type AiIntelItem } from "@/modules/ai-intel/types";
-import { cn } from "@/lib/utils";
 
 function websiteHref(website: string | null): string | null {
   if (!website) return null;
   return website.startsWith("http") ? website : `https://${website}`;
 }
 
-function EssentialPointRow({
-  point,
-  expanded,
-  onToggle,
-}: {
-  point: EssentialPoint;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-muted/25">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
-        className="flex w-full min-w-0 items-start gap-3 px-3.5 py-3 text-left"
+    <section>
+      <Text
+        size="sm"
+        weight="medium"
+        className="mb-2 uppercase tracking-wide text-muted-foreground"
       >
-        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--dh-brand)]" />
-        <span className="min-w-0 flex-1 overflow-hidden">
-          <Text size="sm" weight="medium" className="leading-snug break-words">
-            {point.label}
-          </Text>
-          <Text
-            size="sm"
-            tone="muted"
-            className="mt-1 line-clamp-2 break-words leading-relaxed"
-          >
-            {point.teaser}
-          </Text>
-        </span>
-        <ChevronDown
-          className={cn(
-            "mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform",
-            expanded && "rotate-180",
-          )}
-        />
-      </button>
-      {expanded ? (
-        <div className="overflow-x-hidden border-t border-border/70 px-3.5 py-3">
-          <Text
-            size="sm"
-            className="break-words leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]"
-          >
-            {point.detail}
-          </Text>
-        </div>
-      ) : null}
-    </div>
+        {title}
+      </Text>
+      {children}
+    </section>
   );
 }
 
@@ -137,25 +97,25 @@ function ItemDetailModalBody({
   const copy = t(locale);
   const { run, pending } = useAsyncAction();
   const [localItem, setLocalItem] = useState(item);
-  const [expandedPoint, setExpandedPoint] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalItem(item);
-    setExpandedPoint(null);
   }, [item]);
 
   useEffect(() => {
-    if (!open || !localItem) return;
-    const i18n = getItemI18n((localItem.metadata ?? {}) as Record<string, unknown>);
+    if (!open) return;
+    const i18n = getItemI18n((item.metadata ?? {}) as Record<string, unknown>);
     if (i18n?.translatedAt) return;
 
     void run(
       async () => {
-        const meta = await ensureItemTranslation(localItem.id);
+        const translatedMeta = await ensureItemTranslation(item.id);
         setLocalItem((prev) =>
-          prev ? { ...prev, metadata: meta as Record<string, unknown> } : prev,
+          prev
+            ? { ...prev, metadata: translatedMeta as Record<string, unknown> }
+            : prev,
         );
-        onMetadataUpdate?.(localItem.id, meta as Record<string, unknown>);
+        onMetadataUpdate?.(item.id, translatedMeta as Record<string, unknown>);
       },
       {
         silent: true,
@@ -164,21 +124,39 @@ function ItemDetailModalBody({
         },
       },
     );
-  }, [open, localItem.id, run, onMetadataUpdate]);
+  }, [open, item, run, onMetadataUpdate]);
 
   const meta = (localItem.metadata ?? {}) as Record<string, unknown>;
   const brief = resolveBrief(localItem, locale);
-  const recap = buildEssentialRecap(localItem, locale);
   const i18n = getItemI18n(meta);
+  const tags = itemTags(localItem);
   const website = readMetaString(meta, "website");
   const image = readMetaString(meta, "image");
   const score = readMetaString(meta, "score");
+  const impact = readMetaString(meta, "impact");
+  const scoreReason = readMetaString(meta, "scoreReason");
   const verdictLabel =
     (locale === "fr" ? i18n?.verdictLabel?.fr : i18n?.verdictLabel?.en) ||
     readMetaString(meta, "verdictLabel");
   const visitUrl = websiteHref(website) || localItem.url;
   const translated = Boolean(i18n?.translatedAt);
   const dateLocale = locale === "fr" ? "fr-FR" : "en-US";
+
+  const summary =
+    readMetaString(meta, "purpose") || brief.tldr || localItem.summary;
+
+  // Analysed items carry their own points; older rows fall back to the recap.
+  const storedPoints = Array.isArray(meta.essentialPoints)
+    ? (meta.essentialPoints as unknown[])
+        .map((p) => String(p).trim())
+        .filter((p) => p.length > 0)
+    : [];
+  const points = storedPoints.length
+    ? storedPoints
+    : buildEssentialRecap(localItem, locale).map(
+        (p) => `${p.label} : ${p.teaser}`,
+      );
+
   const kindTone = contentKindTone(brief.kind);
   const kindBadgeTone =
     kindTone === "urgent"
@@ -201,6 +179,11 @@ function ItemDetailModalBody({
             {brief.product ? (
               <Badge tone="neutral">{brief.product}</Badge>
             ) : null}
+            {tags.map((tag) => (
+              <Badge key={tag} tone="neutral">
+                {tag}
+              </Badge>
+            ))}
             {verdictLabel ? (
               <Badge tone={verdictTone(meta.verdict)}>{verdictLabel}</Badge>
             ) : null}
@@ -228,12 +211,10 @@ function ItemDetailModalBody({
           <DialogTitle className="text-balance text-xl leading-snug">
             {brief.title}
           </DialogTitle>
-          <DialogDescription className="sr-only">
-            {recap[0]?.teaser ?? brief.tldr}
-          </DialogDescription>
+          <DialogDescription className="sr-only">{summary}</DialogDescription>
         </DialogHeader>
 
-        <Stack gap={3}>
+        <Stack gap={4}>
           {image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -243,39 +224,68 @@ function ItemDetailModalBody({
             />
           ) : null}
 
-          <section>
-            <Text
-              size="sm"
-              weight="medium"
-              className="mb-2 uppercase tracking-wide text-muted-foreground"
-            >
-              {copy.recapTitle}
-            </Text>
-            <Stack gap={2}>
-              {recap.map((point) => (
-                <EssentialPointRow
-                  key={point.id}
-                  point={point}
-                  expanded={expandedPoint === point.id}
-                  onToggle={() =>
-                    setExpandedPoint((current) =>
-                      current === point.id ? null : point.id,
-                    )
-                  }
-                />
-              ))}
-            </Stack>
-          </section>
+          {summary ? (
+            <Section title={copy.tldr}>
+              <Text size="sm" className="leading-relaxed break-words">
+                {summary}
+              </Text>
+            </Section>
+          ) : null}
 
-          <section className="rounded-2xl border border-border bg-muted/30 px-4 py-3">
-            <Text
-              size="sm"
-              weight="medium"
-              className="uppercase tracking-wide text-muted-foreground"
-            >
-              {copy.sources}
-            </Text>
-            <Text size="sm" tone="muted" className="mt-2">
+          {points.length > 0 ? (
+            <Section title={copy.essentials}>
+              <ul className="space-y-2">
+                {points.map((point) => (
+                  <li key={point} className="flex gap-2.5">
+                    <span
+                      className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--dh-brand)]"
+                      aria-hidden
+                    />
+                    <Text size="sm" className="leading-relaxed break-words">
+                      {point}
+                    </Text>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          ) : null}
+
+          {impact ? (
+            <Section title={copy.impact}>
+              <Text
+                size="sm"
+                className="rounded-2xl border border-border bg-muted/30 px-4 py-3 leading-relaxed break-words"
+              >
+                {impact}
+              </Text>
+            </Section>
+          ) : null}
+
+          {brief.facts.length > 0 ? (
+            <Section title={copy.facts}>
+              <dl className="grid grid-cols-2 gap-x-3 gap-y-2">
+                {brief.facts.map((fact) => (
+                  <div key={`${fact.label}-${fact.value}`} className="min-w-0">
+                    <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                      {fact.label}
+                    </dt>
+                    <dd className="truncate text-sm">{fact.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </Section>
+          ) : null}
+
+          {scoreReason ? (
+            <Section title={copy.scoreWhy}>
+              <Text size="sm" tone="muted" className="leading-relaxed break-words">
+                {scoreReason}
+              </Text>
+            </Section>
+          ) : null}
+
+          <Section title={copy.sources}>
+            <Text size="sm" tone="muted">
               {copy.published}{" "}
               {localItem.published_at
                 ? new Date(localItem.published_at).toLocaleDateString(dateLocale, {
@@ -287,7 +297,7 @@ function ItemDetailModalBody({
               {" · "}
               {localItem.primary_source}
             </Text>
-          </section>
+          </Section>
         </Stack>
 
         <DialogFooter className="gap-2 pb-1 sm:justify-between">

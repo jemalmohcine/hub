@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { Check, ChevronRight } from "lucide-react";
 import { Text } from "@/design-system";
 import { resolveBrief } from "@/modules/ai-intel/brief";
-import { buildEssentialRecap } from "@/modules/ai-intel/essential-recap";
 import { contentKindTone } from "@/modules/ai-intel/content-kind";
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
 import { t } from "@/modules/ai-intel/i18n/locale";
@@ -12,6 +11,7 @@ import {
   isHotAlert,
   isTrending,
   itemKind,
+  itemTags,
   pricingKind,
 } from "@/modules/ai-intel/ui/rank";
 import { readMetaString } from "@/modules/ai-intel/ui/verdict";
@@ -73,7 +73,7 @@ export function FeedItemRow({
   const copy = t(locale);
   const meta = (item.metadata ?? {}) as Record<string, unknown>;
   const brief = resolveBrief(item, locale);
-  const recap = buildEssentialRecap(item, locale);
+  const tags = itemTags(item);
   const stars = prettyCount(readMetaString(meta, "stars"));
   const starsToday = prettyCount(readMetaString(meta, "starsToday"));
   const score = readMetaString(meta, "score");
@@ -114,12 +114,15 @@ export function FeedItemRow({
     >
       <span className="min-w-0 flex-1">
         <span className="mb-2 flex flex-wrap items-center gap-1">
+          {hot ? <Chip tone="urgent">{copy.urgent}</Chip> : null}
           <Chip tone={hot ? "urgent" : contentKindTone(brief.kind)}>
             {brief.typeLabel}
           </Chip>
           {brief.product ? <Chip>{brief.product}</Chip> : null}
           {trending ? <Chip tone="ok">{copy.trending}</Chip> : null}
-          {hot ? <Chip tone="urgent">{copy.urgent}</Chip> : null}
+          {tags.map((tag) => (
+            <Chip key={tag}>{tag}</Chip>
+          ))}
           {score ? (
             <Chip tone="ok">
               {copy.score} {score}
@@ -137,23 +140,7 @@ export function FeedItemRow({
           {brief.title}
         </Text>
 
-        <ul className="mt-2.5 space-y-1.5">
-          {recap.map((point) => (
-            <li key={point.id} className="flex gap-2 text-left">
-              <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[var(--dh-brand)]" />
-              <span className="min-w-0">
-                <span className="text-[11px] font-semibold text-foreground/85">
-                  {point.label}
-                </span>
-                <span className="mt-0.5 block text-[12px] leading-relaxed text-muted-foreground line-clamp-2">
-                  {point.teaser}
-                </span>
-              </span>
-            </li>
-          ))}
-        </ul>
-
-        <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
           <span>{item.primary_source}</span>
           {publishedLabel ? <span>· {publishedLabel}</span> : null}
           {metricParts.length > 0 ? (

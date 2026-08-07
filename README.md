@@ -84,6 +84,9 @@ Module Pro `/app/ai` : digest multi-sources (4 piliers), merge cross-sites, save
 2. Ajoute dans `.env.local` / Vercel / GitHub Actions secrets :
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `SUPABASE_SERVICE_ROLE_KEY`
+   - `GOOGLE_GENERATIVE_AI_API_KEY` (Gemini gratuit — https://aistudio.google.com/apikey)
+     Sans cette clé le scrape tourne quand même, mais titres, urgences, tags et scores
+     retombent sur les heuristiques regex au lieu d'être décidés en lisant le contenu.
    - `TAVILY_API_KEY` (optionnel — découverte de nouveaux sites)
    - `CRON_SECRET` (optionnel — trigger manuel local via `/api/cron/ai-intel`)
    - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` (+ `VAPID_SUBJECT`) pour les push PWA
@@ -111,4 +114,16 @@ Module Pro `/app/ai` : digest multi-sources (4 piliers), merge cross-sites, save
      -H "Authorization: Bearer $CRON_SECRET"
    ```
 
-Secrets GitHub requis pour le workflow : `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (et `TAVILY_API_KEY` / `NEXT_PUBLIC_APP_URL` si tu les utilises).
+Secrets GitHub requis pour le workflow : `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (et `TAVILY_API_KEY` / `NEXT_PUBLIC_APP_URL` si tu les utilises).
+
+### Comment une info devient une alerte
+
+1. Collecte RSS / HTML / API depuis `ai_intel_sources`
+2. Dédoublonnage par `canonicalKey`, sans jugement sur le titre
+3. Scrape complet de la page ou du dépôt (README, corps d'article, métriques)
+4. Gemini lit ce contenu et décide : titre, résumé, points essentiels, type, urgence,
+   impact, tags, score et `actionRequired`
+5. Garde-fous déterministes (`hard-signals.ts`) : une CVE, une hausse de prix ou une
+   dépréciation reste urgente même si le modèle la sous-estime ; un dépôt n'est urgent
+   que s'il explose vraiment (`repo-momentum.ts`)
+6. Filtre qualité, puis notification push uniquement pour ces cas-là

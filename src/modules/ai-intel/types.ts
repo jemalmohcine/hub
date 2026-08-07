@@ -17,6 +17,8 @@ export type AiCategory =
   | "trending_repo"
   | "release"
   | "library"
+  | "security"
+  | "outage"
   | "regulation"
   | "ban"
   | "policy"

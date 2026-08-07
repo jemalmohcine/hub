@@ -1,6 +1,7 @@
 import { classifyHit, urgencyFromScore } from "@/modules/ai-intel/classify";
+import { detectHardSignal } from "@/modules/ai-intel/hard-signals";
 import { buildCanonicalKey } from "@/modules/ai-intel/merge/canonical-key";
-import { attachScoreToRaw, isWorthKeeping } from "@/modules/ai-intel/score";
+import { attachScoreToRaw, isOffTopic } from "@/modules/ai-intel/score";
 import type {
   AiCategory,
   AiIntelSource,
@@ -99,7 +100,12 @@ export function mergeHits(
       starsToday: Number(scoredMeta.starsToday) || 0,
     });
 
-    if (!isWorthKeeping(scoredMeta, ranked.length)) {
+    // Nothing is judged on the RSS headline alone: the real scoring happens
+    // after the scrape. Only unmistakable off-topic noise is dropped here.
+    const headline = `${richest.title} ${richest.summary}`;
+    const preSignal = detectHardSignal(headline);
+    const preScore = Number(scoredMeta.score) || 0;
+    if (!preSignal && isOffTopic(headline) && preScore < 30) {
       dropped += 1;
       continue;
     }
@@ -124,12 +130,14 @@ export function mergeHits(
         externalIds: ranked.map((h) => h.externalId),
         longSummary: richest.summary.trim().slice(0, 700),
         ...scoredMeta,
+        preScore,
+        preSignal,
       },
     });
   }
 
-  // Prefer beneficial / urgent first in DB order bias
-  items.sort((a, b) => rankScore(b) - rankScore(a));
+  // Scrape budgets are finite, so the most promising items must be enriched first.
+  items.sort((a, b) => enrichPriority(b) - enrichPriority(a));
 
   return {
     items,
@@ -142,8 +150,10 @@ export function mergeHits(
   };
 }
 
-function rankScore(item: ClassifiedItem): number {
-  const score = Number(item.metadata.score) || 0;
+/** Who gets the scrape + LLM budget first. */
+function enrichPriority(item: ClassifiedItem): number {
+  const score = Number(item.metadata.preScore) || 0;
+  const signalBoost = item.metadata.preSignal ? 300 : 0;
   const urgencyBoost =
     item.urgency === "urgent" ? 120 : item.urgency === "medium" ? 40 : 0;
   const verdictBoost =
@@ -153,5 +163,5 @@ function rankScore(item: ClassifiedItem): number {
         ? 20
         : 0;
   const repoBoost = item.pillar === "opensource" && item.metadata.beneficial ? 25 : 0;
-  return score + urgencyBoost + verdictBoost + repoBoost;
+  return score + signalBoost + urgencyBoost + verdictBoost + repoBoost;
 }

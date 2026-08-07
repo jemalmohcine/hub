@@ -1,15 +1,20 @@
 import { scrapeArticlePage } from "@/modules/ai-intel/article-scrape";
-import { urgencyFromScore } from "@/modules/ai-intel/classify";
+import { detectHardSignal, hardSignalScoreFloor } from "@/modules/ai-intel/hard-signals";
 import { sanitizePlainText } from "@/modules/ai-intel/html-to-text";
+import type { LlmContentKind } from "@/modules/ai-intel/llm-organize";
 import { resetLlmOrganizeBudget } from "@/modules/ai-intel/llm-organize";
 import { organizeIntelLocalized } from "@/modules/ai-intel/organize-intel";
+import { isRepoExploding } from "@/modules/ai-intel/repo-momentum";
 import { scrapeGithubRepo } from "@/modules/ai-intel/scrape-github-repo";
-import { attachScoreToRaw } from "@/modules/ai-intel/score";
-import type { ClassifiedItem } from "@/modules/ai-intel/types";
+import { attachScoreToRaw, isOffTopic, verdictFromScore } from "@/modules/ai-intel/score";
+import type { AiCategory, AiPillar, AiUrgency, ClassifiedItem } from "@/modules/ai-intel/types";
 
-const MAX_ARTICLE_SCRAPES = 18;
-const MAX_REPO_SCRAPES = 22;
-const MAX_TOOL_SCRAPES = 12;
+const MAX_ARTICLE_SCRAPES = Number(process.env.AI_INTEL_ARTICLE_SCRAPES || 60);
+const MAX_REPO_SCRAPES = Number(process.env.AI_INTEL_REPO_SCRAPES || 40);
+const MAX_TOOL_SCRAPES = Number(process.env.AI_INTEL_TOOL_SCRAPES || 30);
+
+const EXPLODING_REPO_SCORE_FLOOR = 78;
+const OFF_TOPIC_SCORE_CEILING = 40;
 
 function itemKind(meta: Record<string, unknown>): "repo" | "tool" | "news" {
   if (meta.kind === "repo") return "repo";
@@ -17,7 +22,7 @@ function itemKind(meta: Record<string, unknown>): "repo" | "tool" | "news" {
   return "news";
 }
 
-function repoSlug(item: ClassifiedItem, meta: Record<string, unknown>): string | null {
+function repoSlug(item: ClassifiedItem): string | null {
   const fromTitle = item.title.trim();
   if (/^[^/]+\/[^/]+$/.test(fromTitle)) return fromTitle;
   const url = item.url || "";
@@ -53,7 +58,37 @@ export async function reorganizeClassifiedItem(
   return enrichClassifiedItem(item, { skipScrape: true });
 }
 
-/** Full scrape + organized title/summary/essential points before DB insert. */
+/** Pillar implied by what the content turned out to be. */
+function pillarFromContentKind(
+  kind: LlmContentKind,
+  current: AiPillar,
+): AiPillar {
+  if (kind === "repo") return "opensource";
+  if (kind === "tool" || kind === "feature") return "tools";
+  if (kind === "model") return "models";
+  if (kind === "policy") return "world";
+  return current;
+}
+
+/** Category implied by what the content turned out to be, for feed filters. */
+function categoryFromContentKind(
+  kind: LlmContentKind,
+  current: AiCategory,
+): AiCategory {
+  if (kind === "security") return "security";
+  if (kind === "pricing") return "pricing";
+  if (kind === "breaking") return "deprecation";
+  if (kind === "model") {
+    return current === "capacity" || current === "upgrade" ? current : "new_model";
+  }
+  if (kind === "feature") return "upgrade";
+  return current;
+}
+
+/**
+ * Scrape everything available, let the LLM decide what it is and how urgent it
+ * is, then clamp that decision with deterministic guardrails.
+ */
 export async function enrichClassifiedItem(
   item: ClassifiedItem,
   opts: { skipScrape?: boolean } = {},
@@ -63,7 +98,7 @@ export async function enrichClassifiedItem(
   const skipScrape = opts.skipScrape === true;
 
   if (!skipScrape && kind === "repo" && repoScrapeBudget > 0) {
-    const slug = repoSlug(item, meta);
+    const slug = repoSlug(item);
     if (slug) {
       repoScrapeBudget -= 1;
       const scraped = await scrapeGithubRepo(slug);
@@ -85,13 +120,7 @@ export async function enrichClassifiedItem(
     }
   }
 
-  if (
-    !skipScrape &&
-    kind === "tool" &&
-    toolScrapeBudget > 0 &&
-    item.url &&
-    (!meta.readme || String(meta.description || "").length < 80)
-  ) {
+  if (!skipScrape && kind === "tool" && toolScrapeBudget > 0 && item.url) {
     toolScrapeBudget -= 1;
     const scraped = await scrapeArticlePage(item.url);
     if (scraped) {
@@ -100,20 +129,14 @@ export async function enrichClassifiedItem(
         meta.description = sanitizePlainText(scraped.description, 500);
       }
       if (scraped.content) {
-        meta.articleBody = scraped.content.slice(0, 4000);
+        meta.articleBody = scraped.content.slice(0, 12_000);
         meta.articleExcerpt = sanitizePlainText(scraped.content, 500);
       }
       meta.fullPageScraped = true;
     }
   }
 
-  if (
-    !skipScrape &&
-    kind === "news" &&
-    articleScrapeBudget > 0 &&
-    item.url &&
-    (!meta.articleBody || String(item.summary).length < 160)
-  ) {
+  if (!skipScrape && kind === "news" && articleScrapeBudget > 0 && item.url) {
     articleScrapeBudget -= 1;
     const scraped = await scrapeArticlePage(item.url);
     if (scraped) {
@@ -122,7 +145,7 @@ export async function enrichClassifiedItem(
         meta.description = sanitizePlainText(scraped.description, 500);
       }
       if (scraped.content) {
-        meta.articleBody = scraped.content.slice(0, 4000);
+        meta.articleBody = scraped.content.slice(0, 12_000);
         meta.articleExcerpt = sanitizePlainText(scraped.content, 500);
       }
       if (scraped.siteName) meta.siteName = scraped.siteName;
@@ -134,7 +157,7 @@ export async function enrichClassifiedItem(
     kind,
     name:
       kind === "repo"
-        ? repoSlug(item, meta) || item.title
+        ? repoSlug(item) || item.title
         : (typeof meta.scrapedTitle === "string" && meta.scrapedTitle) || item.title,
     description:
       (typeof meta.description === "string" && meta.description) ||
@@ -150,36 +173,89 @@ export async function enrichClassifiedItem(
     language: typeof meta.language === "string" ? meta.language : null,
     locale: "fr",
     metrics: buildMetricsLine(meta),
+    url: item.url,
+    source: item.primarySource,
+    publishedAt: item.publishedAt,
   });
+
+  const decision = organized.decision ?? null;
 
   const summary =
     organized.purpose ||
     organized.essentialPoints[0] ||
     sanitizePlainText(item.summary, 240);
 
+  // Heuristic pass stays as the fallback and keeps its human-readable labels.
   const rescored = attachScoreToRaw(kind, meta, {
     title: organized.title,
     summary,
     urgency: item.urgency,
   });
 
-  const urgency = urgencyFromScore({
-    base: item.urgency,
-    verdict: String(rescored.verdict ?? "skip"),
-    score: Number(rescored.score) || 0,
-    category: item.category,
-    kind,
-    starsToday: Number(meta.starsToday) || 0,
-  });
+  // The guardrails read the full scraped body, not just the RSS headline.
+  const fullText = [
+    item.title,
+    item.summary,
+    readMetaString(meta, "description"),
+    readMetaString(meta, "articleBody") || readMetaString(meta, "articleExcerpt"),
+    readMetaString(meta, "readme"),
+  ]
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, 20_000);
+
+  const hardSignal = kind === "repo" ? null : detectHardSignal(fullText);
+  const exploding = kind === "repo" && isRepoExploding({ metadata: meta });
+  const offTopic = isOffTopic(fullText.slice(0, 4000));
+
+  let score = decision ? decision.score : Number(rescored.score) || 0;
+  score = Math.max(score, hardSignalScoreFloor(hardSignal));
+  if (exploding) score = Math.max(score, EXPLODING_REPO_SCORE_FLOOR);
+  if (offTopic && !hardSignal) score = Math.min(score, OFF_TOPIC_SCORE_CEILING);
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  let urgency: AiUrgency = decision
+    ? decision.urgency
+    : (rescored.verdict === "use_it" ? "medium" : "light");
+
+  if (hardSignal) urgency = "urgent";
+  if (kind === "repo") {
+    // A repo never forces an action — only a real explosion earns an alert.
+    urgency = exploding ? "urgent" : urgency === "urgent" ? "medium" : urgency;
+  }
+  if (offTopic && !hardSignal) urgency = "light";
+
+  const actionRequired =
+    Boolean(hardSignal) || (decision?.actionRequired === true && !offTopic);
+
+  const contentKind: LlmContentKind | null = hardSignal
+    ? (hardSignal === "outage" ? "news" : hardSignal)
+    : exploding
+      ? "repo"
+      : (decision?.contentKind ?? null);
+
+  const pillar = contentKind
+    ? pillarFromContentKind(contentKind, item.pillar)
+    : item.pillar;
+  const category = contentKind
+    ? categoryFromContentKind(contentKind, item.category)
+    : item.category;
+
+  const verdict = verdictFromScore(score);
 
   return {
     ...item,
+    pillar,
+    category,
     title: organized.title,
     summary: summary.slice(0, 240),
     urgency,
     metadata: {
       ...meta,
       ...rescored,
+      score,
+      verdict,
+      beneficial: verdict === "use_it",
       rawTitle: item.title,
       displayTitle: organized.title,
       organizedTitle: organized.title,
@@ -188,8 +264,15 @@ export async function enrichClassifiedItem(
       organizedAt: new Date().toISOString(),
       organizedBy: organized.organizedBy ?? "heuristic",
       llmModel: organized.llmModel ?? null,
-      longSummary: organized.longAbout.slice(0, 1200),
-      about: organized.longAbout.slice(0, 1800),
+      contentKind,
+      hardSignal,
+      actionRequired,
+      exploding,
+      tags: decision?.tags ?? [],
+      impact: decision?.impact ?? null,
+      scoreReason: decision?.scoreReason ?? null,
+      longSummary: organized.longAbout.slice(0, 1600),
+      about: organized.longAbout.slice(0, 2400),
       // Never keep raw readme HTML in about — readme stays in meta.readme for re-runs
     },
   };

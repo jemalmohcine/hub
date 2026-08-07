@@ -3,6 +3,7 @@ import { translateOnce } from "@/modules/ai-intel/i18n/translate";
 import {
   isLlmOrganizeAvailable,
   llmOrganizeIntel,
+  type LlmIntelDecision,
 } from "@/modules/ai-intel/llm-organize";
 import {
   firstCleanClause,
@@ -182,7 +183,7 @@ export function organizeIntel(input: {
   };
 }
 
-/** French labels when source content is English. Uses LLM when AI Gateway is configured. */
+/** French labels when source content is English. Uses the LLM when Gemini is configured. */
 export async function organizeIntelLocalized(input: {
   kind: "repo" | "tool" | "news";
   name: string;
@@ -193,11 +194,15 @@ export async function organizeIntelLocalized(input: {
   language?: string | null;
   locale?: AiLocale;
   metrics?: string | null;
+  url?: string | null;
+  source?: string | null;
+  publishedAt?: string | null;
 }): Promise<
   OrganizedIntel & {
     locale: AiLocale;
     organizedBy?: "llm" | "heuristic";
     llmModel?: string;
+    decision?: LlmIntelDecision;
   }
 > {
   const locale = input.locale ?? "fr";
@@ -218,6 +223,9 @@ export async function organizeIntelLocalized(input: {
       description,
       metrics: input.metrics,
       sourceText,
+      url: input.url,
+      source: input.source,
+      publishedAt: input.publishedAt,
       locale,
     });
     if (llm) {
@@ -229,6 +237,7 @@ export async function organizeIntelLocalized(input: {
         locale,
         organizedBy: "llm",
         llmModel: llm.model,
+        decision: llm,
       };
     }
   }
