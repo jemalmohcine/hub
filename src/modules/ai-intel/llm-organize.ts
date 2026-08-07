@@ -1,4 +1,5 @@
-import { generateText, Output } from "ai";
+import { google } from "@ai-sdk/google";
+import { generateText, Output, type LanguageModel } from "ai";
 import { z } from "zod";
 import { sanitizePlainText } from "@/modules/ai-intel/html-to-text";
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
@@ -14,7 +15,8 @@ const organizeSchema = z.object({
     .describe("2-4 bullets: what it is, key signal, dev impact"),
 });
 
-const DEFAULT_MODEL = "google/gemini-2.5-flash";
+const DEFAULT_GEMINI_MODEL = "gemini-3.6-flash";
+const DEFAULT_GATEWAY_MODEL = "google/gemini-3.6-flash";
 
 let llmBudget = 25;
 
@@ -22,13 +24,32 @@ export function resetLlmOrganizeBudget() {
   llmBudget = Number(process.env.AI_INTEL_LLM_BUDGET || 25);
 }
 
-/** True when Vercel AI Gateway auth is configured (API key or OIDC on Vercel). */
-export function isLlmOrganizeAvailable(): boolean {
-  return Boolean(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN);
+function hasGoogleFreeApiKey(): boolean {
+  return Boolean(
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY,
+  );
 }
 
-function resolveModel(): string {
-  return (process.env.AI_INTEL_LLM_MODEL || DEFAULT_MODEL).trim();
+/** True when a Gemini provider is configured (Google free tier or Vercel AI Gateway). */
+export function isLlmOrganizeAvailable(): boolean {
+  return (
+    hasGoogleFreeApiKey() ||
+    Boolean(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN)
+  );
+}
+
+function resolveModel(): { model: LanguageModel | string; label: string } {
+  const configured = (process.env.AI_INTEL_LLM_MODEL || "").trim();
+
+  if (hasGoogleFreeApiKey()) {
+    const modelId = configured.includes("/")
+      ? configured.split("/").pop() || DEFAULT_GEMINI_MODEL
+      : configured || DEFAULT_GEMINI_MODEL;
+    return { model: google(modelId), label: modelId };
+  }
+
+  const gatewayModel = configured || DEFAULT_GATEWAY_MODEL;
+  return { model: gatewayModel, label: gatewayModel };
 }
 
 function buildPrompt(input: {
@@ -75,7 +96,7 @@ function buildPrompt(input: {
 }
 
 /**
- * Summarize scraped content with an LLM via Vercel AI Gateway.
+ * Summarize scraped content with Gemini (Google AI Studio free tier preferred).
  * Returns null when no API key, budget exhausted, or call fails.
  */
 export async function llmOrganizeIntel(input: {
@@ -93,7 +114,7 @@ export async function llmOrganizeIntel(input: {
 
   llmBudget -= 1;
   const locale = input.locale ?? "fr";
-  const model = resolveModel();
+  const { model, label: modelLabel } = resolveModel();
 
   try {
     const { output } = await generateText({
@@ -131,7 +152,7 @@ export async function llmOrganizeIntel(input: {
       purpose,
       essentialPoints: essentialPoints.slice(0, 4),
       longAbout,
-      model,
+      model: modelLabel,
     };
   } catch {
     return null;
