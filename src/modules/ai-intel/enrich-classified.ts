@@ -1,6 +1,7 @@
 import { scrapeArticlePage } from "@/modules/ai-intel/article-scrape";
 import { urgencyFromScore } from "@/modules/ai-intel/classify";
 import { sanitizePlainText } from "@/modules/ai-intel/html-to-text";
+import { resetLlmOrganizeBudget } from "@/modules/ai-intel/llm-organize";
 import { organizeIntelLocalized } from "@/modules/ai-intel/organize-intel";
 import { scrapeGithubRepo } from "@/modules/ai-intel/scrape-github-repo";
 import { attachScoreToRaw } from "@/modules/ai-intel/score";
@@ -32,6 +33,7 @@ export function resetArticleScrapeBudget() {
   articleScrapeBudget = MAX_ARTICLE_SCRAPES;
   repoScrapeBudget = MAX_REPO_SCRAPES;
   toolScrapeBudget = MAX_TOOL_SCRAPES;
+  resetLlmOrganizeBudget();
 }
 
 function needsReorganize(meta: Record<string, unknown>): boolean {
@@ -147,6 +149,7 @@ export async function enrichClassifiedItem(
     topics: Array.isArray(meta.topics) ? (meta.topics as string[]) : [],
     language: typeof meta.language === "string" ? meta.language : null,
     locale: "fr",
+    metrics: buildMetricsLine(meta),
   });
 
   const summary =
@@ -183,6 +186,8 @@ export async function enrichClassifiedItem(
       purpose: organized.purpose,
       essentialPoints: organized.essentialPoints,
       organizedAt: new Date().toISOString(),
+      organizedBy: organized.organizedBy ?? "heuristic",
+      llmModel: organized.llmModel ?? null,
       longSummary: organized.longAbout.slice(0, 1200),
       about: organized.longAbout.slice(0, 1800),
       // Never keep raw readme HTML in about — readme stays in meta.readme for re-runs
@@ -197,4 +202,17 @@ export function itemNeedsContentRefresh(meta: Record<string, unknown>): boolean 
 function readMetaString(meta: Record<string, unknown>, key: string): string | null {
   const v = meta[key];
   return typeof v === "string" && v.trim() ? v.trim() : null;
+}
+
+function buildMetricsLine(meta: Record<string, unknown>): string | null {
+  const parts: string[] = [];
+  const stars = Number(meta.stars);
+  const starsToday = Number(meta.starsToday);
+  const forks = Number(meta.forks);
+  if (stars > 0) parts.push(`${stars} stars`);
+  if (starsToday > 0) parts.push(`+${starsToday} stars today`);
+  if (forks > 0) parts.push(`${forks} forks`);
+  if (typeof meta.language === "string") parts.push(meta.language);
+  if (typeof meta.pricing === "string") parts.push(meta.pricing);
+  return parts.length ? parts.join(" · ") : null;
 }

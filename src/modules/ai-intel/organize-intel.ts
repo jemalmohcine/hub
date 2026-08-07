@@ -1,6 +1,10 @@
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
 import { translateOnce } from "@/modules/ai-intel/i18n/translate";
 import {
+  isLlmOrganizeAvailable,
+  llmOrganizeIntel,
+} from "@/modules/ai-intel/llm-organize";
+import {
   firstCleanClause,
   isGarbageText,
   sanitizePlainText,
@@ -178,7 +182,7 @@ export function organizeIntel(input: {
   };
 }
 
-/** French labels when source content is English. */
+/** French labels when source content is English. Uses LLM when AI Gateway is configured. */
 export async function organizeIntelLocalized(input: {
   kind: "repo" | "tool" | "news";
   name: string;
@@ -188,12 +192,51 @@ export async function organizeIntelLocalized(input: {
   topics?: string[];
   language?: string | null;
   locale?: AiLocale;
-}): Promise<OrganizedIntel & { locale: AiLocale }> {
+  metrics?: string | null;
+}): Promise<
+  OrganizedIntel & {
+    locale: AiLocale;
+    organizedBy?: "llm" | "heuristic";
+    llmModel?: string;
+  }
+> {
   const locale = input.locale ?? "fr";
+  const description = cleanLine((input.description || "").trim());
+
+  const sourceText = [
+    description,
+    input.readme || "",
+    input.articleBody || "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  if (isLlmOrganizeAvailable() && sourceText.length >= 80) {
+    const llm = await llmOrganizeIntel({
+      kind: input.kind,
+      name: input.name,
+      description,
+      metrics: input.metrics,
+      sourceText,
+      locale,
+    });
+    if (llm) {
+      return {
+        title: llm.title,
+        purpose: llm.purpose,
+        essentialPoints: llm.essentialPoints,
+        longAbout: llm.longAbout,
+        locale,
+        organizedBy: "llm",
+        llmModel: llm.model,
+      };
+    }
+  }
+
   const base = organizeIntel({ ...input, locale: "en" });
 
   if (locale === "en") {
-    return { ...base, locale };
+    return { ...base, locale, organizedBy: "heuristic" };
   }
 
   const titleFr =
@@ -221,5 +264,6 @@ export async function organizeIntelLocalized(input: {
     essentialPoints: pointsFr,
     longAbout: longClean || base.longAbout,
     locale,
+    organizedBy: "heuristic",
   };
 }
