@@ -53,14 +53,18 @@ function EssentialPointRow({
         type="button"
         onClick={onToggle}
         aria-expanded={expanded}
-        className="flex w-full items-start gap-3 px-3.5 py-3 text-left"
+        className="flex w-full min-w-0 items-start gap-3 px-3.5 py-3 text-left"
       >
         <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--dh-brand)]" />
-        <span className="min-w-0 flex-1">
-          <Text size="sm" weight="medium" className="leading-snug">
+        <span className="min-w-0 flex-1 overflow-hidden">
+          <Text size="sm" weight="medium" className="leading-snug break-words">
             {point.label}
           </Text>
-          <Text size="sm" tone="muted" className="mt-1 line-clamp-2 leading-relaxed">
+          <Text
+            size="sm"
+            tone="muted"
+            className="mt-1 line-clamp-2 break-words leading-relaxed"
+          >
             {point.teaser}
           </Text>
         </span>
@@ -72,8 +76,11 @@ function EssentialPointRow({
         />
       </button>
       {expanded ? (
-        <div className="border-t border-border/70 px-3.5 py-3">
-          <Text size="sm" className="leading-relaxed whitespace-pre-wrap">
+        <div className="overflow-x-hidden border-t border-border/70 px-3.5 py-3">
+          <Text
+            size="sm"
+            className="break-words leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]"
+          >
             {point.detail}
           </Text>
         </div>
@@ -184,7 +191,7 @@ function ItemDetailModalBody({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto pb-[calc(var(--dh-safe-bottom)+0.75rem)] sm:max-w-lg">
+      <DialogContent className="max-h-[90dvh] max-w-[100vw] overflow-x-hidden overflow-y-auto pb-[calc(var(--dh-safe-bottom)+0.75rem)] sm:max-w-lg">
         <DialogHeader>
           <Cluster gap={2} className="mb-2 flex-wrap">
             {isHotAlert(localItem) ? (

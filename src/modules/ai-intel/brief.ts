@@ -7,6 +7,7 @@ import {
 import { detectTextLang } from "@/modules/ai-intel/i18n/detect-lang";
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
 import { translateOnce } from "@/modules/ai-intel/i18n/translate";
+import { sanitizePlainText } from "@/modules/ai-intel/html-to-text";
 import { formatStars } from "@/modules/ai-intel/score";
 import type { AiIntelItem, ClassifiedItem } from "@/modules/ai-intel/types";
 
@@ -578,7 +579,13 @@ export async function enrichI18nMetadata(
 
   const title = item.title;
   const summary = item.summary;
-  const about = readMeta(meta, "about") || readMeta(meta, "description") || "";
+  const about = sanitizePlainText(
+    readMeta(meta, "purpose") ||
+      readMeta(meta, "about") ||
+      readMeta(meta, "description") ||
+      "",
+    1200,
+  );
   const blob = `${title} ${summary} ${about}`;
   const sourceLang = detectTextLang(blob);
   const takeFr = cleanTakeaway(meta, "fr");

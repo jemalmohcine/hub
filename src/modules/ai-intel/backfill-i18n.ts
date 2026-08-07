@@ -1,10 +1,13 @@
 import { createAdminClient } from "@/core/auth/supabase/admin";
 import { enrichI18nMetadata } from "@/modules/ai-intel/brief";
+import {
+  itemNeedsContentRefresh,
+  reorganizeClassifiedItem,
+} from "@/modules/ai-intel/enrich-classified";
 import type { ClassifiedItem } from "@/modules/ai-intel/types";
 
 /**
- * Re-process existing rows: clean FR/EN takeaways + translate titles once.
- * Does not re-scrape sources.
+ * Re-process existing rows: reorganize titles/points from stored readme + translate.
  */
 export async function backfillAiIntelI18n(limit = 120) {
   const admin = createAdminClient();
@@ -20,8 +23,8 @@ export async function backfillAiIntelI18n(limit = 120) {
   let updated = 0;
   let failed = 0;
 
-  for (let i = 0; i < rows.length; i += 6) {
-    const batch = rows.slice(i, i + 6);
+  for (let i = 0; i < rows.length; i += 4) {
+    const batch = rows.slice(i, i + 4);
     await Promise.all(
       batch.map(async (row) => {
         try {
@@ -39,17 +42,24 @@ export async function backfillAiIntelI18n(limit = 120) {
             metadata: (row.metadata ?? {}) as Record<string, unknown>,
           };
 
-          const nextMeta = await enrichI18nMetadata(classified, { force: true });
+          const reorganized = itemNeedsContentRefresh(classified.metadata)
+            ? await reorganizeClassifiedItem(classified)
+            : classified;
+
+          const nextMeta = await enrichI18nMetadata(reorganized, { force: true });
+          const mergedMeta = { ...reorganized.metadata, ...nextMeta };
           const takeaway =
-            typeof nextMeta.takeaway === "string"
-              ? nextMeta.takeaway
-              : row.summary;
+            typeof mergedMeta.takeaway === "string"
+              ? mergedMeta.takeaway
+              : reorganized.summary;
 
           const { error: upErr } = await admin
             .from("ai_intel_items")
             .update({
+              title: reorganized.title,
               summary: String(takeaway).slice(0, 220),
-              metadata: nextMeta,
+              urgency: reorganized.urgency,
+              metadata: mergedMeta,
             })
             .eq("id", row.id);
 

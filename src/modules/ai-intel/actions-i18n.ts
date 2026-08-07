@@ -3,9 +3,13 @@
 import { getHubUser } from "@/core/auth/get-user";
 import { createAdminClient } from "@/core/auth/supabase/admin";
 import { enrichI18nMetadata } from "@/modules/ai-intel/brief";
+import {
+  itemNeedsContentRefresh,
+  reorganizeClassifiedItem,
+} from "@/modules/ai-intel/enrich-classified";
 import type { ClassifiedItem } from "@/modules/ai-intel/types";
 
-/** Translate once for an existing item (force refresh FR/EN pair). */
+/** Translate and refresh organized content for an existing item. */
 export async function ensureItemTranslation(itemId: string) {
   const user = await getHubUser();
   if (!user) throw new Error("Unauthorized");
@@ -33,17 +37,31 @@ export async function ensureItemTranslation(itemId: string) {
     metadata: (data.metadata ?? {}) as Record<string, unknown>,
   };
 
-  const nextMeta = await enrichI18nMetadata(classified, { force: false });
+  const meta = classified.metadata;
+  const reorganized =
+    itemNeedsContentRefresh(meta)
+      ? await reorganizeClassifiedItem(classified)
+      : classified;
+
+  const nextMeta = await enrichI18nMetadata(reorganized, {
+    force: itemNeedsContentRefresh(meta),
+  });
+
+  const mergedMeta = { ...reorganized.metadata, ...nextMeta };
   const takeaway =
-    typeof nextMeta.takeaway === "string" ? nextMeta.takeaway : data.summary;
+    typeof mergedMeta.takeaway === "string"
+      ? mergedMeta.takeaway
+      : reorganized.summary;
 
   await admin
     .from("ai_intel_items")
     .update({
+      title: reorganized.title,
       summary: String(takeaway).slice(0, 220),
-      metadata: nextMeta,
+      urgency: reorganized.urgency,
+      metadata: mergedMeta,
     })
     .eq("id", itemId);
 
-  return nextMeta;
+  return mergedMeta;
 }

@@ -36,6 +36,7 @@ jobs:
       VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
       NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
 
     steps:
       - name: Checkout
