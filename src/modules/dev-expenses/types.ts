@@ -122,6 +122,8 @@ export type ProviderSuggestion = {
   note: string;
   confidence: number;
   source: AdviceSource;
+  /** Cheaper or free options for the same job, read from the scraped catalogue. */
+  alternatives: AlternativeOption[];
 };
 
 export const BUDGET_FINDING_KINDS = [

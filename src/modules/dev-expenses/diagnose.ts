@@ -35,13 +35,17 @@ export function diagnoseServiceLocally(
   service: DevExpenseService,
   actualMonthlyCents: number,
   totalMonthlyCents: number,
+  /** Scraped candidates; the offline catalog answers when the table is empty. */
+  scrapedAlternatives: AlternativeOption[] = [],
 ): ExpenseDiagnostic {
   const spendCents = actualMonthlyCents || monthlyEquivalentCents(service);
   const monthlySpendEur = eur(spendCents);
   const shareOfBudgetPct =
     totalMonthlyCents > 0 ? Math.round((spendCents / totalMonthlyCents) * 100) : 0;
 
-  const alternatives = alternativesFor(service.providerSlug, service.category);
+  const alternatives = scrapedAlternatives.length
+    ? scrapedAlternatives
+    : alternativesFor(service.providerSlug, service.category);
   const cheapest = cheapestPrice(alternatives);
   const potentialSavingsEur =
     cheapest != null && monthlySpendEur > cheapest
@@ -110,7 +114,11 @@ const EFFORT_PENALTY = { low: 6, medium: 10, high: 14 } as const;
  * Whole-budget review: overlapping tools, paid services with a usable free
  * plan, one line item eating the budget, and services never actually logged.
  */
-export function diagnoseBudgetLocally(services: ServiceWithStats[]): BudgetDiagnostic {
+export function diagnoseBudgetLocally(
+  services: ServiceWithStats[],
+  /** Best free option per category, straight from the scraped catalogue. */
+  freeByCategory: Map<string, AlternativeOption> = new Map(),
+): BudgetDiagnostic {
   const active = services.filter((s) => s.isActive);
   const totalCents = active.reduce((sum, s) => sum + effectiveMonthlyCents(s), 0);
   const findings: BudgetFinding[] = [];
@@ -146,8 +154,11 @@ export function diagnoseBudgetLocally(services: ServiceWithStats[]): BudgetDiagn
 
     const spendEur = eur(spendCents);
     const provider = findProvider(service.providerSlug);
-    const alternatives = alternativesFor(service.providerSlug, service.category);
-    const freeOption = alternatives.find((alt) => alt.typicalMonthlyEur === 0);
+    const freeOption =
+      freeByCategory.get(service.category) ??
+      alternativesFor(service.providerSlug, service.category).find(
+        (alt) => alt.typicalMonthlyEur === 0,
+      );
 
     if (provider?.freeTier && spendEur <= 30) {
       findings.push({

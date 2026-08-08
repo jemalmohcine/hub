@@ -642,5 +642,6 @@ export function suggestProviderFromCatalog(
     note: provider.note,
     confidence: 0.6,
     source: "catalog",
+    alternatives: [],
   };
 }
