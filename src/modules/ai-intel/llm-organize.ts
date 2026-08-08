@@ -1,6 +1,11 @@
-import { google } from "@ai-sdk/google";
 import { generateText, Output, type LanguageModel } from "ai";
 import { z } from "zod";
+import {
+  isLlmAvailable,
+  isRateLimitError,
+  resolveLlmModel,
+  sleep,
+} from "@/lib/ai/model";
 import { sanitizePlainText } from "@/modules/ai-intel/html-to-text";
 import type { HubLocale } from "@/core/i18n";
 import type { OrganizedIntel } from "@/modules/ai-intel/organize-intel";
@@ -67,8 +72,6 @@ export type LlmIntelDecision = OrganizedIntel & {
   scoreReason: string;
 };
 
-const DEFAULT_GEMINI_MODEL = "gemini-3.6-flash";
-const DEFAULT_GATEWAY_MODEL = "google/gemini-3.6-flash";
 const DEFAULT_BUDGET = 80;
 const MAX_SOURCE_CHARS = 14_000;
 /** Google's free tier throttles per minute, so calls are spaced instead of bursted. */
@@ -83,8 +86,6 @@ export function resetLlmOrganizeBudget() {
   nextCallAt = 0;
 }
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 /** Reserve the next slot so concurrent callers never fire at the same instant. */
 async function waitForSlot(): Promise<void> {
   const interval = Number(
@@ -96,43 +97,17 @@ async function waitForSlot(): Promise<void> {
   if (slot > now) await sleep(slot - now);
 }
 
-function isRateLimited(err: unknown): boolean {
-  const message = err instanceof Error ? err.message : String(err);
-  return /\b429\b|rate.?limit|RESOURCE_EXHAUSTED|quota|too many requests/i.test(
-    message,
-  );
-}
-
 export function remainingLlmBudget(): number {
   return llmBudget;
 }
 
-function hasGoogleFreeApiKey(): boolean {
-  return Boolean(
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY,
-  );
-}
-
 /** True when a Gemini provider is configured (Google free tier or Vercel AI Gateway). */
 export function isLlmOrganizeAvailable(): boolean {
-  return (
-    hasGoogleFreeApiKey() ||
-    Boolean(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN)
-  );
+  return isLlmAvailable();
 }
 
-function resolveModel(): { model: LanguageModel | string; label: string } {
-  const configured = (process.env.AI_INTEL_LLM_MODEL || "").trim();
-
-  if (hasGoogleFreeApiKey()) {
-    const modelId = configured.includes("/")
-      ? configured.split("/").pop() || DEFAULT_GEMINI_MODEL
-      : configured || DEFAULT_GEMINI_MODEL;
-    return { model: google(modelId), label: modelId };
-  }
-
-  const gatewayModel = configured || DEFAULT_GATEWAY_MODEL;
-  return { model: gatewayModel, label: gatewayModel };
+function resolveModel() {
+  return resolveLlmModel(process.env.AI_INTEL_LLM_MODEL);
 }
 
 const URGENCY_RUBRIC = [
@@ -242,7 +217,7 @@ async function requestDecision(
       });
       return output ?? null;
     } catch (err) {
-      if (attempt > 0 || !isRateLimited(err)) throw err;
+      if (attempt > 0 || !isRateLimitError(err)) throw err;
       if (process.env.AI_INTEL_LLM_DEBUG) {
         console.warn(`[ai-intel] LLM throttled for "${name}", retrying…`);
       }
