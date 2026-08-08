@@ -1,0 +1,43 @@
+name: Dev Tools Ingest
+
+# Refreshes the shared tool catalogue: GitHub metrics, pricing pages, and the
+# LLM classification behind the expense advisor's suggestions.
+# Triggered on every main merge via post-merge-main.yml (workflow_call).
+on:
+  workflow_call:
+  schedule:
+    # 03:00 UTC every day, after the AI intel and job board runs.
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: dev-tools-ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    name: Refresh dev tools catalogue
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+      AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ingest
+        run: npm run dev-tools:ingest

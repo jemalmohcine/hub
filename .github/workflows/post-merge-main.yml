@@ -27,3 +27,9 @@ jobs:
     needs: supabase-migrate
     uses: ./.github/workflows/job-board-ingest.yml
     secrets: inherit
+
+  dev-tools-ingest:
+    name: Dev tools ingest
+    needs: supabase-migrate
+    uses: ./.github/workflows/dev-tools-ingest.yml
+    secrets: inherit
