@@ -8,14 +8,14 @@ import {
   ChevronRight,
   X,
 } from "lucide-react";
-import { Button, Text } from "@/design-system";
+import { Text } from "@/design-system";
 import type { HubLocale } from "@/core/i18n";
 import { formatDate } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
-export type DatePreset = "7d" | "month" | "year" | "range";
+export type DatePreset = "today" | "7d" | "month" | "year" | "range";
 
-/** Rolling window so the feed is never empty first thing in the morning. */
+/** Rolling window for the 7-day preset. */
 const ROLLING_DAYS = 7;
 
 export type DateRangeValue = {
@@ -48,6 +48,8 @@ export function rangeForPreset(preset: Exclude<DatePreset, "range">): {
   const now = startOfDay(new Date());
   const to = toIsoDate(now);
 
+  if (preset === "today") return { from: to, to };
+
   if (preset === "7d") {
     const from = new Date(now);
     from.setDate(now.getDate() - (ROLLING_DAYS - 1));
@@ -68,8 +70,8 @@ export function rangeForPreset(preset: Exclude<DatePreset, "range">): {
 }
 
 export function defaultDateRange(): DateRangeValue {
-  const { from, to } = rangeForPreset("7d");
-  return { preset: "7d", from, to };
+  const { from, to } = rangeForPreset("today");
+  return { preset: "today", from, to };
 }
 
 function fmtShort(iso: string, locale: HubLocale) {
@@ -81,11 +83,13 @@ function labelForRange(value: DateRangeValue, locale: HubLocale): string {
   const L =
     locale === "fr"
       ? {
+          today: "Aujourd’hui",
           "7d": "7 derniers jours",
           month: "Ce mois",
           year: "Cette année",
         }
       : {
+          today: "Today",
           "7d": "Last 7 days",
           month: "This month",
           year: "This year",
@@ -96,7 +100,12 @@ function labelForRange(value: DateRangeValue, locale: HubLocale): string {
   return `${fmtShort(value.from, locale)} › ${fmtShort(value.to, locale)}`;
 }
 
-const PRESETS: Array<Exclude<DatePreset, "range">> = ["7d", "month", "year"];
+const PRESETS: Array<Exclude<DatePreset, "range">> = [
+  "today",
+  "7d",
+  "month",
+  "year",
+];
 
 function monthMatrix(view: Date): Array<Date | null> {
   const year = view.getFullYear();
@@ -111,6 +120,15 @@ function monthMatrix(view: Date): Array<Date | null> {
   }
   while (cells.length % 7 !== 0) cells.push(null);
   return cells;
+}
+
+function presetIsActive(
+  value: DateRangeValue,
+  preset: Exclude<DatePreset, "range">,
+): boolean {
+  if (value.preset === preset) return true;
+  const range = rangeForPreset(preset);
+  return value.from === range.from && value.to === range.to;
 }
 
 export function DateRangePicker({
@@ -132,30 +150,28 @@ export function DateRangePicker({
     () =>
       locale === "fr"
         ? {
+            today: "Aujourd’hui",
             "7d": "7 derniers jours",
             month: "Ce mois",
             year: "Cette année",
             custom: "Personnalisé",
             from: "Début",
             to: "Fin",
-            apply: "Appliquer",
             close: "Fermer",
             title: "Période",
             days: ["L", "M", "M", "J", "V", "S", "D"],
-            clear: "Réinitialiser",
           }
         : {
+            today: "Today",
             "7d": "Last 7 days",
             month: "This month",
             year: "This year",
             custom: "Custom",
             from: "Start",
             to: "End",
-            apply: "Apply",
             close: "Close",
             title: "Date range",
             days: ["M", "T", "W", "T", "F", "S", "S"],
-            clear: "Reset",
           },
     [locale],
   );
@@ -200,20 +216,11 @@ export function DateRangePicker({
       setPicking("to");
       return;
     }
-    setDraftTo(iso);
-    setPicking("from");
-  }
-
-  function applyRange() {
     let from = draftFrom;
-    let to = draftTo;
+    let to = iso;
     if (from > to) [from, to] = [to, from];
     onChange({ preset: "range", from, to });
     setOpen(false);
-  }
-
-  function clearToDefault() {
-    selectPreset("7d");
   }
 
   function inDraftRange(iso: string) {
@@ -252,10 +259,8 @@ export function DateRangePicker({
             aria-label={copy.title}
             className={cn(
               "z-50 overflow-hidden border border-border bg-card shadow-2xl",
-              // Mobile: bottom sheet centered in viewport (avoids overflow from narrow trigger)
               "fixed inset-x-0 bottom-0 max-h-[min(92dvh,40rem)] overflow-y-auto rounded-t-3xl border-b-0",
               "pb-[max(0.75rem,env(safe-area-inset-bottom))]",
-              // Desktop: dropdown anchored to trigger
               "sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-2 sm:max-h-none sm:w-80 sm:rounded-3xl sm:border-b",
             )}
           >
@@ -273,7 +278,7 @@ export function DateRangePicker({
 
             <div className="flex gap-1.5 overflow-x-auto px-3 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {PRESETS.map((preset) => {
-                const active = value.preset === preset;
+                const active = presetIsActive(value, preset);
                 return (
                   <button
                     key={preset}
@@ -386,22 +391,53 @@ export function DateRangePicker({
                 </div>
               </div>
             </div>
-
-            <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-3">
-              <button
-                type="button"
-                onClick={clearToDefault}
-                className="h-9 rounded-full px-3 text-sm font-medium text-muted-foreground hover:bg-muted"
-              >
-                {copy.clear}
-              </button>
-              <Button type="button" size="sm" onClick={applyRange}>
-                {copy.apply}
-              </Button>
-            </div>
           </div>
         </>
       ) : null}
+    </div>
+  );
+}
+
+/** Inline chips: Aujourd’hui + 7 derniers jours (no modal). */
+export function DateRangeQuickPills({
+  value,
+  onChange,
+  locale,
+}: {
+  value: DateRangeValue;
+  onChange: (next: DateRangeValue) => void;
+  locale: HubLocale;
+}) {
+  const labels =
+    locale === "fr"
+      ? { today: "Aujourd’hui", "7d": "7 derniers jours" }
+      : { today: "Today", "7d": "Last 7 days" };
+
+  const quick: Array<"today" | "7d"> = ["today", "7d"];
+
+  return (
+    <div className="flex shrink-0 gap-1">
+      {quick.map((preset) => {
+        const active = presetIsActive(value, preset);
+        return (
+          <button
+            key={preset}
+            type="button"
+            onClick={() => {
+              const range = rangeForPreset(preset);
+              onChange({ preset, ...range });
+            }}
+            className={cn(
+              "inline-flex h-8 shrink-0 items-center rounded-full px-2.5 text-[11px] font-semibold sm:px-3 sm:text-xs",
+              active
+                ? "bg-foreground text-background"
+                : "bg-muted text-muted-foreground",
+            )}
+          >
+            {labels[preset]}
+          </button>
+        );
+      })}
     </div>
   );
 }
