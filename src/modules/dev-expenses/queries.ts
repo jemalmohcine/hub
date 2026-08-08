@@ -1,5 +1,8 @@
 import { createClient } from "@/core/auth/supabase/server";
-import { monthlyEquivalentCents } from "@/modules/dev-expenses/alternatives";
+import {
+  effectiveMonthlyCents,
+  monthlyEquivalentCents,
+} from "@/modules/dev-expenses/amounts";
 import type {
   DevExpenseEntry,
   DevExpenseService,
@@ -109,8 +112,7 @@ export function computeMonthlyTotals(services: ServiceWithStats[]): {
     if (!s.isActive) continue;
     plannedMonthlyCents += monthlyEquivalentCents(s);
     ytdCents += s.ytdTotalCents;
-    currentMonthCents +=
-      s.monthAmountCents ?? monthlyEquivalentCents(s);
+    currentMonthCents += effectiveMonthlyCents(s);
   }
 
   return { currentMonthCents, plannedMonthlyCents, ytdCents };

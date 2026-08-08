@@ -62,6 +62,23 @@ promoting it to `design-system` or `shared/ui`.
 - `productOf` names the vendor an item is *about*. An aggregator is never
   a product.
 
+## Dev expenses advisor
+
+`saisie → détection provider → diagnostic ligne → revue du budget entier`.
+
+- **Every LLM feature resolves its model in `lib/ai/model.ts`.** One env var
+  switches the whole app between the free Gemini tier and the AI Gateway.
+- **The advisor is optional, never load-bearing.** `llm-advisor.ts` returns
+  `null` on a missing key, a throttle, or a bad payload, and `diagnose.ts`
+  answers instead. Every diagnostic carries `source: "ai" | "catalog"` and the
+  UI says which one the user is reading.
+- **`catalog.ts` is data, not logic**: providers, aliases, free tiers, and the
+  alternatives worth suggesting. Add a provider there rather than teaching the
+  prompt about it.
+- **The budget review reads the whole stack in one call.** Duplicates and
+  overlapping tools are invisible service by service, which is exactly where
+  the money is.
+
 ## Commands
 
 ```bash

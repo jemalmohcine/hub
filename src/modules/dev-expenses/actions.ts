@@ -4,11 +4,27 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/core/auth/supabase/server";
 import { assertEntitled } from "@/core/entitlements/assert-entitled";
 import { ENTITLEMENTS } from "@/core/entitlements/keys";
+import { effectiveMonthlyCents } from "@/modules/dev-expenses/amounts";
+import { suggestProviderFromCatalog } from "@/modules/dev-expenses/catalog";
+import {
+  diagnoseBudgetLocally,
+  diagnoseServiceLocally,
+} from "@/modules/dev-expenses/diagnose";
+import {
+  llmDiagnoseBudget,
+  llmDiagnoseService,
+  llmIdentifyProvider,
+} from "@/modules/dev-expenses/llm-advisor";
+import { listDevExpenseServices } from "@/modules/dev-expenses/queries";
 import type {
   BillingCycle,
+  BudgetDiagnostic,
   DevExpenseService,
   ExpenseCategory,
+  ExpenseDiagnostic,
+  ProviderSuggestion,
 } from "@/modules/dev-expenses/types";
+import { CATEGORY_LABELS } from "@/modules/dev-expenses/types";
 
 /** Every action in this file requires the expenses module. */
 const requireUser = () => assertEntitled(ENTITLEMENTS.expenses);
@@ -145,4 +161,101 @@ export async function upsertMonthlyEntry(input: {
   if (error) throw new Error(error.message);
   revalidatePath("/app/expenses");
   return data;
+}
+
+/**
+ * Recognise a service from free text so the user only ever types a name.
+ * The catalog answers when the model is unavailable or unsure.
+ */
+export async function suggestProvider(input: {
+  name: string;
+  websiteUrl?: string | null;
+  notes?: string | null;
+  amountEur?: number | null;
+}): Promise<ProviderSuggestion | null> {
+  await requireUser();
+
+  const name = input.name.trim();
+  if (name.length < 2) return null;
+
+  const local = suggestProviderFromCatalog(name, input.websiteUrl, input.notes);
+
+  const ai = await llmIdentifyProvider({
+    name,
+    websiteUrl: input.websiteUrl,
+    notes: input.notes,
+    amountEur: input.amountEur,
+  }).catch(() => null);
+
+  if (ai && ai.confidence >= 0.35) return ai;
+  return local ?? ai;
+}
+
+function centsToEur(cents: number): number {
+  return Math.round(cents) / 100;
+}
+
+/** Diagnose one line item, with the rest of the stack as context. */
+export async function diagnoseService(serviceId: string): Promise<ExpenseDiagnostic> {
+  const user = await requireUser();
+  const services = await listDevExpenseServices(user.id);
+  const service = services.find((s) => s.id === serviceId);
+  if (!service) throw new Error("Service introuvable");
+
+  const totalCents = services
+    .filter((s) => s.isActive)
+    .reduce((sum, s) => sum + effectiveMonthlyCents(s), 0);
+  const spendCents = effectiveMonthlyCents(service);
+  const local = diagnoseServiceLocally(service, spendCents, totalCents);
+
+  const ai = await llmDiagnoseService({
+    service,
+    monthlySpendEur: centsToEur(spendCents),
+    shareOfBudgetPct: local.shareOfBudgetPct,
+    totalMonthlyEur: centsToEur(totalCents),
+    otherServices: services
+      .filter((s) => s.isActive && s.id !== serviceId)
+      .map((s) => ({
+        name: s.name,
+        category: CATEGORY_LABELS[s.category],
+        monthlyEur: centsToEur(effectiveMonthlyCents(s)),
+      })),
+  }).catch(() => null);
+
+  if (!ai) return local;
+
+  // The model rarely knows a good alternative for niche SaaS; keep the
+  // catalog's when it came back empty rather than showing nothing.
+  return {
+    ...ai,
+    alternatives: ai.alternatives.length ? ai.alternatives : local.alternatives,
+    actions: ai.actions.length ? ai.actions : local.actions,
+  };
+}
+
+/** Review the whole stack at once — duplicates and overlaps only show up there. */
+export async function diagnoseBudget(): Promise<BudgetDiagnostic> {
+  const user = await requireUser();
+  const services = await listDevExpenseServices(user.id);
+  const active = services.filter((s) => s.isActive);
+  const local = diagnoseBudgetLocally(services);
+
+  if (active.length === 0) return local;
+
+  const totalCents = active.reduce((sum, s) => sum + effectiveMonthlyCents(s), 0);
+  const ytdCents = active.reduce((sum, s) => sum + s.ytdTotalCents, 0);
+
+  const ai = await llmDiagnoseBudget({
+    services: active.map((s) => ({
+      name: s.name,
+      category: CATEGORY_LABELS[s.category],
+      billingCycle: s.billingCycle,
+      monthlyEur: centsToEur(effectiveMonthlyCents(s)),
+      notes: s.notes,
+    })),
+    totalMonthlyEur: centsToEur(totalCents),
+    ytdEur: centsToEur(ytdCents),
+  }).catch(() => null);
+
+  return ai ?? local;
 }
