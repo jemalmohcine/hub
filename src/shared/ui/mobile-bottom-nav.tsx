@@ -114,9 +114,13 @@ export function MobileBottomNav({
 
   return (
     <>
+      {/*
+        In normal flow, not fixed: the shell owns the viewport height, so the
+        bar sits on the physical bottom edge whatever iOS does with its chrome.
+      */}
       <nav
         aria-label="Navigation principale"
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card lg:hidden"
+        className="z-30 shrink-0 border-t border-border bg-card lg:hidden"
       >
         <div className="mx-auto grid h-[var(--dh-bottom-nav-h)] max-w-lg grid-cols-5 items-center px-1">
           {TABS.map((tab) => (
