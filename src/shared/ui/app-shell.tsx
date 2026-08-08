@@ -75,8 +75,13 @@ export function AppShell({
     return pathname.startsWith(path);
   }
 
+  // Below `lg` the shell is pinned to the viewport and <main> is the only
+  // scroller, so the bottom bar sits on the physical bottom edge by
+  // construction. `position: fixed` drifts with iOS chrome and visual-viewport
+  // changes, which is what made the menu float. The lock lives on the shell
+  // rather than on `body` so marketing and auth pages keep scrolling normally.
   return (
-    <div className="min-h-dvh bg-background lg:flex">
+    <div className="bg-background max-lg:fixed max-lg:inset-0 max-lg:overflow-hidden lg:min-h-dvh lg:flex">
       <ThemeSync theme={user.preferences?.theme ?? "system"} />
 
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[var(--dh-sidebar-w)] flex-col border-r border-border bg-card lg:flex">
@@ -138,7 +143,7 @@ export function AppShell({
         </div>
       </aside>
 
-      <div className="flex min-h-dvh w-full flex-1 flex-col lg:ml-[var(--dh-sidebar-w)]">
+      <div className="flex h-full min-h-0 w-full flex-1 flex-col lg:ml-[var(--dh-sidebar-w)] lg:h-auto lg:min-h-dvh">
         <header
           className="z-20 shrink-0 border-b border-border bg-card/90 px-[var(--dh-space-4)] backdrop-blur lg:hidden"
           style={{ paddingTop: "var(--dh-safe-top)" }}
@@ -154,8 +159,8 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain lg:overflow-visible">
-          <div className="mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] pb-[calc(var(--dh-mobile-bottom-offset)+1.25rem)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)] lg:pb-[var(--dh-space-8)]">
+        <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] lg:overflow-visible">
+          <div className="mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] pb-[var(--dh-space-8)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)]">
             {children}
           </div>
         </main>
