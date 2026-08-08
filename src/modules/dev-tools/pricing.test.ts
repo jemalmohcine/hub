@@ -4,10 +4,15 @@ import { detectFreeTier, detectStartingPrice } from "@/modules/dev-tools/pricing
 describe("detectFreeTier", () => {
   it("recognises a permanent free plan", () => {
     const result = detectFreeTier(
-      "Hobby — Free plan for personal projects. 100 GB bandwidth included.",
+      "Free plan for personal projects. 100 GB bandwidth included.",
     );
     expect(result.hasFreeTier).toBe(true);
     expect(result.note).toContain("100 GB");
+  });
+
+  it("reads the run-together column headers of a pricing table", () => {
+    expect(detectFreeTier("Sending & receivingFreeProScaleEnterpriseDaily limit100").hasFreeTier)
+      .toBe(true);
   });
 
   it("does not turn a trial into a free tier", () => {
@@ -33,6 +38,14 @@ describe("detectStartingPrice", () => {
 
   it("ignores enterprise-sized figures that are never a starting price", () => {
     expect(detectStartingPrice("Entreprise à partir de 15000 € par an")).toBeNull();
+  });
+
+  it("prefers a monthly plan price over a per-unit rate", () => {
+    expect(detectStartingPrice("Bandwidth $0.15 / GB · Pro $20 / month")).toBe(20);
+  });
+
+  it("ignores per-unit rates when no plan price is tagged monthly", () => {
+    expect(detectStartingPrice("Storage billed at $0.02 per GB stored")).toBeNull();
   });
 
   it("returns null when there is no price at all", () => {

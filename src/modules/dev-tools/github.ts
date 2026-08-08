@@ -127,6 +127,9 @@ export async function discoverRepos(options: {
       if (repo.fork || repo.archived) continue;
       if (!repo.description || repo.description.length < 20) continue;
       if (NOT_A_TOOL.test(shortName)) continue;
+      // No licence means nobody can legally build on it, whatever its star count.
+      if (!repo.license?.spdx_id) continue;
+      if (Date.now() - Date.parse(repo.created_at) < 90 * 86_400_000) continue;
 
       found.push({
         category: options.category,

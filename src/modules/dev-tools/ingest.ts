@@ -128,6 +128,11 @@ async function buildCandidates(): Promise<Candidate[]> {
     if (seed.repo) takenRepos.add(foldCase(seed.repo));
   }
 
+  // Discovery is only as good as the classifier that vets it. Without a model,
+  // a topic search happily returns link collections and abandoned demos, so
+  // the catalogue sticks to the curated list instead.
+  if (!isToolLlmAvailable()) return candidates;
+
   for (const category of EXPENSE_CATEGORIES) {
     const repos = await discoverRepos({
       category,
@@ -227,6 +232,7 @@ async function buildRow(
       pricingText,
     });
 
+    if (!classified && !seed) return null; // unvetted discovery hit
     if (classified) {
       if (!classified.isRealTool) return null;
 
