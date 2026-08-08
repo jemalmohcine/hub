@@ -19,6 +19,7 @@ import {
 import { ItemDetailModal } from "@/modules/ai-intel/ui/item-detail-modal";
 import {
   DateRangePicker,
+  DateRangeQuickPills,
   defaultDateRange,
   itemInRange,
   type DateRangeValue,
@@ -302,6 +303,11 @@ export function AiIntelWorkspace({
           >
             <Search className="h-4 w-4" />
           </button>
+          <DateRangeQuickPills
+            value={dateRange}
+            onChange={setDateRange}
+            locale={locale}
+          />
           <DateRangePicker
             value={dateRange}
             onChange={setDateRange}

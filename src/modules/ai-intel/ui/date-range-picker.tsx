@@ -8,7 +8,7 @@ import {
   ChevronRight,
   X,
 } from "lucide-react";
-import { Button, Text } from "@/design-system";
+import { Text } from "@/design-system";
 import type { AiLocale } from "@/modules/ai-intel/i18n/locale";
 import { cn } from "@/lib/utils";
 
@@ -47,10 +47,8 @@ export function rangeForPreset(preset: Exclude<DatePreset, "range">): {
   if (preset === "today") return { from: to, to };
 
   if (preset === "week") {
-    const day = now.getDay();
-    const mondayOffset = day === 0 ? -6 : 1 - day;
     const from = new Date(now);
-    from.setDate(now.getDate() + mondayOffset);
+    from.setDate(now.getDate() - 6);
     return { from: toIsoDate(from), to };
   }
 
@@ -82,13 +80,13 @@ function labelForRange(value: DateRangeValue, locale: AiLocale): string {
     locale === "fr"
       ? {
           today: "Aujourd’hui",
-          week: "Cette semaine",
+          week: "7 derniers jours",
           month: "Ce mois",
           year: "Cette année",
         }
       : {
           today: "Today",
-          week: "This week",
+          week: "Last 7 days",
           month: "This month",
           year: "This year",
         };
@@ -140,31 +138,27 @@ export function DateRangePicker({
       locale === "fr"
         ? {
             today: "Aujourd’hui",
-            week: "Cette semaine",
+            week: "7 derniers jours",
             month: "Ce mois",
             year: "Cette année",
             custom: "Personnalisé",
             from: "Début",
             to: "Fin",
-            apply: "Appliquer",
             close: "Fermer",
             title: "Période",
             days: ["L", "M", "M", "J", "V", "S", "D"],
-            clear: "Réinitialiser",
           }
         : {
             today: "Today",
-            week: "This week",
+            week: "Last 7 days",
             month: "This month",
             year: "This year",
             custom: "Custom",
             from: "Start",
             to: "End",
-            apply: "Apply",
             close: "Close",
             title: "Date range",
             days: ["M", "T", "W", "T", "F", "S", "S"],
-            clear: "Reset",
           },
     [locale],
   );
@@ -212,20 +206,17 @@ export function DateRangePicker({
       setPicking("to");
       return;
     }
-    setDraftTo(iso);
-    setPicking("from");
-  }
-
-  function applyRange() {
     let from = draftFrom;
-    let to = draftTo;
+    let to = iso;
     if (from > to) [from, to] = [to, from];
     onChange({ preset: "range", from, to });
     setOpen(false);
   }
 
-  function clearToToday() {
-    selectPreset("today");
+  function presetIsActive(preset: Exclude<DatePreset, "range">): boolean {
+    if (value.preset === preset) return true;
+    const range = rangeForPreset(preset);
+    return value.from === range.from && value.to === range.to;
   }
 
   function inDraftRange(iso: string) {
@@ -285,7 +276,7 @@ export function DateRangePicker({
 
             <div className="flex gap-1.5 overflow-x-auto px-3 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {PRESETS.map((preset) => {
-                const active = value.preset === preset;
+                const active = presetIsActive(preset);
                 return (
                   <button
                     key={preset}
@@ -398,22 +389,62 @@ export function DateRangePicker({
                 </div>
               </div>
             </div>
-
-            <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-3">
-              <button
-                type="button"
-                onClick={clearToToday}
-                className="h-9 rounded-full px-3 text-sm font-medium text-muted-foreground hover:bg-muted"
-              >
-                {copy.clear}
-              </button>
-              <Button type="button" size="sm" onClick={applyRange}>
-                {copy.apply}
-              </Button>
-            </div>
           </div>
         </>
       ) : null}
+    </div>
+  );
+}
+
+/** Inline chips: Aujourd’hui + 7 derniers jours (no modal). */
+export function DateRangeQuickPills({
+  value,
+  onChange,
+  locale,
+}: {
+  value: DateRangeValue;
+  onChange: (next: DateRangeValue) => void;
+  locale: AiLocale;
+}) {
+  const labels =
+    locale === "fr"
+      ? { today: "Aujourd’hui", week: "7 derniers jours" }
+      : { today: "Today", week: "Last 7 days" };
+
+  const quick: Array<Exclude<DatePreset, "range" | "month" | "year">> = [
+    "today",
+    "week",
+  ];
+
+  function isActive(preset: "today" | "week"): boolean {
+    if (value.preset === preset) return true;
+    const range = rangeForPreset(preset);
+    return value.from === range.from && value.to === range.to;
+  }
+
+  return (
+    <div className="flex shrink-0 gap-1">
+      {quick.map((preset) => {
+        const active = isActive(preset);
+        return (
+          <button
+            key={preset}
+            type="button"
+            onClick={() => {
+              const range = rangeForPreset(preset);
+              onChange({ preset, ...range });
+            }}
+            className={cn(
+              "inline-flex h-8 shrink-0 items-center rounded-full px-2.5 text-[11px] font-semibold sm:px-3 sm:text-xs",
+              active
+                ? "bg-foreground text-background"
+                : "bg-muted text-muted-foreground",
+            )}
+          >
+            {labels[preset]}
+          </button>
+        );
+      })}
     </div>
   );
 }
