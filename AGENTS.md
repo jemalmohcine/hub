@@ -79,6 +79,32 @@ promoting it to `design-system` or `shared/ui`.
   overlapping tools are invisible service by service, which is exactly where
   the money is.
 
+## Dev tools catalogue
+
+`seeds + découverte GitHub → métriques dépôt → scrape des tarifs → classification LLM → upsert`.
+
+Runs daily in `.github/workflows/dev-tools-ingest.yml`, writes `public.dev_tools`
+(shared table, authenticated read, service-role write), and feeds both the
+`/app/expenses?tab=tools` directory and the expense advisor's alternatives.
+
+- **Measured facts and editorial judgement stay separate.** Stars, licence and
+  release dates come from the GitHub API every night because they are cheap;
+  the tagline, free-tier wording and pros/cons cost an LLM call, so a row is
+  only re-classified once its `scraped_at` is older than `DEV_TOOLS_REFRESH_DAYS`.
+  `data_source` records which layer a row actually got.
+- **Scores are pure functions in `scoring.ts`.** Same repo, same score every
+  night, so a ranking change always means something moved. Popularity is a log
+  scale on stars; stability blends age, commit recency, release cadence and
+  licence, and is zero for an archived project.
+- **A free trial is not a free tier.** `pricing.ts` refuses the shortcut, and
+  the prompt repeats the rule — a wrong "c'est gratuit" is worse than "je ne
+  sais pas".
+- **Hosted products have no repo to measure.** They carry an editorial baseline
+  in `seeds.ts` that the model can refine, never a fabricated star count.
+- **The advisor consumes the catalogue, not a hardcoded list.**
+  `findAlternativeTools()` grounds both the offline diagnostic and the prompt in
+  the same scraped rows; `catalog.ts` is only the fallback before the first run.
+
 ## Commands
 
 ```bash

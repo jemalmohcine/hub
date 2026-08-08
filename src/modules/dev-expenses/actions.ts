@@ -16,15 +16,23 @@ import {
   llmIdentifyProvider,
 } from "@/modules/dev-expenses/llm-advisor";
 import { listDevExpenseServices } from "@/modules/dev-expenses/queries";
+import {
+  describeToolForPrompt,
+  toAlternativeOption,
+} from "@/modules/dev-expenses/tool-alternatives";
 import type {
+  AlternativeOption,
   BillingCycle,
   BudgetDiagnostic,
   DevExpenseService,
   ExpenseCategory,
   ExpenseDiagnostic,
   ProviderSuggestion,
+  ServiceWithStats,
 } from "@/modules/dev-expenses/types";
 import { CATEGORY_LABELS } from "@/modules/dev-expenses/types";
+import { findAlternativeTools } from "@/modules/dev-tools/queries";
+import { slugify } from "@/lib/slug";
 
 /** Every action in this file requires the expenses module. */
 const requireUser = () => assertEntitled(ENTITLEMENTS.expenses);
@@ -187,8 +195,18 @@ export async function suggestProvider(input: {
     amountEur: input.amountEur,
   }).catch(() => null);
 
-  if (ai && ai.confidence >= 0.35) return ai;
-  return local ?? ai;
+  const identified = ai && ai.confidence >= 0.35 ? ai : (local ?? ai);
+  if (!identified) return null;
+
+  // Answer "et si je prenais autre chose ?" before the expense even exists.
+  const tools = await findAlternativeTools({
+    category: identified.category,
+    excludeSlugs: [identified.providerSlug, slugify(name)].filter(Boolean),
+    maxPriceEur: input.amountEur ?? identified.typicalMonthlyEur ?? null,
+    limit: 3,
+  }).catch(() => []);
+
+  return { ...identified, alternatives: tools.map(toAlternativeOption) };
 }
 
 function centsToEur(cents: number): number {
@@ -206,7 +224,21 @@ export async function diagnoseService(serviceId: string): Promise<ExpenseDiagnos
     .filter((s) => s.isActive)
     .reduce((sum, s) => sum + effectiveMonthlyCents(s), 0);
   const spendCents = effectiveMonthlyCents(service);
-  const local = diagnoseServiceLocally(service, spendCents, totalCents);
+
+  const scraped = await findAlternativeTools({
+    category: service.category,
+    excludeSlugs: [service.providerSlug, slugify(service.name)].filter(
+      (s): s is string => Boolean(s),
+    ),
+    maxPriceEur: centsToEur(spendCents) || null,
+  }).catch(() => []);
+
+  const local = diagnoseServiceLocally(
+    service,
+    spendCents,
+    totalCents,
+    scraped.map(toAlternativeOption),
+  );
 
   const ai = await llmDiagnoseService({
     service,
@@ -220,6 +252,7 @@ export async function diagnoseService(serviceId: string): Promise<ExpenseDiagnos
         category: CATEGORY_LABELS[s.category],
         monthlyEur: centsToEur(effectiveMonthlyCents(s)),
       })),
+    candidates: scraped.map(describeToolForPrompt),
   }).catch(() => null);
 
   if (!ai) return local;
@@ -233,12 +266,46 @@ export async function diagnoseService(serviceId: string): Promise<ExpenseDiagnos
   };
 }
 
+/**
+ * One catalogue lookup per category actually present in the budget, so both
+ * the offline diagnostic and the model work from the same scraped facts.
+ */
+async function collectCandidates(active: ServiceWithStats[]): Promise<{
+  freeByCategory: Map<string, AlternativeOption>;
+  promptLines: string[];
+}> {
+  const categories = [...new Set(active.map((s) => s.category))];
+  const freeByCategory = new Map<string, AlternativeOption>();
+  const promptLines: string[] = [];
+
+  const perCategory = await Promise.all(
+    categories.map(async (category) => ({
+      category,
+      tools: await findAlternativeTools({ category, limit: 4 }).catch(() => []),
+    })),
+  );
+
+  for (const { category, tools } of perCategory) {
+    if (tools.length === 0) continue;
+
+    promptLines.push(`${CATEGORY_LABELS[category]} :`);
+    for (const tool of tools) promptLines.push(describeToolForPrompt(tool));
+
+    const free = tools.find((tool) => tool.hasFreeTier);
+    if (free) freeByCategory.set(category, toAlternativeOption(free));
+  }
+
+  return { freeByCategory, promptLines };
+}
+
 /** Review the whole stack at once — duplicates and overlaps only show up there. */
 export async function diagnoseBudget(): Promise<BudgetDiagnostic> {
   const user = await requireUser();
   const services = await listDevExpenseServices(user.id);
   const active = services.filter((s) => s.isActive);
-  const local = diagnoseBudgetLocally(services);
+
+  const { freeByCategory, promptLines } = await collectCandidates(active);
+  const local = diagnoseBudgetLocally(services, freeByCategory);
 
   if (active.length === 0) return local;
 
@@ -255,6 +322,7 @@ export async function diagnoseBudget(): Promise<BudgetDiagnostic> {
     })),
     totalMonthlyEur: centsToEur(totalCents),
     ytdEur: centsToEur(ytdCents),
+    candidates: promptLines,
   }).catch(() => null);
 
   return ai ?? local;

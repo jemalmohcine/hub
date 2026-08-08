@@ -18,6 +18,7 @@ import {
 } from "@/design-system";
 import { createDevExpenseService, suggestProvider } from "@/modules/dev-expenses/actions";
 import type {
+  AlternativeOption,
   BillingCycle,
   DevExpenseService,
   ExpenseCategory,
@@ -27,6 +28,7 @@ import {
   BILLING_LABELS,
   CATEGORY_LABELS,
   EXPENSE_CATEGORIES,
+  EFFORT_LABELS,
 } from "@/modules/dev-expenses/types";
 
 /** How long the user has to stop typing before we ask the model who this is. */
@@ -335,6 +337,43 @@ function DetectionCard({
           </Text>
         </Cluster>
       ) : null}
+
+      {suggestion.alternatives.length > 0 ? (
+        <div className="mt-3 border-t border-[var(--dh-brand)]/20 pt-2">
+          <Text size="sm" weight="medium">
+            Avant de payer, regarde ça
+          </Text>
+          <Stack gap={2} className="mt-2">
+            {suggestion.alternatives.map((alt) => (
+              <AlternativeHint key={alt.slug} alternative={alt} />
+            ))}
+          </Stack>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function AlternativeHint({ alternative }: { alternative: AlternativeOption }) {
+  const price =
+    alternative.typicalMonthlyEur === 0
+      ? "Gratuit"
+      : alternative.typicalMonthlyEur != null
+        ? `${alternative.typicalMonthlyEur} €/mois`
+        : "Tarif à l’usage";
+
+  return (
+    <div className="min-w-0">
+      <Cluster gap={2} className="items-center">
+        <Text size="sm" weight="medium" className="break-words">
+          {alternative.name}
+        </Text>
+        <Badge tone={alternative.typicalMonthlyEur === 0 ? "success" : "neutral"}>{price}</Badge>
+        <Badge tone="neutral">{EFFORT_LABELS[alternative.migrationEffort]}</Badge>
+      </Cluster>
+      <Text size="sm" tone="muted" className="break-words">
+        {alternative.freeTier ?? alternative.bestFor}
+      </Text>
     </div>
   );
 }

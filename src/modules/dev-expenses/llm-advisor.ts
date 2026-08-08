@@ -149,6 +149,7 @@ export async function llmIdentifyProvider(input: {
     note: collapseWhitespace(output.note),
     confidence: Math.max(0, Math.min(1, output.confidence)),
     source: "ai",
+    alternatives: [],
   };
 }
 
@@ -187,6 +188,8 @@ export async function llmDiagnoseService(input: {
   shareOfBudgetPct: number;
   totalMonthlyEur: number;
   otherServices: { name: string; category: string; monthlyEur: number }[];
+  /** Pre-formatted rows from the scraped catalogue, measured today. */
+  candidates: string[];
 }): Promise<ExpenseDiagnostic | null> {
   if (!isExpenseAiAvailable()) return null;
 
@@ -202,6 +205,9 @@ export async function llmDiagnoseService(input: {
     "Propose au maximum trois alternatives réellement moins chères, gratuites en priorité,",
     "qui couvrent le même usage. Ignore les alternatives qui coûtent plus cher.",
     "Tiens compte du reste du stack : une alternative déjà payée par ailleurs vaut mieux qu'un nouvel outil.",
+    input.candidates.length
+      ? "Les candidats ci-dessous viennent d'un catalogue mesuré aujourd'hui (tarifs, notoriété, stabilité). Sers-t'en en priorité et reprends leurs chiffres tels quels."
+      : "",
     "verdict : keep si le prix est justifié, review s'il faut vérifier l'usage,",
     "consider_switch s'il existe une option nettement moins chère et crédible.",
     "",
@@ -214,6 +220,9 @@ export async function llmDiagnoseService(input: {
     `Budget dev total: ${input.totalMonthlyEur} €/mois`,
     service.notes ? `Notes de l'utilisateur: ${collapseWhitespace(service.notes).slice(0, 300)}` : "",
     stack ? `Reste du stack:\n${stack}` : "",
+    input.candidates.length
+      ? `Catalogue d'alternatives mesurées:\n${input.candidates.join("\n")}`
+      : "",
   ]
     .filter(Boolean)
     .join("\n");
@@ -282,6 +291,8 @@ export async function llmDiagnoseBudget(input: {
   services: { name: string; category: string; billingCycle: string; monthlyEur: number; notes: string | null }[];
   totalMonthlyEur: number;
   ytdEur: number;
+  /** Cheaper or free options per category, from the scraped catalogue. */
+  candidates: string[];
 }): Promise<BudgetDiagnostic | null> {
   if (!isExpenseAiAvailable() || input.services.length === 0) return null;
 
@@ -307,11 +318,19 @@ export async function llmDiagnoseBudget(input: {
     "Chaque constat cite les services concernés par leur nom exact et chiffre l'économie quand elle est estimable.",
     "N'invente pas de doublon là où il n'y en a pas : si le budget est sain, dis-le avec un constat « healthy ».",
     "monthlySavingsEur global = somme des économies que tu juges réellement atteignables, sans double comptage.",
+    input.candidates.length
+      ? "Quand tu proposes un remplacement, prends-le dans le catalogue mesuré fourni et reprends ses chiffres."
+      : "",
     "",
     `Budget total: ${input.totalMonthlyEur} €/mois (cumul annuel constaté: ${input.ytdEur} €)`,
     `Services (${input.services.length}):`,
     lines,
-  ].join("\n");
+    input.candidates.length
+      ? `\nCatalogue d'alternatives mesurées:\n${input.candidates.join("\n")}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const output = await ask(budgetSchema, "budget_diagnostic", prompt, 2200);
   if (!output) return null;

@@ -9,6 +9,7 @@
     "lint": "eslint",
     "ai-intel:ingest": "node --env-file-if-exists=.env.local --import tsx scripts/ai-intel-ingest.ts",
     "job-board:ingest": "node --env-file-if-exists=.env.local --import tsx scripts/job-board-ingest.ts",
+    "dev-tools:ingest": "node --env-file-if-exists=.env.local --import tsx scripts/dev-tools-ingest.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
