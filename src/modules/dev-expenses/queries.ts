@@ -2,7 +2,7 @@ import { createClient } from "@/core/auth/supabase/server";
 import {
   effectiveMonthlyCents,
   monthlyEquivalentCents,
-} from "@/modules/dev-expenses/diagnose";
+} from "@/modules/dev-expenses/amounts";
 import type {
   DevExpenseEntry,
   DevExpenseService,

@@ -4,11 +4,11 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/core/auth/supabase/server";
 import { assertEntitled } from "@/core/entitlements/assert-entitled";
 import { ENTITLEMENTS } from "@/core/entitlements/keys";
+import { effectiveMonthlyCents } from "@/modules/dev-expenses/amounts";
 import { suggestProviderFromCatalog } from "@/modules/dev-expenses/catalog";
 import {
   diagnoseBudgetLocally,
   diagnoseServiceLocally,
-  effectiveMonthlyCents,
 } from "@/modules/dev-expenses/diagnose";
 import {
   llmDiagnoseBudget,

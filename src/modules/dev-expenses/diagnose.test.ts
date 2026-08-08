@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  effectiveMonthlyCents,
+  monthlyEquivalentCents,
+} from "@/modules/dev-expenses/amounts";
+import {
   alternativesFor,
   matchProviderFromText,
   suggestProviderFromCatalog,
@@ -7,8 +11,6 @@ import {
 import {
   diagnoseBudgetLocally,
   diagnoseServiceLocally,
-  effectiveMonthlyCents,
-  monthlyEquivalentCents,
 } from "@/modules/dev-expenses/diagnose";
 import type { ServiceWithStats } from "@/modules/dev-expenses/types";
 

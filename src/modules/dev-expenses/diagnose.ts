@@ -1,3 +1,7 @@
+import {
+  effectiveMonthlyCents,
+  monthlyEquivalentCents,
+} from "@/modules/dev-expenses/amounts";
 import { alternativesFor, findProvider } from "@/modules/dev-expenses/catalog";
 import type {
   AlternativeOption,
@@ -13,18 +17,6 @@ import { CATEGORY_LABELS } from "@/modules/dev-expenses/types";
  * Deterministic diagnostics. They run instantly, they never cost anything, and
  * they are what the UI shows when no LLM is configured or the call fails.
  */
-
-export function monthlyEquivalentCents(service: DevExpenseService): number {
-  if (service.billingCycle === "yearly") {
-    return Math.round(service.plannedAmountCents / 12);
-  }
-  return service.plannedAmountCents;
-}
-
-/** The amount that actually counts this month: what was logged, else the plan. */
-export function effectiveMonthlyCents(service: ServiceWithStats): number {
-  return service.monthAmountCents ?? monthlyEquivalentCents(service);
-}
 
 function eur(cents: number): number {
   return Math.round(cents) / 100;

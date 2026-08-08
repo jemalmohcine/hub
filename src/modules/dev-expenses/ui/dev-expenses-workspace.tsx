@@ -19,7 +19,7 @@ import {
   diagnoseService,
   upsertMonthlyEntry,
 } from "@/modules/dev-expenses/actions";
-import { monthlyEquivalentCents } from "@/modules/dev-expenses/diagnose";
+import { monthlyEquivalentCents } from "@/modules/dev-expenses/amounts";
 import { BudgetAnalysis } from "@/modules/dev-expenses/ui/budget-analysis";
 import { ServiceDiagnostic } from "@/modules/dev-expenses/ui/service-diagnostic";
 import { ServiceForm } from "@/modules/dev-expenses/ui/service-form";
