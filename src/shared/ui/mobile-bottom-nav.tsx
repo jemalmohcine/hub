@@ -115,12 +115,14 @@ export function MobileBottomNav({
   return (
     <>
       {/*
-        In normal flow, not fixed: the shell owns the viewport height, so the
-        bar sits on the physical bottom edge whatever iOS does with its chrome.
+        Fixed to the viewport bottom now that the shell is also pinned: the page
+        no longer scrolls underneath, so this stays flush with the physical edge
+        on iOS and paints the home-indicator zone with bg-card.
       */}
       <nav
         aria-label="Navigation principale"
-        className="z-30 shrink-0 border-t border-border bg-card pb-[env(safe-area-inset-bottom,0px)] lg:hidden"
+        className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card lg:hidden"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
         <div className="mx-auto grid h-[var(--dh-bottom-nav-h)] max-w-lg grid-cols-5 items-center px-1">
           {TABS.map((tab) => (

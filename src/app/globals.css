@@ -65,3 +65,16 @@
     animation: none !important;
   }
 }
+
+/* iOS PWA: keep the home-indicator zone painted with the nav background */
+@media (max-width: 1023px) {
+  .mobile-bottom-nav {
+    background-color: var(--card);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .app-shell {
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
+  }
+}

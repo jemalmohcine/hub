@@ -4,8 +4,8 @@
   "description": "Le hub développeur pour tout gérer en un seul endroit.",
   "start_url": "/app/overview",
   "display": "standalone",
-  "background_color": "#0b1220",
-  "theme_color": "#0b1220",
+  "background_color": "#1a2030",
+  "theme_color": "#1a2030",
   "orientation": "portrait-primary",
   "icons": [
     {
