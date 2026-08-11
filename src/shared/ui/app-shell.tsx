@@ -143,7 +143,7 @@ export function AppShell({
         </div>
       </aside>
 
-      <div className="flex h-full min-h-0 w-full flex-1 flex-col lg:ml-[var(--dh-sidebar-w)] lg:h-auto lg:min-h-dvh">
+      <div className="flex max-lg:h-dvh max-lg:max-h-dvh min-h-0 w-full flex-1 flex-col lg:ml-[var(--dh-sidebar-w)] lg:h-auto lg:max-h-none lg:min-h-dvh">
         <header
           className="z-20 shrink-0 border-b border-border bg-card/90 px-[var(--dh-space-4)] backdrop-blur lg:hidden"
           style={{ paddingTop: "var(--dh-safe-top)" }}
