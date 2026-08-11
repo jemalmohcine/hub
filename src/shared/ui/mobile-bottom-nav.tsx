@@ -120,7 +120,7 @@ export function MobileBottomNav({
       */}
       <nav
         aria-label="Navigation principale"
-        className="z-30 shrink-0 border-t border-border bg-card lg:hidden"
+        className="z-30 shrink-0 border-t border-border bg-card pb-[env(safe-area-inset-bottom,0px)] lg:hidden"
       >
         <div className="mx-auto grid h-[var(--dh-bottom-nav-h)] max-w-lg grid-cols-5 items-center px-1">
           {TABS.map((tab) => (
@@ -151,11 +151,6 @@ export function MobileBottomNav({
             </span>
           </button>
         </div>
-        <div
-          aria-hidden
-          className="bg-card"
-          style={{ height: "env(safe-area-inset-bottom, 0px)" }}
-        />
       </nav>
 
       <Sheet
