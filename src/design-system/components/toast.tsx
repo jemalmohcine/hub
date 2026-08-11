@@ -83,7 +83,7 @@ function Toaster({
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 top-[calc(var(--dh-safe-top)+0.75rem)] z-[100] flex flex-col items-center gap-2 px-4 sm:inset-x-auto sm:right-4 sm:top-auto sm:bottom-[calc(var(--dh-bottom-nav-h)+var(--dh-safe-bottom)+1rem)] sm:items-end lg:bottom-6"
+      className="pointer-events-none fixed inset-x-0 top-[calc(var(--dh-safe-top)+0.75rem)] z-[100] flex flex-col items-center gap-2 px-4 sm:inset-x-auto sm:right-4 sm:top-auto sm:bottom-[calc(var(--dh-safe-bottom)+1rem)] sm:items-end lg:bottom-6"
     >
       {items.map((toast) => {
         const tone = TONE_STYLES[toast.tone];

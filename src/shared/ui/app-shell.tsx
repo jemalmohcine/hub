@@ -21,8 +21,6 @@ import {
 import { NotificationBell } from "@/modules/notifications/ui/notification-bell";
 import type { HubNotification } from "@/modules/notifications/types";
 import type { HubLocale } from "@/core/i18n";
-import { MobileBottomNav } from "@/shared/ui/mobile-bottom-nav";
-
 const SHELL_COPY = {
   fr: {
     overview: "Aperçu",
@@ -76,10 +74,8 @@ export function AppShell({
   }
 
   // Below `lg` the shell is pinned to the viewport and <main> is the only
-  // scroller, so the bottom bar sits on the physical bottom edge by
-  // construction. `position: fixed` drifts with iOS chrome and visual-viewport
-  // changes, which is what made the menu float. The lock lives on the shell
-  // rather than on `body` so marketing and auth pages keep scrolling normally.
+  // scroller. The lock lives on the shell rather than on `body` so marketing
+  // and auth pages keep scrolling normally.
   return (
     <div className="bg-background max-lg:fixed max-lg:inset-0 max-lg:overflow-hidden lg:min-h-dvh lg:flex">
       <ThemeSync theme={user.preferences?.theme ?? "system"} />
@@ -160,15 +156,13 @@ export function AppShell({
         </header>
 
         <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] lg:overflow-visible">
-          <div className="mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] pb-[var(--dh-space-8)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)]">
+          <div
+            className="mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)]"
+            style={{ paddingBottom: "calc(var(--dh-space-8) + var(--dh-safe-bottom))" }}
+          >
             {children}
           </div>
         </main>
-
-        <MobileBottomNav
-          labels={copy}
-          isAdmin={user.profile.role === "admin"}
-        />
       </div>
     </div>
   );
