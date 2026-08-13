@@ -67,7 +67,7 @@ export const UI = {
     score: "Score",
     pageTitle: "Intelligence AI",
     pageDesc:
-      "Le filtre de période et la date affichée correspondent au jour où l’info a été scrapée.",
+      "Le filtre de période et la date affichée correspondent au jour du scrape (chaque matin vers 8h). Un repo encore en tendance est redaté ce jour-là, il ne disparaît pas.",
     digestPrefix: "Dernière mise à jour",
     digestEmpty: "Aucune mise à jour pour le moment",
     detail: "En savoir plus",
@@ -132,7 +132,7 @@ export const UI = {
     score: "Score",
     pageTitle: "AI Intelligence",
     pageDesc:
-      "The date filter and card date both use the day the item was first scraped into the hub.",
+      "The date filter and card date use the scrape day (every morning around 08:00 Paris). A repo still trending is re-dated to that morning so it does not vanish.",
     digestPrefix: "Last update",
     digestEmpty: "No update yet",
     detail: "More details",

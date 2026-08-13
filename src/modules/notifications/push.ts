@@ -9,6 +9,11 @@ export type PushPayload = {
   severity?: string;
 };
 
+/** Phone pushes are interruptive — only urgency that demands action today. */
+export function isUrgentPush(payload: Pick<PushPayload, "severity">): boolean {
+  return payload.severity === "urgent";
+}
+
 type PushRow = {
   id: string;
   user_id: string;
@@ -66,8 +71,9 @@ async function sendToRow(row: PushRow, payload: PushPayload) {
   }
 }
 
-/** Push to one user (all their devices). */
+/** Push to one user (all their devices). Non-urgent payloads are never sent. */
 export async function sendPushToUser(userId: string, payload: PushPayload) {
+  if (!isUrgentPush(payload)) return { sent: 0, skipped: true as const };
   if (!configureWebPush()) return { sent: 0, skipped: true as const };
 
   const admin = createAdminClient();
@@ -87,11 +93,20 @@ export async function sendPushToUser(userId: string, payload: PushPayload) {
 /**
  * Broadcast to subscribed devices.
  * For AI category: Pro users with module:ai only.
+ * Never sends unless severity is urgent.
  */
 export async function sendPushBroadcast(
   payload: PushPayload,
   opts: { category?: string } = {},
 ) {
+  if (!isUrgentPush(payload)) {
+    return {
+      sent: 0,
+      skipped: true as const,
+      reason: "not_urgent" as const,
+      eligible: 0,
+    };
+  }
   if (!configureWebPush()) {
     return {
       sent: 0,

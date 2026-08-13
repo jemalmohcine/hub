@@ -96,16 +96,16 @@ Module Pro `/app/ai` : digest multi-sources (4 piliers), merge cross-sites, save
    - scrape AI Intel
    - scrape offres d’emploi (job board)
 4. Scrape AI Intel (aussi en schedule) : `.github/workflows/ai-intel-ingest.yml`
-   - **Chaque matin** : `0 1 * * *` UTC
+   - **Chaque matin** : `0 6 * * *` UTC (08:00 Paris en été)
    - Manuel : Actions → « AI Intel Ingest » → Run workflow (`full` ou `i18n`)
 5. Scrape offres emploi : `.github/workflows/job-board-ingest.yml`
-   - **Chaque nuit** : `30 2 * * *` UTC
+   - **Chaque matin** : `30 6 * * *` UTC
    - Manuel : Actions → « Job Board Ingest »
 6. Notifications téléphone (PWA) :
    - Applique `supabase/migrations/007_push_subscriptions.sql`
    - Sur le téléphone : installer DevHub (Ajouter à l’écran d’accueil)
    - Settings → Langue & apparence → **Activer les alertes**
-   - Après chaque scrape, s’il y a une alerte AI, une notif système est envoyée aux appareils Pro abonnés
+   - Après chaque scrape, seule une alerte **urgente** (prix, faille, breaking, repo qui explose) part sur le téléphone. Le reste reste dans le feed.
 7. Test local :
    ```bash
    npm run ai-intel:ingest

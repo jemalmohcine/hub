@@ -164,29 +164,61 @@ export async function runAiIntelIngest() {
     const droppedAfterEnrich = enriched.length - keepers.length;
 
     let inserted = 0;
-    let skipped = 0;
+    let refreshed = 0;
     const insertedItems: InsertedIntelItem[] = [];
 
-    for (const item of keepers) {
-      const { data, error } = await admin
+    const keeperKeys = keepers.map((item) => item.canonicalKey);
+    const existingKeys = new Set<string>();
+    if (keeperKeys.length > 0) {
+      const { data: existingRows } = await admin
         .from("ai_intel_items")
-        .upsert(
-          {
-            canonical_key: item.canonicalKey,
-            pillar: item.pillar,
-            category: item.category,
-            urgency: item.urgency,
-            title: item.title,
-            summary: item.summary,
-            url: item.url,
-            primary_source: item.primarySource,
-            source_refs: item.sourceRefs,
-            metadata: item.metadata,
+        .select("canonical_key")
+        .in("canonical_key", keeperKeys);
+      for (const row of existingRows ?? []) {
+        existingKeys.add(row.canonical_key as string);
+      }
+    }
+
+    for (const item of keepers) {
+      const row = {
+        canonical_key: item.canonicalKey,
+        pillar: item.pillar,
+        category: item.category,
+        urgency: item.urgency,
+        title: item.title,
+        summary: item.summary,
+        url: item.url,
+        primary_source: item.primarySource,
+        source_refs: item.sourceRefs,
+        metadata: item.metadata,
+        published_at: scrapeDay,
+        ingested_at: scrapeDay,
+      };
+
+      if (existingKeys.has(item.canonicalKey)) {
+        const { error } = await admin
+          .from("ai_intel_items")
+          .update({
+            pillar: row.pillar,
+            category: row.category,
+            urgency: row.urgency,
+            title: row.title,
+            summary: row.summary,
+            url: row.url,
+            primary_source: row.primary_source,
+            source_refs: row.source_refs,
+            metadata: row.metadata,
             published_at: scrapeDay,
             ingested_at: scrapeDay,
-          },
-          { onConflict: "canonical_key", ignoreDuplicates: true },
-        )
+          })
+          .eq("canonical_key", item.canonicalKey);
+        if (!error) refreshed += 1;
+        continue;
+      }
+
+      const { data, error } = await admin
+        .from("ai_intel_items")
+        .insert(row)
         .select("id");
 
       if (error) continue;
@@ -194,8 +226,6 @@ export async function runAiIntelIngest() {
       if (data && data.length > 0) {
         inserted += 1;
         insertedItems.push({ ...item, dbId: data[0].id as string });
-      } else {
-        skipped += 1;
       }
     }
 
@@ -220,7 +250,7 @@ export async function runAiIntelIngest() {
           ...mergeStats,
           droppedAfterEnrich,
           inserted,
-          skipped,
+          refreshed,
           notify,
         },
       })
@@ -235,7 +265,7 @@ export async function runAiIntelIngest() {
         ...mergeStats,
         droppedAfterEnrich,
         inserted,
-        skipped,
+        refreshed,
         notify,
       },
     };
