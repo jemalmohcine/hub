@@ -124,7 +124,7 @@ export function MobileBottomNav({
       <nav
         aria-label="Navigation principale"
         className="mobile-bottom-nav z-30 shrink-0 border-t border-border bg-card lg:hidden"
-        style={{ paddingBottom: "var(--ios-pwa-bottom-gap)" }}
+        style={{ paddingBottom: "calc(var(--ios-pwa-bottom-gap) + var(--bottom-nav-pad))" }}
       >
         <div className="mx-auto grid h-[var(--dh-bottom-nav-h)] max-w-lg grid-cols-5 items-center px-1">
           {TABS.map((tab) => (

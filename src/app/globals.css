@@ -90,6 +90,6 @@
 
   .mobile-bottom-nav {
     background-color: var(--card);
-    padding-bottom: var(--ios-pwa-bottom-gap, 0px);
+    padding-bottom: calc(var(--ios-pwa-bottom-gap, 0px) + var(--bottom-nav-pad));
   }
 }
