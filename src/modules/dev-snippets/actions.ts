@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/core/auth/supabase/server";
 import { assertEntitled } from "@/core/entitlements/assert-entitled";
 import { ENTITLEMENTS } from "@/core/entitlements/keys";
+import { listDevSnippets } from "@/modules/dev-snippets/queries";
+import { rankSnippetsWithLlm } from "@/modules/dev-snippets/llm-search";
+import { rankSnippets } from "@/modules/dev-snippets/match";
 import type { DevSnippetInput } from "@/modules/dev-snippets/types";
 
 /** Every action in this file requires the snippets module. */
@@ -98,4 +101,29 @@ export async function deleteDevSnippet(id: string) {
 
 export async function toggleDevSnippetPin(id: string, isPinned: boolean) {
   await updateDevSnippet(id, { isPinned });
+}
+
+export async function searchDevSnippets(query: string): Promise<{
+  ids: string[];
+  source: "ai" | "local";
+}> {
+  const user = await requireUser();
+  const q = query.trim();
+  if (q.length < 2) return { ids: [], source: "local" };
+
+  const snippets = await listDevSnippets(user.id);
+  const local = rankSnippets(q, snippets);
+  const localIds = local.map((item) => item.id);
+
+  const catalog = local.length >= 3 ? local : snippets;
+  const aiIds = await rankSnippetsWithLlm(q, catalog);
+  if (aiIds && aiIds.length > 0) {
+    const seen = new Set(aiIds);
+    return {
+      ids: [...aiIds, ...localIds.filter((id) => !seen.has(id))],
+      source: "ai",
+    };
+  }
+
+  return { ids: localIds, source: "local" };
 }
