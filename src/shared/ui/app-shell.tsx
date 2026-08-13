@@ -75,11 +75,11 @@ export function AppShell({
     return pathname.startsWith(path);
   }
 
-  // Below `lg` the shell is pinned to the viewport and <main> is the only
-  // scroller. The bottom nav is fixed to the physical bottom edge so iOS can
-  // paint the home-indicator zone with bg-card instead of leaving a black gap.
+  // Below `lg` the shell is a flex column whose height is 100dvh plus the iOS
+  // PWA lying-viewport gap. `position: fixed; inset: 0` pins to that lying
+  // viewport and leaves a black strip under the nav — do not use it.
   return (
-    <div className="app-shell bg-background max-lg:fixed max-lg:inset-0 max-lg:flex max-lg:flex-col max-lg:overflow-hidden lg:min-h-dvh lg:flex">
+    <div className="app-shell bg-background max-lg:flex max-lg:flex-col max-lg:overflow-hidden lg:min-h-dvh lg:flex">
       <ThemeSync theme={user.preferences?.theme ?? "system"} />
 
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[var(--dh-sidebar-w)] flex-col border-r border-border bg-card lg:flex">
@@ -157,7 +157,7 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] max-lg:pb-[var(--dh-mobile-bottom-offset)] lg:overflow-visible lg:pb-0">
+        <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] lg:overflow-visible">
           <div className="mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] pb-[var(--dh-space-8)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)]">
             {children}
           </div>

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { IBM_Plex_Mono, Sora } from "next/font/google";
+import { IosPwaViewport } from "@/shared/ui/ios-pwa-viewport";
 import { PwaRegister } from "@/shared/ui/pwa-register";
 import { NavigationProgress, ThemeProvider, ToastProvider } from "@/design-system";
 import { cn } from "@/lib/utils";
@@ -49,10 +50,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f3f6fa" },
-    { media: "(prefers-color-scheme: dark)", color: "#1a2030" },
-  ],
+  // iOS PWA ignores media-query theme-color and falls back to black chrome.
+  themeColor: "#1a2030",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -76,6 +75,7 @@ export default function RootLayout({
               <NavigationProgress />
             </Suspense>
             {children}
+            <IosPwaViewport />
             <PwaRegister />
           </ToastProvider>
         </ThemeProvider>

@@ -115,14 +115,16 @@ export function MobileBottomNav({
   return (
     <>
       {/*
-        Fixed to the viewport bottom now that the shell is also pinned: the page
-        no longer scrolls underneath, so this stays flush with the physical edge
-        on iOS and paints the home-indicator zone with bg-card.
+        In document flow at the bottom of the shell. Padding uses
+        --ios-pwa-bottom-gap (measured in standalone, env() elsewhere) so the
+        card background paints the home-indicator strip. Do not position:fixed
+        this to bottom: 0 — that anchors to the lying viewport and leaves a
+        black gap on iOS PWAs.
       */}
       <nav
         aria-label="Navigation principale"
-        className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card lg:hidden"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+        className="mobile-bottom-nav z-30 shrink-0 border-t border-border bg-card lg:hidden"
+        style={{ paddingBottom: "var(--ios-pwa-bottom-gap)" }}
       >
         <div className="mx-auto grid h-[var(--dh-bottom-nav-h)] max-w-lg grid-cols-5 items-center px-1">
           {TABS.map((tab) => (
