@@ -115,12 +115,16 @@ export function MobileBottomNav({
   return (
     <>
       {/*
-        In normal flow, not fixed: the shell owns the viewport height, so the
-        bar sits on the physical bottom edge whatever iOS does with its chrome.
+        In document flow at the bottom of the shell. Padding uses
+        --ios-pwa-bottom-gap (measured in standalone, env() elsewhere) so the
+        card background paints the home-indicator strip. Do not position:fixed
+        this to bottom: 0 — that anchors to the lying viewport and leaves a
+        black gap on iOS PWAs.
       */}
       <nav
         aria-label="Navigation principale"
-        className="z-30 shrink-0 border-t border-border bg-card pb-[env(safe-area-inset-bottom,0px)] lg:hidden"
+        className="mobile-bottom-nav z-30 shrink-0 border-t border-border bg-card lg:hidden"
+        style={{ paddingBottom: "var(--ios-pwa-bottom-gap)" }}
       >
         <div className="mx-auto grid h-[var(--dh-bottom-nav-h)] max-w-lg grid-cols-5 items-center px-1">
           {TABS.map((tab) => (

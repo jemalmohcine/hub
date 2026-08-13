@@ -65,3 +65,31 @@
     animation: none !important;
   }
 }
+
+/*
+ * iOS standalone PWA: 100dvh is the lying viewport (home-indicator strip
+ * excluded, env(safe-area-inset-bottom) = 0). Extend the shell by the
+ * measured --ios-pwa-bottom-gap so the nav background paints that strip.
+ * Do not use position:fixed; inset:0 — that clips to the lying viewport.
+ */
+@media (max-width: 1023px) {
+  html:has(.app-shell),
+  body:has(.app-shell) {
+    height: calc(100dvh + var(--ios-pwa-bottom-gap, 0px));
+    overflow: hidden;
+    background-color: var(--card);
+  }
+
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: calc(100dvh + var(--ios-pwa-bottom-gap, 0px));
+    background-color: var(--background);
+  }
+
+  .mobile-bottom-nav {
+    background-color: var(--card);
+    padding-bottom: var(--ios-pwa-bottom-gap, 0px);
+  }
+}
