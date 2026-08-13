@@ -235,6 +235,7 @@ export async function updateProfile(
       body: "Vos informations de compte ont été enregistrées.",
       href: "/app/settings/account",
       severity: "success",
+      skipPush: true,
       dedupeKey: `account:profile:${user.id}:${new Date().toISOString().slice(0, 10)}`,
     });
   } catch {
@@ -337,6 +338,7 @@ export async function mockUpgradePlan(
           : "Votre abonnement est passé au plan Free.",
       href: "/app/settings/billing",
       severity: plan === "pro" ? "success" : "info",
+      skipPush: true,
       dedupeKey: `billing:plan:${user.id}:${plan}:${new Date().toISOString().slice(0, 10)}`,
     });
   } catch {

@@ -5,7 +5,8 @@ name: Job Board Ingest
 on:
   workflow_call:
   schedule:
-    - cron: "30 2 * * *"
+    # 06:30 UTC, just after the AI intel digest.
+    - cron: "30 6 * * *"
   workflow_dispatch:
 
 concurrency:

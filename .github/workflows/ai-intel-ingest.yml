@@ -5,8 +5,10 @@ name: AI Intel Ingest
 on:
   workflow_call:
   schedule:
-    # 01:00 UTC every day
-    - cron: "0 1 * * *"
+    # 06:00 UTC = 08:00 Paris (summer) / 07:00 Paris (winter).
+    # Late enough that GitHub "stars today" has real volume; early enough
+    # that the digest is dated "today" when the user opens the app.
+    - cron: "0 6 * * *"
   workflow_dispatch:
     inputs:
       mode:

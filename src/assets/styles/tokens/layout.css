@@ -4,7 +4,7 @@
   --bottom-nav-h: 3rem;
   /* Overwritten with a measured px value in iOS standalone (env() is 0 there). */
   --ios-pwa-bottom-gap: env(safe-area-inset-bottom, 0px);
-  --bottom-nav-pad: 0.5rem;
+  --bottom-nav-pad: 0.875rem;
   --mobile-bottom-offset: calc(var(--bottom-nav-h) + var(--ios-pwa-bottom-gap) + var(--bottom-nav-pad));
   --content-max: 64rem;
   --auth-max: 28rem;
