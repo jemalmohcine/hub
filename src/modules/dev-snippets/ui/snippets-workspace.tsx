@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Copy,
   ExternalLink,
@@ -9,6 +9,7 @@ import {
   PinOff,
   Plus,
   Search,
+  Sparkles,
   StickyNote,
   Trash2,
   Code2,
@@ -31,10 +32,12 @@ import {
 import {
   createDevSnippet,
   deleteDevSnippet,
+  searchDevSnippets,
   toggleDevSnippetPin,
   updateDevSnippet,
 } from "@/modules/dev-snippets/actions";
 import { SNIPPET_LANGUAGES } from "@/modules/dev-snippets/languages";
+import { mergeRankedIds, rankSnippets } from "@/modules/dev-snippets/match";
 import {
   buildSmartSearchQuery,
   buildWebSearchUrl,
@@ -57,6 +60,10 @@ export function SnippetsWorkspace({ initialSnippets }: { initialSnippets: DevSni
   const [snippets, setSnippets] = useState(initialSnippets);
   const [selectedId, setSelectedId] = useState<string | null>(initialSnippets[0]?.id ?? null);
   const [search, setSearch] = useState("");
+  const [aiIds, setAiIds] = useState<string[] | null>(null);
+  const [aiSource, setAiSource] = useState<"ai" | "local" | null>(null);
+  const [aiPending, setAiPending] = useState(false);
+  const searchSeq = useRef(0);
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [kindFilter, setKindFilter] = useState<DevSnippetKind | "all">("all");
   const [quickSearch, setQuickSearch] = useState("");
@@ -75,23 +82,64 @@ export function SnippetsWorkspace({ initialSnippets }: { initialSnippets: DevSni
     return [...tags].sort();
   }, [snippets]);
 
-  const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
+  const scoped = useMemo(() => {
     return snippets.filter((item) => {
       if (kindFilter !== "all" && item.kind !== kindFilter) return false;
       if (tagFilter && !item.tags.includes(tagFilter)) return false;
-      if (!query) return true;
-      const haystack = [
-        item.title,
-        item.content,
-        item.language ?? "",
-        item.tags.join(" "),
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(query);
+      return true;
     });
-  }, [snippets, search, tagFilter, kindFilter]);
+  }, [snippets, tagFilter, kindFilter]);
+
+  const localMatched = useMemo(() => {
+    if (!search.trim()) return scoped;
+    return rankSnippets(search, scoped);
+  }, [scoped, search]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return scoped;
+    const known = new Set(scoped.map((item) => item.id));
+    const merged = mergeRankedIds(
+      aiIds,
+      localMatched.map((item) => item.id),
+      known,
+    );
+    if (!merged) return localMatched;
+    const byId = new Map(scoped.map((item) => [item.id, item]));
+    return merged
+      .map((id) => byId.get(id))
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
+  }, [scoped, search, localMatched, aiIds]);
+
+  useEffect(() => {
+    const query = search.trim();
+    if (query.length < 2) {
+      setAiIds(null);
+      setAiSource(null);
+      setAiPending(false);
+      return;
+    }
+
+    const seq = (searchSeq.current += 1);
+    setAiPending(true);
+    const timer = window.setTimeout(() => {
+      void searchDevSnippets(query)
+        .then((result) => {
+          if (seq !== searchSeq.current) return;
+          setAiIds(result.ids);
+          setAiSource(result.source);
+        })
+        .catch(() => {
+          if (seq !== searchSeq.current) return;
+          setAiIds(null);
+          setAiSource("local");
+        })
+        .finally(() => {
+          if (seq === searchSeq.current) setAiPending(false);
+        });
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
   function startCreate() {
     setEditing(true);
@@ -256,7 +304,7 @@ export function SnippetsWorkspace({ initialSnippets }: { initialSnippets: DevSni
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Filtrer vos snippets et notes…"
+              placeholder="Ex. docker, healthcheck postgres, note javascript…"
               className="pl-9"
             />
           </div>
@@ -275,6 +323,26 @@ export function SnippetsWorkspace({ initialSnippets }: { initialSnippets: DevSni
           Nouveau
         </Button>
       </Cluster>
+      {search.trim().length >= 2 ? (
+        <Cluster gap={2} className="items-center">
+          {aiPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+          ) : (
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+          )}
+          <Text size="sm" tone="muted">
+            {aiPending
+              ? "L’IA lit tes snippets…"
+              : aiSource === "ai"
+                ? "Résultats rangés selon ce que tu as demandé."
+                : "Titre, tags, code et notes — l’IA affine dès qu’elle peut."}
+          </Text>
+        </Cluster>
+      ) : (
+        <Text size="sm" tone="muted">
+          Tape un mot, un langage ou une intention. L’IA retrouve le bon snippet même avec beaucoup d’entrées.
+        </Text>
+      )}
 
       {allTags.length > 0 ? (
         <Cluster gap={2} className="flex-wrap">
@@ -304,9 +372,13 @@ export function SnippetsWorkspace({ initialSnippets }: { initialSnippets: DevSni
         <Stack gap={2}>
           {filtered.length === 0 ? (
             <EmptyState
-              icon={Code2}
-              title="Aucun snippet"
-              hint="Crée ta première note ou ton premier extrait de code."
+              icon={Search}
+              title={search.trim() ? "Aucun résultat" : "Aucun snippet"}
+              hint={
+                search.trim()
+                  ? "Essaie un autre mot, un tag, ou le langage (docker, javascript…)."
+                  : "Crée ta première note ou ton premier extrait de code."
+              }
             />
           ) : (
             filtered.map((item) => (
