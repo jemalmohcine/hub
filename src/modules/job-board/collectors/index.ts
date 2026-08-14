@@ -9,17 +9,19 @@ import {
 import { isCredibleRegion, roleMatchesAny } from "@/modules/job-board/match";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
+import { wantsRemote } from "@/modules/job-board/work-modes";
 
 export const DEFAULT_FRANCE_SEARCH: JobSearchPrefs = {
   ...EMPTY_JOB_SEARCH_PREFS,
   roles: ["fullstack"],
   roleQuery: "Développeur full stack",
   locations: ["france"],
+  workModes: ["hybrid"],
   workMode: "hybrid",
 };
 
 async function collectRemotiveForPrefs(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
-  if (prefs.workMode === "onsite") return [];
+  if (!wantsRemote(prefs)) return [];
   const hits = await collectRemotive();
   const selected = expandWithParentCountries(resolveLocations(prefs.locations));
   return hits.filter((hit) => {

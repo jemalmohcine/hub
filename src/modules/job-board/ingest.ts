@@ -7,6 +7,7 @@ import {
 import { resolveLocations } from "@/modules/job-board/locations";
 import { classifyWorkMode, matchesSearchPrefs } from "@/modules/job-board/match";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
+import { normalizeWorkModes } from "@/modules/job-board/work-modes";
 
 function devRelevant(hit: RawJobHit): boolean {
   const blob = `${hit.title} ${hit.description} ${(hit.tags ?? []).join(" ")}`.toLowerCase();
@@ -21,6 +22,7 @@ function prefsFromRow(row: {
   work_mode: string;
   locations?: string[] | null;
   roles?: string[] | null;
+  work_modes?: string[] | null;
 }): JobSearchPrefs {
   const fromColumn = Array.isArray(row.locations) ? row.locations : [];
   const fallback = row.city
@@ -31,13 +33,18 @@ function prefsFromRow(row: {
     ? row.role_query.split(/[·,/|]/g).map((part) => part.trim()).filter(Boolean)
     : [];
   const roles = fromRoles.length > 0 ? fromRoles : fallbackRoles;
+  const workModes = normalizeWorkModes({
+    workModes: Array.isArray(row.work_modes) ? (row.work_modes as JobSearchPrefs["workModes"]) : [],
+    workMode: row.work_mode as JobSearchPrefs["workMode"],
+  });
   return {
     roles,
     roleQuery: row.role_query,
     locations: resolveLocations(fromColumn.length > 0 ? fromColumn : fallback).map(
       (entry) => entry.id,
     ),
-    workMode: row.work_mode as JobSearchPrefs["workMode"],
+    workModes,
+    workMode: workModes[0] ?? "hybrid",
   };
 }
 
@@ -116,9 +123,14 @@ export async function runJobBoardIngest() {
   const admin = createAdminClient();
   const full = await admin
     .from("job_search_prefs")
-    .select("role_query, city, work_mode, locations, roles");
+    .select("role_query, city, work_mode, locations, roles, work_modes");
   const prefRows =
     full.data ??
+    (
+      await admin
+        .from("job_search_prefs")
+        .select("role_query, city, work_mode, locations, roles")
+    ).data ??
     (
       await admin
         .from("job_search_prefs")
@@ -133,7 +145,7 @@ export async function runJobBoardIngest() {
     const prefs = prefsFromRow(row);
     if (!prefs.roleQuery.trim() && prefs.roles.length === 0) continue;
     unique.set(
-      `${prefs.roles.slice().sort().join(",")}|${prefs.roleQuery}|${prefs.locations.slice().sort().join(",")}|${prefs.workMode}`.toLowerCase(),
+      `${prefs.roles.slice().sort().join(",")}|${prefs.locations.slice().sort().join(",")}|${prefs.workModes.slice().sort().join(",")}|${prefs.workMode}`.toLowerCase(),
       prefs,
     );
   }

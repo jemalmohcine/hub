@@ -30,6 +30,9 @@ export type JobSearchPrefs = {
   roleQuery: string;
   /** Catalog ids (cities / countries), multi-select. */
   locations: string[];
+  /** Télétravail / hybride / présentiel — multi-select. */
+  workModes: JobWorkMode[];
+  /** First selected mode, kept for older rows / collectors. */
   workMode: JobWorkMode;
 };
 
@@ -80,6 +83,7 @@ export const EMPTY_JOB_SEARCH_PREFS: JobSearchPrefs = {
   roles: [],
   roleQuery: "",
   locations: [],
+  workModes: ["hybrid"],
   workMode: "hybrid",
 };
 

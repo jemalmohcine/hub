@@ -32,12 +32,10 @@ import {
   WORK_MODE_LABELS,
   type JobListing,
   type JobSearchPrefs,
-  type JobWorkMode,
 } from "@/modules/job-board/types";
+import { JOB_WORK_MODES, normalizeWorkModes, onsiteOnly } from "@/modules/job-board/work-modes";
 import type { CvDocumentSummary } from "@/modules/cv-builder/types";
 import type { JobApplication } from "@/modules/job-tracker/types";
-
-const MODES: JobWorkMode[] = ["remote", "hybrid", "onsite"];
 
 const KIND_HINT = {
   city: "Ville",
@@ -79,7 +77,7 @@ export function JobBoardWorkspace({
 
   const canSave =
     (prefs.roles.length > 0 || prefs.roleQuery.trim().length >= 2) &&
-    (prefs.workMode !== "onsite" || prefs.locations.length > 0);
+    (!onsiteOnly(prefs) || prefs.locations.length > 0);
 
   const sorted = useMemo(() => listings, [listings]);
 
@@ -116,7 +114,7 @@ export function JobBoardWorkspace({
 
   function handleSave() {
     if (!canSave) return;
-    persist(prefs, "Config enregistrée — scrape chaque matin");
+    persist(prefs, "Config enregistrée — offres scrapées");
   }
 
   function handleFollow(listing: JobListing, openOffer: boolean) {
@@ -156,8 +154,8 @@ export function JobBoardWorkspace({
           <div>
             <Text weight="medium">Ta recherche</Text>
             <Text size="sm" tone="muted" className="mt-1">
-              Postes, villes ou pays : multi-choix. Si tu as un CV, on préremplit
-              et on enregistre tout seul. Le scrape tourne chaque matin.
+              Postes, villes et modes : multi-choix. Enregistrer scrape tout de
+              suite ; ensuite ça tourne toutes les 3 heures.
             </Text>
           </div>
           <Field
@@ -205,21 +203,38 @@ export function JobBoardWorkspace({
           </Field>
           <div>
             <Text size="sm" weight="medium" className="mb-2">
-              Mode
+              Mode de travail
             </Text>
             <Cluster gap={2} className="flex-wrap">
-              {MODES.map((mode) => (
-                <Button
-                  key={mode}
-                  type="button"
-                  size="sm"
-                  variant={prefs.workMode === mode ? "primary" : "outline"}
-                  onClick={() => setPrefs({ ...prefs, workMode: mode })}
-                >
-                  {WORK_MODE_LABELS[mode]}
-                </Button>
-              ))}
+              {JOB_WORK_MODES.map((mode) => {
+                const selected = normalizeWorkModes(prefs).includes(mode);
+                return (
+                  <Button
+                    key={mode}
+                    type="button"
+                    size="sm"
+                    variant={selected ? "primary" : "outline"}
+                    onClick={() => {
+                      const current = normalizeWorkModes(prefs);
+                      const next = current.includes(mode)
+                        ? current.filter((entry) => entry !== mode)
+                        : [...current, mode];
+                      if (next.length === 0) return;
+                      setPrefs({
+                        ...prefs,
+                        workModes: next,
+                        workMode: next[0] ?? "hybrid",
+                      });
+                    }}
+                  >
+                    {WORK_MODE_LABELS[mode]}
+                  </Button>
+                );
+              })}
             </Cluster>
+            <Text size="sm" tone="muted" className="mt-1">
+              Tu peux cocher télétravail et présentiel en même temps.
+            </Text>
           </div>
           {cvDocuments.length > 0 ? (
             <Field label="CV à lier au suivi" htmlFor="board-cv">
@@ -277,7 +292,7 @@ export function JobBoardWorkspace({
       </Card>
 
       <Text size="sm" tone="muted">
-        {sorted.length} offre{sorted.length !== 1 ? "s" : ""} · scrape du matin
+        {sorted.length} offre{sorted.length !== 1 ? "s" : ""} · scrape toutes les 3 h
       </Text>
 
       <Stack gap={2}>
@@ -361,8 +376,8 @@ export function JobBoardWorkspace({
         {sorted.length === 0 ? (
           <EmptyState
             icon={Briefcase}
-            title="Les offres arrivent chaque matin"
-            hint="Ta config (poste + lieux) suffit. Tu peux aussi coller un lien tout de suite."
+            title="Enregistre pour scraper maintenant"
+            hint="Télétravail et présentiel peuvent coexister. Le scrape tourne aussi toutes les 3 heures."
           />
         ) : null}
       </Stack>

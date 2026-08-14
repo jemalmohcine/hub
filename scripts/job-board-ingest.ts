@@ -1,6 +1,6 @@
 /**
  * Scrape France-first job sources into Supabase (job_listings),
- * using saved user search prefs (poste, villes/pays, mode) when they exist.
+ * using saved user search prefs when they exist. Also triggered on save.
  *
  * Usage:
  *   npm run job-board:ingest

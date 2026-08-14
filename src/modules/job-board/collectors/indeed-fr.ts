@@ -5,6 +5,7 @@ import {
   resolveLocations,
 } from "@/modules/job-board/locations";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
+import { wantsRemote } from "@/modules/job-board/work-modes";
 
 function tagContent(block: string, tag: string): string {
   const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "i");
@@ -50,7 +51,7 @@ function indeedQueries(prefs: JobSearchPrefs): string[] {
 function indeedTargets(prefs: JobSearchPrefs): { query: string; location: string; host: string }[] {
   const selected = resolveLocations(prefs.locations);
   const expanded =
-    prefs.workMode === "remote" ? expandWithParentCountries(selected) : selected;
+    wantsRemote(prefs) ? expandWithParentCountries(selected) : selected;
   const places =
     expanded.length > 0
       ? expanded.slice(0, 5)

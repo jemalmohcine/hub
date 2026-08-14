@@ -64,9 +64,9 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     id: "jobs",
     label: "Candidatures",
     description: "Offres près de chez toi et suivi des candidatures",
-    pageDescription: "Enregistre poste, villes et mode — le scrape tourne chaque matin, puis suis tes relances.",
+    pageDescription: "Enregistre poste, villes et modes — scrape à la sauvegarde, puis toutes les 3 heures.",
     upsell:
-      "Configure tes villes ou pays (présentiel, hybride ou remote) : les offres arrivent chaque jour, le suivi au même endroit.",
+      "Télétravail et présentiel en même temps : les offres arrivent dès que tu enregistres, puis toutes les 3 heures.",
     href: "/app/career?tab=jobs",
     order: 25,
     requiredEntitlement: ENTITLEMENTS.jobs,
