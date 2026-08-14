@@ -4,6 +4,7 @@ import {
   classifyWorkMode,
   isCredibleRegion,
   matchesSearchPrefs,
+  roleMatches,
 } from "@/modules/job-board/match";
 
 describe("classifyWorkMode", () => {
@@ -43,6 +44,13 @@ describe("cityMatches", () => {
   });
 });
 
+describe("roleMatches", () => {
+  it("uses the tech token, not just développeur", () => {
+    expect(roleMatches("développeur React", "React engineer, Paris")).toBe(true);
+    expect(roleMatches("développeur React", "Python backend, Lyon")).toBe(false);
+  });
+});
+
 describe("matchesSearchPrefs", () => {
   it("keeps a Paris hybrid React offer", () => {
     expect(
@@ -54,7 +62,7 @@ describe("matchesSearchPrefs", () => {
           tags: ["react"],
           workMode: "hybrid",
         },
-        { roleQuery: "react", city: "Paris", workMode: "hybrid" },
+        { roleQuery: "react", locations: ["paris"], workMode: "hybrid" },
       ),
     ).toBe(true);
   });
@@ -69,8 +77,23 @@ describe("matchesSearchPrefs", () => {
           tags: [],
           workMode: "remote",
         },
-        { roleQuery: "react", city: "Paris", workMode: "remote" },
+        { roleQuery: "react", locations: ["paris"], workMode: "remote" },
       ),
     ).toBe(false);
+  });
+
+  it("keeps Belgium when selected", () => {
+    expect(
+      matchesSearchPrefs(
+        {
+          title: "React developer",
+          description: "Hybrid in Brussels",
+          location: "Bruxelles, Belgique",
+          tags: ["react"],
+          workMode: "hybrid",
+        },
+        { roleQuery: "react", locations: ["belgique"], workMode: "hybrid" },
+      ),
+    ).toBe(true);
   });
 });

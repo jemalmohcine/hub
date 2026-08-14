@@ -5,9 +5,10 @@ import { createClient } from "@/core/auth/supabase/server";
 import { assertEntitled } from "@/core/entitlements/assert-entitled";
 import { ENTITLEMENTS } from "@/core/entitlements/keys";
 import { addDaysIso } from "@/lib/dates";
-import { ingestJobsForPrefs } from "@/modules/job-board/ingest";
+import { MAX_JOB_LOCATIONS, resolveLocations } from "@/modules/job-board/locations";
 import {
   getJobListingById,
+  getJobListingByUrl,
   listJobListingsForPrefs,
   saveJobSearchPrefs,
 } from "@/modules/job-board/queries";
@@ -58,7 +59,7 @@ function mapApplication(row: {
   };
 }
 
-export async function searchJobsForMe(prefs: JobSearchPrefs): Promise<{
+export async function saveJobSearchConfig(prefs: JobSearchPrefs): Promise<{
   prefs: JobSearchPrefs;
   listings: JobListing[];
 }> {
@@ -67,16 +68,19 @@ export async function searchJobsForMe(prefs: JobSearchPrefs): Promise<{
   if (roleQuery.length < 2) {
     throw new Error("Indique le type de poste (ex. développeur React).");
   }
-  if (prefs.workMode === "onsite" && !prefs.city.trim()) {
-    throw new Error("Pour du présentiel, indique une ville.");
+  const locations = resolveLocations(prefs.locations).map((entry) => entry.id);
+  if (prefs.workMode === "onsite" && locations.length === 0) {
+    throw new Error("Pour du présentiel, choisis au moins une ville ou un pays.");
+  }
+  if (locations.length > MAX_JOB_LOCATIONS) {
+    throw new Error(`Choisis au plus ${MAX_JOB_LOCATIONS} lieux.`);
   }
 
   const saved = await saveJobSearchPrefs(user.id, {
     roleQuery,
-    city: prefs.city.trim(),
+    locations,
     workMode: prefs.workMode,
   });
-  await ingestJobsForPrefs(saved);
   const listings = await listJobListingsForPrefs(saved);
   revalidatePath("/app/career");
   return { prefs: saved, listings };
@@ -131,13 +135,37 @@ export async function applyToJobListing(
   return mapApplication(data);
 }
 
-/** Import a job from any URL into the tracker (with scrape). */
+async function findTrackedByUrl(userId: string, url: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("job_applications")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("job_url", url)
+    .maybeSingle();
+  return data;
+}
+
+/** Import a job from any URL into the tracker (listings first, then scrape). */
 export async function importJobFromUrl(
   url: string,
   cvDocumentId?: string | null,
 ): Promise<JobApplication> {
   const user = await requireUser();
-  const scraped = await scrapeJobOfferPage(url);
+  const trimmed = url.trim();
+  if (!trimmed.startsWith("http")) {
+    throw new Error("Colle un lien http(s) d’offre.");
+  }
+
+  const already = await findTrackedByUrl(user.id, trimmed);
+  if (already) return mapApplication(already);
+
+  const listing = await getJobListingByUrl(trimmed);
+  if (listing) {
+    return applyToJobListing(listing.id, cvDocumentId);
+  }
+
+  const scraped = await scrapeJobOfferPage(trimmed);
   if (!scraped?.title) {
     throw new Error("Impossible de lire cette page d’offre");
   }
@@ -150,7 +178,7 @@ export async function importJobFromUrl(
       company: scraped.company || "Entreprise",
       role: scraped.title,
       status: "to_apply",
-      job_url: url,
+      job_url: trimmed,
       description: scraped.description?.slice(0, 4000) || null,
       location: scraped.location,
       salary_hint: scraped.salaryHint,

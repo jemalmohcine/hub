@@ -1,0 +1,25 @@
+import { describe, expect, it } from "vitest";
+import { suggestLocations, resolveLocation } from "@/modules/job-board/locations";
+
+describe("suggestLocations", () => {
+  it("returns closest cities and countries for a prefix", () => {
+    const hits = suggestLocations("par", []);
+    expect(hits.some((entry) => entry.id === "paris")).toBe(true);
+  });
+
+  it("finds a country from an alias", () => {
+    const hits = suggestLocations("belgium", []);
+    expect(hits[0]?.id).toBe("belgique");
+  });
+
+  it("skips already selected ids", () => {
+    const hits = suggestLocations("par", ["paris"]);
+    expect(hits.some((entry) => entry.id === "paris")).toBe(false);
+  });
+});
+
+describe("resolveLocation", () => {
+  it("maps aliases to the catalog id", () => {
+    expect(resolveLocation("IDF").id).toBe("paris");
+  });
+});
