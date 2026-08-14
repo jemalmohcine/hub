@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/core/auth/supabase/server";
 import { assertEntitled } from "@/core/entitlements/assert-entitled";
@@ -110,6 +111,12 @@ async function ensureCategory(
   };
 }
 
+function revalidateSnippetsLater() {
+  after(() => {
+    revalidatePath("/app/snippets");
+  });
+}
+
 async function assignCategory(
   userId: string,
   hint: CategoryHint,
@@ -125,18 +132,16 @@ async function assignCategory(
 export async function createDevSnippet(input: DevSnippetInput) {
   const user = await requireUser();
   const supabase = await createClient();
-  const names = await categoryNamesForUser(user.id);
-  const assigned = await assignCategory(user.id, hintFromInput(input), names);
 
   const { data, error } = await supabase
     .from("dev_snippets")
-    .insert(rowFromInput(input, user.id, assigned.categoryId))
+    .insert(rowFromInput(input, user.id, null))
     .select(SNIPPET_SELECT)
     .single();
 
   if (error) throw new Error(error.message);
-  revalidatePath("/app/snippets");
-  return rowToSnippet(data, assigned.names);
+  revalidateSnippetsLater();
+  return rowToSnippet(data);
 }
 
 export async function updateDevSnippet(
@@ -145,7 +150,7 @@ export async function updateDevSnippet(
 ): Promise<DevSnippet> {
   const user = await requireUser();
   const supabase = await createClient();
-  let names = await categoryNamesForUser(user.id);
+  const names = await categoryNamesForUser(user.id);
 
   const patch: Record<string, unknown> = {};
   if (input.title !== undefined) patch.title = input.title.trim();
@@ -157,38 +162,6 @@ export async function updateDevSnippet(
   if (input.imageUrl !== undefined) patch.image_url = normalizeSnippetImage(input.imageUrl);
   if (input.isPinned !== undefined) patch.is_pinned = input.isPinned;
 
-  const shouldClassify =
-    input.title !== undefined ||
-    input.content !== undefined ||
-    input.language !== undefined ||
-    input.tags !== undefined;
-
-  if (shouldClassify) {
-    const { data: current, error: currentError } = await supabase
-      .from("dev_snippets")
-      .select("title, content, language, tags")
-      .eq("id", id)
-      .eq("user_id", user.id)
-      .single();
-    if (currentError) throw new Error(currentError.message);
-
-    const assigned = await assignCategory(
-      user.id,
-      hintFromInput({
-        title: input.title ?? (current.title as string),
-        content: input.content ?? (current.content as string),
-        language:
-          input.language !== undefined
-            ? input.language
-            : (current.language as string | null),
-        tags: input.tags ?? (current.tags as string[] | null) ?? [],
-      }),
-      names,
-    );
-    patch.category_id = assigned.categoryId;
-    names = assigned.names;
-  }
-
   const { data, error } = await supabase
     .from("dev_snippets")
     .update(patch)
@@ -198,8 +171,46 @@ export async function updateDevSnippet(
     .single();
 
   if (error) throw new Error(error.message);
-  revalidatePath("/app/snippets");
+  revalidateSnippetsLater();
   return rowToSnippet(data, names);
+}
+
+/** LLM (or local fallback) names the snippet, then creates/reuses a category. */
+export async function assignDevSnippetCategory(id: string): Promise<DevSnippet> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const names = await categoryNamesForUser(user.id);
+
+  const { data: current, error: currentError } = await supabase
+    .from("dev_snippets")
+    .select("title, content, language, tags")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .single();
+  if (currentError) throw new Error(currentError.message);
+
+  const assigned = await assignCategory(
+    user.id,
+    hintFromInput({
+      title: current.title as string,
+      content: current.content as string,
+      language: current.language as string | null,
+      tags: (current.tags as string[] | null) ?? [],
+    }),
+    names,
+  );
+
+  const { data, error } = await supabase
+    .from("dev_snippets")
+    .update({ category_id: assigned.categoryId })
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .select(SNIPPET_SELECT)
+    .single();
+
+  if (error) throw new Error(error.message);
+  revalidateSnippetsLater();
+  return rowToSnippet(data, assigned.names);
 }
 
 export async function deleteDevSnippet(id: string) {

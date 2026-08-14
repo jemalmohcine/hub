@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ChevronLeft,
   Copy,
   ExternalLink,
   Loader2,
@@ -32,6 +33,7 @@ import {
   useToast,
 } from "@/design-system";
 import {
+  assignDevSnippetCategory,
   createDevSnippet,
   deleteDevSnippet,
   deleteDevSnippetCategory,
@@ -85,6 +87,10 @@ export function SnippetsWorkspace({
   const [kindFilter, setKindFilter] = useState<DevSnippetKind | "all">("all");
   const [quickSearch, setQuickSearch] = useState("");
   const [editing, setEditing] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [pendingCategoryIds, setPendingCategoryIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [form, setForm] = useState(EMPTY_FORM);
   const { run, pending } = useAsyncAction();
   const toast = useToast();
@@ -161,10 +167,12 @@ export function SnippetsWorkspace({
     setEditing(true);
     setForm(EMPTY_FORM);
     setSelectedId(null);
+    setDetailOpen(true);
   }
 
   function startEdit(item: DevSnippet) {
     setEditing(true);
+    setDetailOpen(true);
     setForm({
       title: item.title,
       kind: item.kind,
@@ -179,7 +187,16 @@ export function SnippetsWorkspace({
   function cancelEdit() {
     setEditing(false);
     setForm(EMPTY_FORM);
-    if (!selectedId && snippets[0]) setSelectedId(snippets[0].id);
+    if (!selectedId) {
+      setDetailOpen(false);
+      if (snippets[0]) setSelectedId(snippets[0].id);
+    }
+  }
+
+  function closeMobileDetail() {
+    setEditing(false);
+    setForm(EMPTY_FORM);
+    setDetailOpen(false);
   }
 
   function parseTags(value: string) {
@@ -205,6 +222,31 @@ export function SnippetsWorkspace({
     });
   }
 
+  function queueCategory(id: string) {
+    setPendingCategoryIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    void assignDevSnippetCategory(id)
+      .then((updated) => {
+        setSnippets((prev) =>
+          prev.map((item) => (item.id === id ? updated : item)),
+        );
+        rememberCategory(updated);
+      })
+      .catch(() => {
+        /* keep the snippet even if ranking fails */
+      })
+      .finally(() => {
+        setPendingCategoryIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      });
+  }
+
   function handleSave() {
     const payload = {
       title: form.title,
@@ -218,34 +260,28 @@ export function SnippetsWorkspace({
 
     if (selectedId) {
       void run(() => updateDevSnippet(selectedId, payload), {
-        success: (updated) =>
-          updated.categoryName
-            ? `Snippet mis à jour · ${updated.categoryName}`
-            : "Snippet mis à jour",
+        success: "Snippet mis à jour",
         error: "Impossible de sauvegarder",
         onSuccess: (updated) => {
           setSnippets((prev) =>
             prev.map((item) => (item.id === selectedId ? updated : item)),
           );
-          rememberCategory(updated);
           setEditing(false);
+          queueCategory(updated.id);
         },
       });
       return;
     }
 
     void run(() => createDevSnippet(payload), {
-      success: (created) =>
-        created.categoryName
-          ? `Snippet créé · ${created.categoryName}`
-          : "Snippet créé",
+      success: "Snippet créé",
       error: "Impossible de créer le snippet",
       onSuccess: (created) => {
         setSnippets((prev) => [created, ...prev]);
-        rememberCategory(created);
         setSelectedId(created.id);
         setEditing(false);
         setForm(EMPTY_FORM);
+        queueCategory(created.id);
       },
     });
   }
@@ -315,6 +351,7 @@ export function SnippetsWorkspace({
 
   return (
     <Stack gap={4} className="pb-4 lg:pb-8">
+      <Stack gap={4} className={cn(detailOpen && "max-lg:hidden")}>
       <Card className="p-4">
         <Stack gap={3}>
           <div>
@@ -463,9 +500,10 @@ export function SnippetsWorkspace({
           ) : null}
         </Cluster>
       </Stack>
+      </Stack>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-        <Stack gap={2}>
+        <Stack gap={2} className={cn(detailOpen && "max-lg:hidden")}>
           {filtered.length === 0 ? (
             <EmptyState
               icon={Search}
@@ -486,6 +524,7 @@ export function SnippetsWorkspace({
                 onClick={() => {
                   setSelectedId(item.id);
                   setEditing(false);
+                  setDetailOpen(true);
                 }}
                 className={cn(
                   "rounded-2xl border p-3 text-left transition-colors",
@@ -517,12 +556,17 @@ export function SnippetsWorkspace({
                   <img
                     src={item.imageUrl}
                     alt=""
-                    className="mt-2 h-16 w-full rounded-lg object-cover"
+                    className="mt-2 h-10 w-10 rounded-lg object-cover"
                   />
                 ) : null}
                 <Cluster gap={2} className="mt-2 flex-wrap">
                   {item.categoryName ? (
                     <Badge tone="info">{item.categoryName}</Badge>
+                  ) : pendingCategoryIds.has(item.id) ? (
+                    <Badge tone="neutral" className="inline-flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      Classement…
+                    </Badge>
                   ) : null}
                   {item.language ? <Badge tone="neutral">{item.language}</Badge> : null}
                   {item.tags.slice(0, 3).map((tag) => (
@@ -536,9 +580,19 @@ export function SnippetsWorkspace({
           )}
         </Stack>
 
-        <Card className="p-4">
+        <Card className={cn("p-4", !detailOpen && "max-lg:hidden")}>
           {editing ? (
             <Stack gap={3}>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="lg:hidden -ml-2 w-fit"
+                onClick={closeMobileDetail}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Retour
+              </Button>
               <Text weight="medium">{selectedId ? "Modifier" : "Nouveau snippet / note"}</Text>
               <Field label="Titre" htmlFor="snippet-title">
                 <Input
@@ -603,13 +657,13 @@ export function SnippetsWorkspace({
                   id="snippet-content"
                   value={form.content}
                   onChange={(e) => setForm({ ...form, content: e.target.value })}
-                  rows={12}
+                  rows={8}
                   className="font-mono text-sm"
                   placeholder="Collez votre code, une note, ou joignez une image…"
                 />
               </Field>
               <Text size="sm" tone="muted">
-                L’IA choisit la catégorie d’après ce que tu écris.
+                L’IA range le snippet juste après la sauvegarde.
               </Text>
               <Cluster gap={2}>
                 <Button
@@ -627,6 +681,16 @@ export function SnippetsWorkspace({
             </Stack>
           ) : selected ? (
             <Stack gap={3}>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="lg:hidden -ml-2 w-fit"
+                onClick={closeMobileDetail}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Retour
+              </Button>
               <Cluster gap={2} className="justify-between">
                 <div className="min-w-0">
                   <Text weight="medium" className="truncate">
@@ -641,6 +705,11 @@ export function SnippetsWorkspace({
                     ) : null}
                     {selected.categoryName ? (
                       <Badge tone="info">{selected.categoryName}</Badge>
+                    ) : pendingCategoryIds.has(selected.id) ? (
+                      <Badge tone="neutral" className="inline-flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" />
+                        Classement…
+                      </Badge>
                     ) : null}
                   </Cluster>
                 </div>
@@ -701,7 +770,7 @@ export function SnippetsWorkspace({
                 <img
                   src={selected.imageUrl}
                   alt={selected.title}
-                  className="max-h-80 w-full rounded-xl bg-muted/40 object-contain"
+                  className="max-h-48 w-full rounded-xl bg-muted/40 object-contain lg:max-h-64"
                 />
               ) : null}
 

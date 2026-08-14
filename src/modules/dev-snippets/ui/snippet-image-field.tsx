@@ -36,7 +36,13 @@ export function SnippetImageField({
         onError(err instanceof Error ? err.message : "Impossible de lire l’image.");
       } finally {
         setPending(false);
-        if (inputRef.current) inputRef.current.value = "";
+        if (inputRef.current) {
+          inputRef.current.value = "";
+          inputRef.current.blur();
+        }
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
       }
     },
     [onChange, onError],
@@ -66,12 +72,12 @@ export function SnippetImageField({
         Capture d’écran, schéma, ou lien. Tu peux aussi coller (Ctrl+V / Cmd+V).
       </Text>
       {value ? (
-        <div className="relative overflow-hidden rounded-xl border border-border bg-muted/40">
+        <div className="relative h-36 max-h-[30vh] overflow-hidden rounded-xl border border-border bg-muted/40">
           {/* eslint-disable-next-line @next/next/no-img-element -- data URLs and arbitrary user URLs */}
           <img
             src={value}
             alt="Aperçu de l’image du snippet"
-            className="max-h-56 w-full object-contain"
+            className="h-full w-full object-contain"
           />
           <IconButton
             type="button"
@@ -91,7 +97,7 @@ export function SnippetImageField({
           id="snippet-image-file"
           type="file"
           accept="image/jpeg,image/png,image/gif,image/webp"
-          className="sr-only"
+          className="pointer-events-none fixed top-0 left-0 h-px w-px opacity-0"
           onChange={(event) => void attachFile(event.target.files?.[0] ?? null)}
         />
         <Button
