@@ -24,6 +24,9 @@ export type JobListing = {
 };
 
 export type JobSearchPrefs = {
+  /** Catalog ids (or custom labels) — multi-select. */
+  roles: string[];
+  /** Joined labels, kept for collectors / matching. */
   roleQuery: string;
   /** Catalog ids (cities / countries), multi-select. */
   locations: string[];
@@ -74,6 +77,7 @@ export const JOB_LISTING_FILTER_LABELS: Record<JobListingFilter, string> = {
 };
 
 export const EMPTY_JOB_SEARCH_PREFS: JobSearchPrefs = {
+  roles: [],
   roleQuery: "",
   locations: [],
   workMode: "hybrid",

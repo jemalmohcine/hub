@@ -3,7 +3,7 @@ import {
   expandWithParentCountries,
   resolveLocations,
 } from "@/modules/job-board/locations";
-import { isCredibleRegion, roleMatches } from "@/modules/job-board/match";
+import { isCredibleRegion, roleMatchesAny } from "@/modules/job-board/match";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 
 type JobicyJob = {
@@ -44,7 +44,7 @@ async function collectJobicyGeo(geo: string, prefs: JobSearchPrefs): Promise<Raw
     if (!job.jobTitle || !job.companyName || !job.url) return [];
     const blob = `${job.jobTitle} ${job.jobExcerpt ?? ""} ${job.jobDescription ?? ""} ${job.jobGeo ?? ""}`;
     if (!isCredibleRegion(job.jobGeo, blob, selected)) return [];
-    if (!roleMatches(prefs.roleQuery, blob)) return [];
+    if (!roleMatchesAny(prefs, blob)) return [];
     return [
       {
         source: "jobicy",

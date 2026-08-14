@@ -99,7 +99,11 @@ export function locationMatches(
 ): boolean {
   const hay = haystack(location, extra);
   if (!hay) return false;
+  if (entry.id === "monde") return true;
   if (entry.id === "europe") return EUROPE_HINT.test(hay) || FRANCE_HINT.test(hay);
+  if (entry.id === "afrique") {
+    return /\b(africa|afrique|maroc|morocco|alger|tunis|dakar|senegal|egypt|nigeria|kenya)\b/i.test(hay);
+  }
   if (entry.kind === "country" || entry.kind === "region") {
     return locationVariants(entry).some((variant) => hay.includes(variant));
   }
@@ -122,11 +126,11 @@ export function isCredibleRegion(
   selected: JobLocation[] = [],
 ): boolean {
   const text = `${location ?? ""} ${blob}`;
-  if (WORLDWIDE_ONLY.test(text) && !FRANCE_HINT.test(text) && !EUROPE_HINT.test(text)) {
-    return false;
-  }
   if (selected.length > 0) {
     return anyLocationMatches(selected, location, blob);
+  }
+  if (WORLDWIDE_ONLY.test(text) && !FRANCE_HINT.test(text) && !EUROPE_HINT.test(text)) {
+    return false;
   }
   if (FRANCE_HINT.test(text) || EUROPE_HINT.test(text)) return true;
   if (!location || !location.trim()) return false;
@@ -170,6 +174,13 @@ export function roleMatches(roleQuery: string, blob: string): boolean {
   return needles.some((token) => hay.includes(token));
 }
 
+export function roleMatchesAny(prefs: JobSearchPrefs, blob: string): boolean {
+  const needles =
+    prefs.roles.length > 0 ? prefs.roles : prefs.roleQuery.trim() ? [prefs.roleQuery] : [];
+  if (needles.length === 0) return true;
+  return needles.some((role) => roleMatches(role, blob));
+}
+
 export function matchesSearchPrefs(
   listing: {
     title: string;
@@ -205,5 +216,8 @@ export function matchesSearchPrefs(
     }
   }
 
-  return roleMatches(prefs.roleQuery, blob);
+  const roleNeedles =
+    prefs.roles.length > 0 ? prefs.roles : prefs.roleQuery.trim() ? [prefs.roleQuery] : [];
+  if (roleNeedles.length === 0) return true;
+  return roleMatchesAny(prefs, blob);
 }

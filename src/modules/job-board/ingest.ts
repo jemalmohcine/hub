@@ -20,12 +20,19 @@ function prefsFromRow(row: {
   city: string;
   work_mode: string;
   locations?: string[] | null;
+  roles?: string[] | null;
 }): JobSearchPrefs {
   const fromColumn = Array.isArray(row.locations) ? row.locations : [];
   const fallback = row.city
     ? row.city.split(",").map((part) => part.trim()).filter(Boolean)
     : [];
+  const fromRoles = Array.isArray(row.roles) ? row.roles : [];
+  const fallbackRoles = row.role_query
+    ? row.role_query.split(/[·,/|]/g).map((part) => part.trim()).filter(Boolean)
+    : [];
+  const roles = fromRoles.length > 0 ? fromRoles : fallbackRoles;
   return {
+    roles,
     roleQuery: row.role_query,
     locations: resolveLocations(fromColumn.length > 0 ? fromColumn : fallback).map(
       (entry) => entry.id,
@@ -107,16 +114,26 @@ export async function ingestJobsForPrefs(prefs: JobSearchPrefs) {
 
 export async function runJobBoardIngest() {
   const admin = createAdminClient();
-  const { data: prefRows } = await admin
+  const full = await admin
     .from("job_search_prefs")
-    .select("role_query, city, work_mode, locations");
+    .select("role_query, city, work_mode, locations, roles");
+  const prefRows =
+    full.data ??
+    (
+      await admin
+        .from("job_search_prefs")
+        .select("role_query, city, work_mode, locations")
+    ).data ??
+    (
+      await admin.from("job_search_prefs").select("role_query, city, work_mode")
+    ).data;
 
   const unique = new Map<string, JobSearchPrefs>();
   for (const row of prefRows ?? []) {
     const prefs = prefsFromRow(row);
-    if (!prefs.roleQuery.trim()) continue;
+    if (!prefs.roleQuery.trim() && prefs.roles.length === 0) continue;
     unique.set(
-      `${prefs.roleQuery}|${prefs.locations.slice().sort().join(",")}|${prefs.workMode}`.toLowerCase(),
+      `${prefs.roles.slice().sort().join(",")}|${prefs.roleQuery}|${prefs.locations.slice().sort().join(",")}|${prefs.workMode}`.toLowerCase(),
       prefs,
     );
   }
