@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/core/auth/supabase/server";
 import { assertEntitled } from "@/core/entitlements/assert-entitled";
 import { ENTITLEMENTS } from "@/core/entitlements/keys";
+import { addDaysIso } from "@/lib/dates";
 import type {
   JobApplication,
   JobApplicationInput,
@@ -107,7 +108,16 @@ export async function updateJobApplication(
 }
 
 export async function updateJobStatus(id: string, status: JobApplicationStatus) {
-  await updateJobApplication(id, { status });
+  const patch: Partial<JobApplicationInput> = { status };
+  if (status === "applied") {
+    patch.appliedAt = addDaysIso(new Date(), 0);
+    patch.followUpAt = addDaysIso(new Date(), 7);
+  }
+  await updateJobApplication(id, patch);
+}
+
+export async function snoozeJobFollowUp(id: string, days = 7) {
+  await updateJobApplication(id, { followUpAt: addDaysIso(new Date(), days) });
 }
 
 export async function deleteJobApplication(id: string) {

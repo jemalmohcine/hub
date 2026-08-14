@@ -7,7 +7,6 @@ import {
   Loader2,
   MapPin,
   Search,
-  Sparkles,
 } from "lucide-react";
 import {
   Badge,
@@ -25,97 +24,76 @@ import {
 import {
   applyToJobListing,
   importJobFromUrl,
+  searchJobsForMe,
 } from "@/modules/job-board/actions";
 import {
-  EMPLOYMENT_CATEGORY_LABELS,
-  JOB_LISTING_FILTER_LABELS,
+  WORK_MODE_LABELS,
   type JobListing,
-  type JobListingFilter,
+  type JobSearchPrefs,
+  type JobWorkMode,
 } from "@/modules/job-board/types";
 import type { CvDocumentSummary } from "@/modules/cv-builder/types";
 import type { JobApplication } from "@/modules/job-tracker/types";
-import { cn } from "@/lib/utils";
 
-const FILTERS: JobListingFilter[] = [
-  "all",
-  "salaried",
-  "freelance_part_time",
-  "freelance_full_time",
-];
+const MODES: JobWorkMode[] = ["remote", "hybrid", "onsite"];
 
-function categoryLabel(listing: JobListing): string {
-  if (listing.employmentCategory === "salaried") {
-    return EMPLOYMENT_CATEGORY_LABELS.salaried;
-  }
-  if (listing.freelanceSubtype === "part_time") {
-    return JOB_LISTING_FILTER_LABELS.freelance_part_time;
-  }
-  return JOB_LISTING_FILTER_LABELS.freelance_full_time;
-}
-
-function categoryTone(listing: JobListing): "brand" | "warning" | "info" {
-  if (listing.employmentCategory === "salaried") return "info";
-  if (listing.freelanceSubtype === "part_time") return "warning";
-  return "brand";
+function modeTone(mode: JobListing["workMode"]): "info" | "brand" | "neutral" {
+  if (mode === "remote") return "info";
+  if (mode === "hybrid") return "brand";
+  return "neutral";
 }
 
 export function JobBoardWorkspace({
   initialListings,
+  initialPrefs,
   cvDocuments,
   trackedListingIds,
   onApplicationCreated,
 }: {
   initialListings: JobListing[];
+  initialPrefs: JobSearchPrefs;
   cvDocuments: CvDocumentSummary[];
   trackedListingIds: string[];
   onApplicationCreated?: (application: JobApplication) => void;
 }) {
-  const [listings] = useState(initialListings);
-  const [filter, setFilter] = useState<JobListingFilter>("all");
-  const [query, setQuery] = useState("");
+  const [listings, setListings] = useState(initialListings);
+  const [prefs, setPrefs] = useState(initialPrefs);
   const [cvId, setCvId] = useState(cvDocuments[0]?.id ?? "");
   const [importUrl, setImportUrl] = useState("");
   const [tracked, setTracked] = useState(() => new Set(trackedListingIds));
   const { run, pending } = useAsyncAction();
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return listings.filter((listing) => {
-      if (filter === "salaried" && listing.employmentCategory !== "salaried") {
-        return false;
-      }
-      if (
-        filter === "freelance_part_time" &&
-        !(
-          listing.employmentCategory === "freelance" &&
-          listing.freelanceSubtype === "part_time"
-        )
-      ) {
-        return false;
-      }
-      if (
-        filter === "freelance_full_time" &&
-        !(
-          listing.employmentCategory === "freelance" &&
-          listing.freelanceSubtype === "full_time"
-        )
-      ) {
-        return false;
-      }
-      if (!q) return true;
-      const blob = `${listing.title} ${listing.company} ${listing.description ?? ""}`.toLowerCase();
-      return blob.includes(q);
-    });
-  }, [listings, filter, query]);
+  const canSearch =
+    prefs.roleQuery.trim().length >= 2 &&
+    (prefs.workMode !== "onsite" || prefs.city.trim().length > 0);
 
-  function handleApply(listing: JobListing) {
+  const sorted = useMemo(() => listings, [listings]);
+
+  function handleSearch() {
+    if (!canSearch) return;
+    void run(() => searchJobsForMe(prefs), {
+      success: (result) =>
+        result.listings.length === 1
+          ? "1 offre trouvée"
+          : `${result.listings.length} offres trouvées`,
+      error: "Impossible de chercher les offres",
+      onSuccess: (result) => {
+        setPrefs(result.prefs);
+        setListings(result.listings);
+      },
+    });
+  }
+
+  function handleFollow(listing: JobListing, openOffer: boolean) {
     void run(() => applyToJobListing(listing.id, cvId || null), {
-      success: "Ajouté à vos candidatures",
+      success: openOffer ? "Suivi — ouverture de l’offre" : "Ajouté au suivi",
       error: "Impossible de suivre cette offre",
       onSuccess: (application) => {
         setTracked((prev) => new Set(prev).add(listing.id));
         onApplicationCreated?.(application);
-        window.open(listing.url, "_blank", "noopener,noreferrer");
+        if (openOffer) {
+          window.open(listing.url, "_blank", "noopener,noreferrer");
+        }
       },
     });
   }
@@ -124,14 +102,11 @@ export function JobBoardWorkspace({
     const url = importUrl.trim();
     if (!url) return;
     void run(() => importJobFromUrl(url, cvId || null), {
-      success: "Offre importée dans vos candidatures",
+      success: "Offre ajoutée au suivi",
       error: "Impossible d’importer cette URL",
       onSuccess: (application) => {
         setImportUrl("");
         onApplicationCreated?.(application);
-        if (application.jobUrl) {
-          window.open(application.jobUrl, "_blank", "noopener,noreferrer");
-        }
       },
     });
   }
@@ -140,66 +115,86 @@ export function JobBoardWorkspace({
     <Stack gap={4} className="pb-8">
       <Card className="p-4">
         <Stack gap={3}>
-          <Cluster gap={2}>
-            <Sparkles className="h-4 w-4 text-[var(--dh-brand)]" />
-            <Text weight="medium">Offres scrappées pour devs</Text>
-          </Cluster>
-          <Text size="sm" tone="muted">
-            Postule depuis l’app : l’offre est ajoutée à ton suivi de candidatures
-            avec la catégorie (salariat ou freelance).
-          </Text>
-          <Field label="CV pour la candidature" htmlFor="board-cv">
-            <Select
-              id="board-cv"
-              value={cvId}
-              onChange={(e) => setCvId(e.target.value)}
-            >
-              <option value="">Aucun CV lié</option>
-              {cvDocuments.map((cv) => (
-                <option key={cv.id} value={cv.id}>
-                  {cv.title}
-                </option>
-              ))}
-            </Select>
+          <div>
+            <Text weight="medium">Ce que tu cherches</Text>
+            <Text size="sm" tone="muted" className="mt-1">
+              Poste, ville, télétravail ou présentiel. On scrape des sources FR
+              (pas le mondial) et on te ramène les offres.
+            </Text>
+          </div>
+          <Field label="Type de poste" htmlFor="job-role-query">
+            <Input
+              id="job-role-query"
+              value={prefs.roleQuery}
+              onChange={(e) => setPrefs({ ...prefs, roleQuery: e.target.value })}
+              placeholder="Ex. développeur React, data engineer…"
+            />
           </Field>
+          <Field
+            label="Ville"
+            htmlFor="job-city"
+            hint={
+              prefs.workMode === "remote"
+                ? "Optionnel en télétravail (France)."
+                : "Ex. Paris, Lyon, Nantes…"
+            }
+          >
+            <Input
+              id="job-city"
+              value={prefs.city}
+              onChange={(e) => setPrefs({ ...prefs, city: e.target.value })}
+              placeholder={prefs.workMode === "remote" ? "France" : "Paris"}
+            />
+          </Field>
+          <div>
+            <Text size="sm" weight="medium" className="mb-2">
+              Mode
+            </Text>
+            <Cluster gap={2} className="flex-wrap">
+              {MODES.map((mode) => (
+                <Button
+                  key={mode}
+                  type="button"
+                  size="sm"
+                  variant={prefs.workMode === mode ? "primary" : "outline"}
+                  onClick={() => setPrefs({ ...prefs, workMode: mode })}
+                >
+                  {WORK_MODE_LABELS[mode]}
+                </Button>
+              ))}
+            </Cluster>
+          </div>
+          {cvDocuments.length > 0 ? (
+            <Field label="CV à lier au suivi" htmlFor="board-cv">
+              <Select
+                id="board-cv"
+                value={cvId}
+                onChange={(e) => setCvId(e.target.value)}
+              >
+                <option value="">Aucun CV lié</option>
+                {cvDocuments.map((cv) => (
+                  <option key={cv.id} value={cv.id}>
+                    {cv.title}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : null}
+          <Button
+            type="button"
+            disabled={pending || !canSearch}
+            onClick={handleSearch}
+          >
+            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            Trouver des offres
+          </Button>
         </Stack>
       </Card>
-
-      <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {FILTERS.map((id) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setFilter(id)}
-            className={cn(
-              "shrink-0 rounded-full px-3.5 py-2 text-sm font-medium transition-colors",
-              filter === id
-                ? "bg-foreground text-background"
-                : "bg-muted text-muted-foreground",
-            )}
-          >
-            {JOB_LISTING_FILTER_LABELS[id]}
-          </button>
-        ))}
-      </div>
-
-      <Field label="Rechercher" htmlFor="board-search">
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            id="board-search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="React, remote, freelance…"
-            className="pl-9"
-          />
-        </div>
-      </Field>
 
       <Card className="p-4">
         <Stack gap={2}>
           <Text size="sm" weight="medium">
-            Importer une offre par URL
+            J’ai déjà un lien
           </Text>
           <Cluster gap={2} className="flex-col sm:flex-row">
             <Input
@@ -214,18 +209,18 @@ export function JobBoardWorkspace({
               onClick={handleImportUrl}
             >
               {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Importer
+              Suivre
             </Button>
           </Cluster>
         </Stack>
       </Card>
 
       <Text size="sm" tone="muted">
-        {filtered.length} offre{filtered.length !== 1 ? "s" : ""}
+        {sorted.length} offre{sorted.length !== 1 ? "s" : ""}
       </Text>
 
       <Stack gap={2}>
-        {filtered.map((listing) => {
+        {sorted.map((listing) => {
           const isTracked = tracked.has(listing.id);
           return (
             <Card key={listing.id} className="p-4">
@@ -242,7 +237,13 @@ export function JobBoardWorkspace({
                       </Text>
                     </Cluster>
                   </div>
-                  <Badge tone={categoryTone(listing)}>{categoryLabel(listing)}</Badge>
+                  <Cluster gap={1} className="flex-wrap">
+                    {listing.workMode ? (
+                      <Badge tone={modeTone(listing.workMode)}>
+                        {WORK_MODE_LABELS[listing.workMode]}
+                      </Badge>
+                    ) : null}
+                  </Cluster>
                 </Cluster>
 
                 {listing.location ? (
@@ -271,24 +272,23 @@ export function JobBoardWorkspace({
                     type="button"
                     size="sm"
                     disabled={pending}
-                    onClick={() => handleApply(listing)}
+                    onClick={() => handleFollow(listing, true)}
                   >
                     {pending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <ExternalLink className="h-4 w-4" />
                     )}
-                    {isTracked ? "Ouvrir l’offre" : "Postuler & suivre"}
+                    {isTracked ? "Ouvrir" : "Postuler"}
                   </Button>
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() =>
-                      window.open(listing.url, "_blank", "noopener,noreferrer")
-                    }
+                    disabled={pending || isTracked}
+                    onClick={() => handleFollow(listing, false)}
                   >
-                    Voir
+                    {isTracked ? "Déjà suivi" : "Suivre"}
                   </Button>
                 </Cluster>
               </Stack>
@@ -296,11 +296,11 @@ export function JobBoardWorkspace({
           );
         })}
 
-        {filtered.length === 0 ? (
+        {sorted.length === 0 ? (
           <EmptyState
             icon={Briefcase}
-            title="Aucune offre pour ce filtre"
-            hint="Le scrape quotidien alimentera cette liste."
+            title="Aucune offre pour l’instant"
+            hint="Remplis le poste, la ville et le mode, puis lance la recherche."
           />
         ) : null}
       </Stack>

@@ -5,7 +5,7 @@ import { aiIntelItemHref } from "@/modules/ai-intel/item-link";
 import { getAiIntelFeed, getLatestAiIntelRun } from "@/modules/ai-intel/queries";
 import { isHotAlert } from "@/modules/ai-intel/ui/rank";
 import { computeMonthlyTotals, listDevExpenseServices } from "@/modules/dev-expenses/queries";
-import { listJobListings } from "@/modules/job-board/queries";
+import { listJobListingsForPrefs, getJobSearchPrefs } from "@/modules/job-board/queries";
 import { listJobApplications } from "@/modules/job-tracker/queries";
 import type { TodayDigest, TodayHighlight, TodaySignal } from "@/modules/today/types";
 import { formatCurrencyCents } from "@/lib/numbers";
@@ -48,8 +48,11 @@ async function aiSignals(userId: string): Promise<{
 }
 
 async function jobSignals(userId: string): Promise<TodaySignal[]> {
+  const prefs = await getJobSearchPrefs(userId).catch(() => null);
   const [listings, applications] = await Promise.all([
-    listJobListings("all").catch(() => []),
+    prefs?.roleQuery
+      ? listJobListingsForPrefs(prefs).catch(() => [])
+      : Promise.resolve([]),
     listJobApplications(userId).catch(() => []),
   ]);
 

@@ -63,10 +63,10 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
   {
     id: "jobs",
     label: "Candidatures",
-    description: "Suivi des offres et candidatures",
-    pageDescription: "Offres collectées et suivi de tes candidatures.",
+    description: "Offres près de chez toi et suivi des candidatures",
+    pageDescription: "Cherche par poste, ville et télétravail, puis suis tes relances.",
     upsell:
-      "Collecte des offres remote, suis tes candidatures et tes relances au même endroit.",
+      "Trouve des offres en France (présentiel, hybride ou remote) et suis tes candidatures au même endroit.",
     href: "/app/career?tab=jobs",
     order: 25,
     requiredEntitlement: ENTITLEMENTS.jobs,

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Briefcase,
+  Clock,
   ExternalLink,
   Loader2,
   Plus,
@@ -25,6 +26,7 @@ import {
 import {
   createJobApplication,
   deleteJobApplication,
+  snoozeJobFollowUp,
   updateJobApplication,
   updateJobStatus,
 } from "@/modules/job-tracker/actions";
@@ -39,6 +41,7 @@ import {
   FREELANCE_SUBTYPE_LABELS,
 } from "@/modules/job-board/types";
 import type { CvDocumentSummary } from "@/modules/cv-builder/types";
+import { addDaysIso, formatDate, toDayKey } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
 const EMPTY_FORM = {
@@ -95,6 +98,14 @@ export function JobTrackerWorkspace({
     return map;
   }, [jobs]);
 
+  const today = toDayKey(new Date());
+  const toNudge = jobs.filter(
+    (job) =>
+      job.followUpAt &&
+      job.followUpAt <= today &&
+      (job.status === "to_apply" || job.status === "applied"),
+  );
+
   function handleCreate() {
     void run(
       () =>
@@ -122,10 +133,33 @@ export function JobTrackerWorkspace({
 
   function handleStatusChange(id: string, status: JobApplicationStatus) {
     setJobs((prev) =>
-      prev.map((j) => (j.id === id ? { ...j, status, updatedAt: new Date().toISOString() } : j)),
+      prev.map((j) =>
+        j.id === id
+          ? {
+              ...j,
+              status,
+              appliedAt:
+                status === "applied" ? addDaysIso(new Date(), 0) : j.appliedAt,
+              followUpAt:
+                status === "applied" ? addDaysIso(new Date(), 7) : j.followUpAt,
+              updatedAt: new Date().toISOString(),
+            }
+          : j,
+      ),
     );
     void run(() => updateJobStatus(id, status), {
       error: "Impossible de mettre à jour le statut",
+    });
+  }
+
+  function handleSnooze(id: string) {
+    const next = addDaysIso(new Date(), 7);
+    setJobs((prev) =>
+      prev.map((j) => (j.id === id ? { ...j, followUpAt: next } : j)),
+    );
+    void run(() => snoozeJobFollowUp(id, 7), {
+      success: "Relance dans 7 jours",
+      error: "Impossible de décaler la relance",
     });
   }
 
@@ -154,6 +188,50 @@ export function JobTrackerWorkspace({
           Ajouter
         </Button>
       </Cluster>
+
+      {toNudge.length > 0 ? (
+        <Card className="p-4">
+          <Stack gap={2}>
+            <Cluster gap={2}>
+              <Clock className="h-4 w-4 text-[var(--dh-brand)]" />
+              <Text weight="medium">À relancer</Text>
+            </Cluster>
+            <Text size="sm" tone="muted">
+              {toNudge.length} candidature{toNudge.length > 1 ? "s" : ""} à traiter
+              aujourd’hui.
+            </Text>
+            {toNudge.map((job) => (
+              <Cluster key={job.id} gap={2} className="flex-wrap justify-between">
+                <Text size="sm">
+                  {job.role} · {job.company}
+                </Text>
+                <Cluster gap={1}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() =>
+                      handleStatusChange(
+                        job.id,
+                        job.status === "to_apply" ? "applied" : "interview",
+                      )
+                    }
+                  >
+                    {job.status === "to_apply" ? "J’ai postulé" : "Entretien"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleSnooze(job.id)}
+                  >
+                    +7 j
+                  </Button>
+                </Cluster>
+              </Cluster>
+            ))}
+          </Stack>
+        </Card>
+      ) : null}
 
       {showForm ? (
         <Card className="p-4">
@@ -269,6 +347,7 @@ export function JobTrackerWorkspace({
                   cvTitle={cvTitle(job.cvDocumentId)}
                   disabled={pending}
                   onStatusChange={handleStatusChange}
+                  onSnooze={handleSnooze}
                   onDelete={handleDelete}
                   onNotesSave={(notes) => {
                     setJobs((prev) =>
@@ -291,11 +370,22 @@ export function JobTrackerWorkspace({
   );
 }
 
+function nextAction(status: JobApplicationStatus): {
+  label: string;
+  status: JobApplicationStatus;
+} | null {
+  if (status === "to_apply") return { label: "J’ai postulé", status: "applied" };
+  if (status === "applied") return { label: "Entretien", status: "interview" };
+  if (status === "interview") return { label: "Offre reçue", status: "offer" };
+  return null;
+}
+
 function JobCard({
   job,
   cvTitle,
   disabled,
   onStatusChange,
+  onSnooze,
   onDelete,
   onNotesSave,
 }: {
@@ -303,11 +393,18 @@ function JobCard({
   cvTitle: string | null;
   disabled: boolean;
   onStatusChange: (id: string, status: JobApplicationStatus) => void;
+  onSnooze: (id: string) => void;
   onDelete: (id: string) => void;
   onNotesSave: (notes: string) => void;
 }) {
   const [editingNotes, setEditingNotes] = useState(false);
   const [notes, setNotes] = useState(job.notes ?? "");
+  const action = nextAction(job.status);
+  const followLabel = job.followUpAt ? formatDate(job.followUpAt, "fr", "short") : "";
+  const overdue =
+    Boolean(job.followUpAt) &&
+    job.followUpAt! <= toDayKey(new Date()) &&
+    (job.status === "to_apply" || job.status === "applied");
 
   return (
     <Card className="p-3">
@@ -367,6 +464,23 @@ function JobCard({
           </Text>
         ) : null}
 
+        {followLabel ? (
+          <Text size="sm" tone={overdue ? "muted" : "muted"}>
+            Relance {overdue ? "aujourd’hui" : `le ${followLabel}`}
+          </Text>
+        ) : null}
+
+        {action ? (
+          <Button
+            type="button"
+            size="sm"
+            disabled={disabled}
+            onClick={() => onStatusChange(job.id, action.status)}
+          >
+            {action.label}
+          </Button>
+        ) : null}
+
         <Select
           value={job.status}
           disabled={disabled}
@@ -381,6 +495,18 @@ function JobCard({
         </Select>
 
         <Cluster gap={1}>
+          {(job.status === "to_apply" || job.status === "applied") && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7"
+              disabled={disabled}
+              onClick={() => onSnooze(job.id)}
+            >
+              +7 j
+            </Button>
+          )}
           <Button
             type="button"
             size="sm"

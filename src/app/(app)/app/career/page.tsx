@@ -5,7 +5,8 @@ import { PageSkeleton } from "@/design-system";
 import { defaultCvDocument } from "@/modules/cv-builder/defaults";
 import { getCvDocumentById, listCvDocuments } from "@/modules/cv-builder/queries";
 import { CareerWorkspace } from "@/modules/career/ui/career-workspace";
-import { listJobListings } from "@/modules/job-board/queries";
+import { listJobListingsForPrefs, getJobSearchPrefs } from "@/modules/job-board/queries";
+import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
 import { listJobApplications } from "@/modules/job-tracker/queries";
 import { ModulePage, isModulePageUnlocked } from "@/shared/ui/module-page";
 
@@ -15,7 +16,7 @@ const CAREER_MODULES = ["cv", "jobs"] as const;
 
 const CAREER_COPY = {
   title: "Carrière",
-  description: "CV Builder, offres d’emploi collectées et suivi des candidatures.",
+  description: "CV Builder, recherche d’offres en France et suivi des candidatures.",
   upsell: "Crée tes CV, adapte-les aux offres et suis tes candidatures.",
 };
 
@@ -40,10 +41,14 @@ export default async function CareerPage({ searchParams }: PageProps) {
   const cvEntitled = hasEntitlement(user.entitlements, ENTITLEMENTS.cv);
   const jobsEntitled = hasEntitlement(user.entitlements, ENTITLEMENTS.jobs);
 
+  const prefs = jobsEntitled
+    ? await getJobSearchPrefs(user.id).catch(() => ({ ...EMPTY_JOB_SEARCH_PREFS }))
+    : { ...EMPTY_JOB_SEARCH_PREFS };
+
   const [documents, jobs, listings] = await Promise.all([
     cvEntitled ? listCvDocuments(user.id).catch(() => []) : Promise.resolve([]),
     jobsEntitled ? listJobApplications(user.id).catch(() => []) : Promise.resolve([]),
-    jobsEntitled ? listJobListings("all").catch(() => []) : Promise.resolve([]),
+    jobsEntitled ? listJobListingsForPrefs(prefs).catch(() => []) : Promise.resolve([]),
   ]);
 
   const activeId = documents[0]?.id;
@@ -63,6 +68,7 @@ export default async function CareerPage({ searchParams }: PageProps) {
           initialDocuments={documents}
           initialJobs={jobs}
           initialListings={listings}
+          initialPrefs={prefs}
         />
       </Suspense>
     </ModulePage>
