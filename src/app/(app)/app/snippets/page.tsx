@@ -1,5 +1,5 @@
 import { requirePageUser } from "@/core/auth/get-user";
-import { listDevSnippets } from "@/modules/dev-snippets/queries";
+import { listDevSnippetCategories, listDevSnippets } from "@/modules/dev-snippets/queries";
 import { SnippetsWorkspace } from "@/modules/dev-snippets/ui/snippets-workspace";
 import { ModulePage, isModulePageUnlocked } from "@/shared/ui/module-page";
 
@@ -13,10 +13,11 @@ export default async function SnippetsPage() {
   }
 
   const snippets = await listDevSnippets(user.id).catch(() => []);
+  const categories = await listDevSnippetCategories(user.id).catch(() => []);
 
   return (
     <ModulePage module="snippets" user={user}>
-      <SnippetsWorkspace initialSnippets={snippets} />
+      <SnippetsWorkspace initialSnippets={snippets} initialCategories={categories} />
     </ModulePage>
   );
 }

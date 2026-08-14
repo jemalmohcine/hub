@@ -56,6 +56,16 @@ describe("scoreSnippet", () => {
     expect(scoreSnippet("js", item)).toBeGreaterThan(0);
   });
 
+  it("finds a user-created category name", () => {
+    const item = snippet({
+      id: "5",
+      title: "Healthcheck",
+      categoryName: "Docker",
+      content: "HEALTHCHECK CMD",
+    });
+    expect(scoreSnippet("docker", item)).toBeGreaterThan(0);
+  });
+
   it("returns 0 when nothing overlaps", () => {
     const item = snippet({
       id: "4",
