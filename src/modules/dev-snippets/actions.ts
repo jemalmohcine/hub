@@ -4,10 +4,15 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/core/auth/supabase/server";
 import { assertEntitled } from "@/core/entitlements/assert-entitled";
 import { ENTITLEMENTS } from "@/core/entitlements/keys";
-import { listDevSnippets } from "@/modules/dev-snippets/queries";
 import { rankSnippetsWithLlm } from "@/modules/dev-snippets/llm-search";
 import { rankSnippets } from "@/modules/dev-snippets/match";
-import type { DevSnippetInput } from "@/modules/dev-snippets/types";
+import {
+  listDevSnippetCategories,
+  listDevSnippets,
+  rowToSnippet,
+  SNIPPET_SELECT,
+} from "@/modules/dev-snippets/queries";
+import type { DevSnippetCategory, DevSnippetInput } from "@/modules/dev-snippets/types";
 
 /** Every action in this file requires the snippets module. */
 const requireUser = () => assertEntitled(ENTITLEMENTS.snippets);
@@ -20,6 +25,10 @@ function normalizeTags(tags?: string[]): string[] {
   );
 }
 
+function normalizeCategoryName(name: string): string {
+  return name.replace(/\s+/g, " ").trim().slice(0, 40);
+}
+
 function rowFromInput(input: DevSnippetInput, userId: string) {
   return {
     user_id: userId,
@@ -28,38 +37,39 @@ function rowFromInput(input: DevSnippetInput, userId: string) {
     language: input.language?.trim() || null,
     content: input.content,
     tags: normalizeTags(input.tags),
+    category_id: input.categoryId?.trim() || null,
     reference_url: input.referenceUrl?.trim() || null,
     is_pinned: input.isPinned ?? false,
   };
 }
 
+async function categoryNamesForUser(userId: string): Promise<Map<string, string>> {
+  const categories = await listDevSnippetCategories(userId);
+  return new Map(categories.map((category) => [category.id, category.name]));
+}
+
+function assertOwnCategory(categoryId: string | null | undefined, names: Map<string, string>) {
+  if (!categoryId) return;
+  if (!names.has(categoryId)) {
+    throw new Error("Cette catégorie ne t’appartient pas.");
+  }
+}
+
 export async function createDevSnippet(input: DevSnippetInput) {
   const user = await requireUser();
   const supabase = await createClient();
+  const names = await categoryNamesForUser(user.id);
+  assertOwnCategory(input.categoryId, names);
 
   const { data, error } = await supabase
     .from("dev_snippets")
     .insert(rowFromInput(input, user.id))
-    .select(
-      "id, title, kind, language, content, tags, reference_url, is_pinned, created_at, updated_at",
-    )
+    .select(SNIPPET_SELECT)
     .single();
 
   if (error) throw new Error(error.message);
   revalidatePath("/app/snippets");
-
-  return {
-    id: data.id,
-    title: data.title,
-    kind: data.kind,
-    language: data.language,
-    content: data.content,
-    tags: data.tags ?? [],
-    referenceUrl: data.reference_url,
-    isPinned: data.is_pinned,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
-  };
+  return rowToSnippet(data, names);
 }
 
 export async function updateDevSnippet(id: string, input: Partial<DevSnippetInput>) {
@@ -72,6 +82,11 @@ export async function updateDevSnippet(id: string, input: Partial<DevSnippetInpu
   if (input.language !== undefined) patch.language = input.language?.trim() || null;
   if (input.content !== undefined) patch.content = input.content;
   if (input.tags !== undefined) patch.tags = normalizeTags(input.tags);
+  if (input.categoryId !== undefined) {
+    const names = await categoryNamesForUser(user.id);
+    assertOwnCategory(input.categoryId, names);
+    patch.category_id = input.categoryId?.trim() || null;
+  }
   if (input.referenceUrl !== undefined) patch.reference_url = input.referenceUrl?.trim() || null;
   if (input.isPinned !== undefined) patch.is_pinned = input.isPinned;
 
@@ -101,6 +116,47 @@ export async function deleteDevSnippet(id: string) {
 
 export async function toggleDevSnippetPin(id: string, isPinned: boolean) {
   await updateDevSnippet(id, { isPinned });
+}
+
+export async function createDevSnippetCategory(name: string): Promise<DevSnippetCategory> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const trimmed = normalizeCategoryName(name);
+  if (!trimmed) throw new Error("Donne un nom à la catégorie.");
+
+  const { data, error } = await supabase
+    .from("dev_snippet_categories")
+    .insert({ user_id: user.id, name: trimmed })
+    .select("id, name, created_at")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error("Cette catégorie existe déjà.");
+    }
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/app/snippets");
+  return {
+    id: data.id as string,
+    name: data.name as string,
+    createdAt: data.created_at as string,
+  };
+}
+
+export async function deleteDevSnippetCategory(id: string) {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("dev_snippet_categories")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/app/snippets");
 }
 
 export async function searchDevSnippets(query: string): Promise<{

@@ -7,6 +7,7 @@ export type SnippetSearchItem = {
   language: string | null;
   content: string;
   tags: string[];
+  categoryName?: string | null;
 };
 
 /** Short aliases a developer types instead of the full word. */
@@ -42,6 +43,7 @@ function haystack(item: SnippetSearchItem) {
     title: foldCase(item.title),
     tags: foldCase(item.tags.join(" ")),
     language: foldCase(item.language ?? ""),
+    category: foldCase(item.categoryName ?? ""),
     content: foldCase(item.content),
   };
 }
@@ -63,6 +65,7 @@ export function scoreSnippet(query: string, item: SnippetSearchItem): number {
     const variants = expandToken(token);
     let tokenScore = 0;
     if (fieldHits(fields.title, variants)) tokenScore = Math.max(tokenScore, 50);
+    if (fieldHits(fields.category, variants)) tokenScore = Math.max(tokenScore, 45);
     if (fieldHits(fields.tags, variants)) tokenScore = Math.max(tokenScore, 40);
     if (fieldHits(fields.language, variants)) tokenScore = Math.max(tokenScore, 35);
     if (fieldHits(fields.content, variants)) tokenScore = Math.max(tokenScore, 18);
