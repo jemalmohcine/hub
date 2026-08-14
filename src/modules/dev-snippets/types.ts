@@ -16,6 +16,7 @@ export type DevSnippet = {
   categoryId: string | null;
   categoryName: string | null;
   referenceUrl: string | null;
+  imageUrl: string | null;
   isPinned: boolean;
   createdAt: string;
   updatedAt: string;
@@ -29,6 +30,7 @@ export type DevSnippetInput = {
   tags?: string[];
   categoryId?: string | null;
   referenceUrl?: string | null;
+  imageUrl?: string | null;
   isPinned?: boolean;
 };
 

@@ -2,7 +2,7 @@ import { createClient } from "@/core/auth/supabase/server";
 import type { DevSnippet, DevSnippetCategory } from "@/modules/dev-snippets/types";
 
 export const SNIPPET_SELECT =
-  "id, title, kind, language, content, tags, category_id, reference_url, is_pinned, created_at, updated_at";
+  "id, title, kind, language, content, tags, category_id, reference_url, image_url, is_pinned, created_at, updated_at";
 
 type SnippetRow = {
   id: string;
@@ -13,6 +13,7 @@ type SnippetRow = {
   tags: string[] | null;
   category_id: string | null;
   reference_url: string | null;
+  image_url: string | null;
   is_pinned: boolean;
   created_at: string;
   updated_at: string;
@@ -33,6 +34,7 @@ export function rowToSnippet(
     categoryId,
     categoryName: categoryId ? (categories.get(categoryId) ?? null) : null,
     referenceUrl: row.reference_url,
+    imageUrl: row.image_url ?? null,
     isPinned: row.is_pinned,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
