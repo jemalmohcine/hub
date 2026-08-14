@@ -1,4 +1,5 @@
 import { decodeXmlEntities, fetchText, HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
+import { resolveRoles } from "@/modules/job-board/roles";
 import {
   expandWithParentCountries,
   resolveLocations,
@@ -19,21 +20,60 @@ function cleanText(raw: string): string {
     .trim();
 }
 
-function indeedPlaces(prefs: JobSearchPrefs): string[] {
+const INDEED_HOST: Record<string, string> = {
+  france: "fr.indeed.com",
+  maroc: "ma.indeed.com",
+  belgique: "be.indeed.com",
+  suisse: "ch.indeed.com",
+  canada: "ca.indeed.com",
+  allemagne: "de.indeed.com",
+  "pays-bas": "nl.indeed.com",
+  espagne: "es.indeed.com",
+  portugal: "pt.indeed.com",
+  italie: "it.indeed.com",
+  "royaume-uni": "uk.indeed.com",
+  "emirats": "ae.indeed.com",
+};
+
+function indeedHostFor(locationId: string, countryId: string): string {
+  return INDEED_HOST[locationId] ?? INDEED_HOST[countryId] ?? "fr.indeed.com";
+}
+
+function indeedQueries(prefs: JobSearchPrefs): string[] {
+  const roles = resolveRoles(
+    prefs.roles.length > 0 ? prefs.roles : prefs.roleQuery ? [prefs.roleQuery] : [],
+  );
+  const queries = roles.map((role) => role.label);
+  return (queries.length > 0 ? queries : ["développeur"]).slice(0, 3);
+}
+
+function indeedTargets(prefs: JobSearchPrefs): { query: string; location: string; host: string }[] {
   const selected = resolveLocations(prefs.locations);
   const expanded =
     prefs.workMode === "remote" ? expandWithParentCountries(selected) : selected;
-  const places = expanded.map((entry) => entry.indeed);
-  if (places.length === 0) return ["France"];
-  return [...new Set(places)].slice(0, 5);
+  const places =
+    expanded.length > 0
+      ? expanded.slice(0, 5)
+      : [{ indeed: "France", id: "france", countryId: "france" as const }];
+  const queries = indeedQueries(prefs);
+  const targets: { query: string; location: string; host: string }[] = [];
+  for (const place of places) {
+    const host = indeedHostFor(place.id ?? "france", place.countryId ?? "france");
+    for (const query of queries) {
+      targets.push({ query, location: place.indeed, host });
+      if (targets.length >= 6) return targets;
+    }
+  }
+  return targets;
 }
 
 async function collectIndeedLocation(
   query: string,
   location: string,
+  host: string,
   workMode: JobSearchPrefs["workMode"],
 ): Promise<RawJobHit[]> {
-  const url = `https://fr.indeed.com/rss?q=${encodeURIComponent(query)}&l=${encodeURIComponent(location)}`;
+  const url = `https://${host}/rss?q=${encodeURIComponent(query)}&l=${encodeURIComponent(location)}`;
   const xml = await fetchText(url, { timeoutMs: HTTP_TIMEOUTS.slow });
   const items = xml.match(/<item[\s\S]*?<\/item>/gi) ?? [];
 
@@ -73,10 +113,10 @@ async function collectIndeedLocation(
  * Indeed France RSS — one request per selected city/country, role as the query.
  */
 export async function collectIndeedFr(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
-  const q = prefs.roleQuery.trim() || "développeur";
-  const places = indeedPlaces(prefs);
   const batches = await Promise.allSettled(
-    places.map((place) => collectIndeedLocation(q, place, prefs.workMode)),
+    indeedTargets(prefs).map((target) =>
+      collectIndeedLocation(target.query, target.location, target.host, prefs.workMode),
+    ),
   );
   return batches.flatMap((batch) => (batch.status === "fulfilled" ? batch.value : []));
 }

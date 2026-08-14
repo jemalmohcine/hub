@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Briefcase,
   ExternalLink,
@@ -25,7 +25,9 @@ import {
   importJobFromUrl,
   saveJobSearchConfig,
 } from "@/modules/job-board/actions";
-import { LocationMultiSelect } from "@/modules/job-board/ui/location-multi-select";
+import { MAX_JOB_LOCATIONS, resolveLocation, suggestLocations } from "@/modules/job-board/locations";
+import { MAX_JOB_ROLES, resolveRole, rolesToQuery, suggestRoles } from "@/modules/job-board/roles";
+import { ChipMultiSelect } from "@/modules/job-board/ui/chip-multi-select";
 import {
   WORK_MODE_LABELS,
   type JobListing,
@@ -37,6 +39,12 @@ import type { JobApplication } from "@/modules/job-tracker/types";
 
 const MODES: JobWorkMode[] = ["remote", "hybrid", "onsite"];
 
+const KIND_HINT = {
+  city: "Ville",
+  country: "Pays",
+  region: "Région",
+} as const;
+
 function modeTone(mode: JobListing["workMode"]): "info" | "brand" | "neutral" {
   if (mode === "remote") return "info";
   if (mode === "hybrid") return "brand";
@@ -46,12 +54,14 @@ function modeTone(mode: JobListing["workMode"]): "info" | "brand" | "neutral" {
 export function JobBoardWorkspace({
   initialListings,
   initialPrefs,
+  cvHint,
   cvDocuments,
   trackedListingIds,
   onApplicationCreated,
 }: {
   initialListings: JobListing[];
   initialPrefs: JobSearchPrefs;
+  cvHint: { roles: string[]; locations: string[] };
   cvDocuments: CvDocumentSummary[];
   trackedListingIds: string[];
   onApplicationCreated?: (application: JobApplication) => void;
@@ -62,21 +72,22 @@ export function JobBoardWorkspace({
   const [importUrl, setImportUrl] = useState("");
   const [tracked, setTracked] = useState(() => new Set(trackedListingIds));
   const [followingId, setFollowingId] = useState<string | null>(null);
+  const autoSaved = useRef(false);
   const saveAction = useAsyncAction();
   const importAction = useAsyncAction();
   const followAction = useAsyncAction();
 
   const canSave =
-    prefs.roleQuery.trim().length >= 2 &&
+    (prefs.roles.length > 0 || prefs.roleQuery.trim().length >= 2) &&
     (prefs.workMode !== "onsite" || prefs.locations.length > 0);
 
   const sorted = useMemo(() => listings, [listings]);
 
-  function handleSave() {
-    if (!canSave) return;
-    void saveAction.run(() => saveJobSearchConfig(prefs), {
-      success: "Config enregistrée — scrape chaque matin",
-      error: "Impossible d’enregistrer la recherche",
+  function persist(next: JobSearchPrefs, success: string) {
+    void saveAction.run(() => saveJobSearchConfig(next), {
+      success,
+      error: (err) =>
+        err instanceof Error ? err.message : "Impossible d’enregistrer la recherche",
       onSuccess: (result) => {
         setPrefs(result.prefs);
         setListings(result.listings);
@@ -84,19 +95,45 @@ export function JobBoardWorkspace({
     });
   }
 
+  useEffect(() => {
+    if (autoSaved.current) return;
+    const roles = prefs.roles.length > 0 ? prefs.roles : cvHint.roles;
+    const locations = prefs.locations.length > 0 ? prefs.locations : cvHint.locations;
+    if (roles.length === 0 && locations.length === 0) return;
+    if (roles === prefs.roles && locations === prefs.locations) return;
+    autoSaved.current = true;
+    const next: JobSearchPrefs = {
+      ...prefs,
+      roles,
+      locations,
+      roleQuery: rolesToQuery(roles) || prefs.roleQuery,
+    };
+    setPrefs(next);
+    persist(next, "Config reprise depuis ton CV");
+    // First paint only — prefs/cvHint are the server snapshot.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleSave() {
+    if (!canSave) return;
+    persist(prefs, "Config enregistrée — scrape chaque matin");
+  }
+
   function handleFollow(listing: JobListing, openOffer: boolean) {
     setFollowingId(listing.id);
-    void followAction.run(() => applyToJobListing(listing.id, cvId || null), {
-      success: openOffer ? "Suivi — ouverture de l’offre" : "Ajouté au suivi",
-      error: "Impossible de suivre cette offre",
-      onSuccess: (application) => {
-        setTracked((prev) => new Set(prev).add(listing.id));
-        onApplicationCreated?.(application);
-        if (openOffer) {
-          window.open(listing.url, "_blank", "noopener,noreferrer");
-        }
-      },
-    }).finally(() => setFollowingId(null));
+    void followAction
+      .run(() => applyToJobListing(listing.id, cvId || null), {
+        success: openOffer ? "Suivi — ouverture de l’offre" : "Ajouté au suivi",
+        error: "Impossible de suivre cette offre",
+        onSuccess: (application) => {
+          setTracked((prev) => new Set(prev).add(listing.id));
+          onApplicationCreated?.(application);
+          if (openOffer) {
+            window.open(listing.url, "_blank", "noopener,noreferrer");
+          }
+        },
+      })
+      .finally(() => setFollowingId(null));
   }
 
   function handleImportUrl() {
@@ -119,26 +156,50 @@ export function JobBoardWorkspace({
           <div>
             <Text weight="medium">Ta recherche</Text>
             <Text size="sm" tone="muted" className="mt-1">
-              Enregistre le poste, les villes ou pays, et le mode. Le scrape
-              tourne chaque matin — pas besoin de relancer à la main.
+              Postes, villes ou pays : multi-choix. Si tu as un CV, on préremplit
+              et on enregistre tout seul. Le scrape tourne chaque matin.
             </Text>
           </div>
-          <Field label="Type de poste" htmlFor="job-role-query">
-            <Input
-              id="job-role-query"
-              value={prefs.roleQuery}
-              onChange={(e) => setPrefs({ ...prefs, roleQuery: e.target.value })}
-              placeholder="Ex. développeur React, data engineer…"
+          <Field
+            label="Type de poste"
+            htmlFor="job-roles"
+            hint="Liste prédéfinie, ou tape pour ajouter le tien."
+          >
+            <ChipMultiSelect
+              id="job-roles"
+              value={prefs.roles}
+              max={MAX_JOB_ROLES}
+              placeholder="Cherche frontend, tech lead, data…"
+              resolveLabel={(id) => resolveRole(id).label}
+              suggest={(query, selected) =>
+                suggestRoles(query, selected).map((role) => ({
+                  id: role.id,
+                  label: role.label,
+                }))
+              }
+              onChange={(roles) =>
+                setPrefs({ ...prefs, roles, roleQuery: rolesToQuery(roles) })
+              }
             />
           </Field>
           <Field
             label="Villes ou pays"
             htmlFor="job-locations"
-            hint="Multi-choix. Tape pour les plus proches (Paris, Belgique, Lyon…)."
+            hint="Tous les pays, les grandes villes, ou ajoute le tien."
           >
-            <LocationMultiSelect
+            <ChipMultiSelect
               id="job-locations"
               value={prefs.locations}
+              max={MAX_JOB_LOCATIONS}
+              placeholder="Cherche Casablanca, Maroc, Paris…"
+              resolveLabel={(id) => resolveLocation(id).label}
+              suggest={(query, selected) =>
+                suggestLocations(query, selected).map((entry) => ({
+                  id: entry.id,
+                  label: entry.label,
+                  hint: KIND_HINT[entry.kind],
+                }))
+              }
               onChange={(locations) => setPrefs({ ...prefs, locations })}
             />
           </Field>
@@ -301,7 +362,7 @@ export function JobBoardWorkspace({
           <EmptyState
             icon={Briefcase}
             title="Les offres arrivent chaque matin"
-            hint="Enregistre poste, lieux et mode. Le scrape quotidien s’en sert — tu peux aussi coller un lien tout de suite."
+            hint="Ta config (poste + lieux) suffit. Tu peux aussi coller un lien tout de suite."
           />
         ) : null}
       </Stack>

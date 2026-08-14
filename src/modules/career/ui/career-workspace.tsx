@@ -7,6 +7,7 @@ import { Stack } from "@/design-system";
 import type { CvDocument, CvDocumentSummary } from "@/modules/cv-builder/types";
 import { CvBuilderWorkspace } from "@/modules/cv-builder/ui/cv-builder-workspace";
 import { JobBoardWorkspace } from "@/modules/job-board/ui/job-board-workspace";
+import { prefsHintFromCv } from "@/modules/job-board/prefs-from-cv";
 import type { JobListing, JobSearchPrefs } from "@/modules/job-board/types";
 import type { JobApplication } from "@/modules/job-tracker/types";
 import { JobTrackerWorkspace } from "@/modules/job-tracker/ui/job-tracker-workspace";
@@ -110,6 +111,7 @@ export function CareerWorkspace({
           <JobBoardWorkspace
             initialListings={initialListings}
             initialPrefs={initialPrefs}
+            cvHint={prefsHintFromCv(initialDoc)}
             cvDocuments={initialDocuments}
             trackedListingIds={trackedListingIds}
             onApplicationCreated={(application) => {

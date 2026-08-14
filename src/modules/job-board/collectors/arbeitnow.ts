@@ -3,7 +3,7 @@ import {
   expandWithParentCountries,
   resolveLocations,
 } from "@/modules/job-board/locations";
-import { isCredibleRegion, roleMatches } from "@/modules/job-board/match";
+import { isCredibleRegion, roleMatchesAny } from "@/modules/job-board/match";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 
 type ArbeitnowJob = {
@@ -37,7 +37,7 @@ export async function collectArbeitnow(prefs: JobSearchPrefs): Promise<RawJobHit
     if (!job.title || !job.company_name || !job.url) continue;
     const blob = `${job.title} ${job.description ?? ""} ${job.location ?? ""} ${(job.tags ?? []).join(" ")}`;
     if (!isCredibleRegion(job.location, blob, selected)) continue;
-    if (!roleMatches(prefs.roleQuery, blob)) continue;
+    if (!roleMatchesAny(prefs, blob)) continue;
 
     hits.push({
       source: "arbeitnow",

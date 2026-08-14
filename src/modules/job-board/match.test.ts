@@ -62,7 +62,7 @@ describe("matchesSearchPrefs", () => {
           tags: ["react"],
           workMode: "hybrid",
         },
-        { roleQuery: "react", locations: ["paris"], workMode: "hybrid" },
+        { roleQuery: "react", roles: ["react"], locations: ["paris"], workMode: "hybrid" },
       ),
     ).toBe(true);
   });
@@ -77,7 +77,7 @@ describe("matchesSearchPrefs", () => {
           tags: [],
           workMode: "remote",
         },
-        { roleQuery: "react", locations: ["paris"], workMode: "remote" },
+        { roleQuery: "react", roles: ["react"], locations: ["paris"], workMode: "remote" },
       ),
     ).toBe(false);
   });
@@ -92,7 +92,7 @@ describe("matchesSearchPrefs", () => {
           tags: ["react"],
           workMode: "hybrid",
         },
-        { roleQuery: "react", locations: ["belgique"], workMode: "hybrid" },
+        { roleQuery: "react", roles: ["react"], locations: ["belgique"], workMode: "hybrid" },
       ),
     ).toBe(true);
   });

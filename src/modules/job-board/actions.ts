@@ -6,6 +6,7 @@ import { assertEntitled } from "@/core/entitlements/assert-entitled";
 import { ENTITLEMENTS } from "@/core/entitlements/keys";
 import { addDaysIso } from "@/lib/dates";
 import { MAX_JOB_LOCATIONS, resolveLocations } from "@/modules/job-board/locations";
+import { MAX_JOB_ROLES, resolveRoles, rolesToQuery } from "@/modules/job-board/roles";
 import {
   getJobListingById,
   getJobListingByUrl,
@@ -65,8 +66,12 @@ export async function saveJobSearchConfig(prefs: JobSearchPrefs): Promise<{
 }> {
   const user = await requireUser();
   const roleQuery = prefs.roleQuery.trim();
-  if (roleQuery.length < 2) {
-    throw new Error("Indique le type de poste (ex. développeur React).");
+  const roles = resolveRoles(prefs.roles.length ? prefs.roles : roleQuery ? [roleQuery] : []);
+  if (roles.length === 0) {
+    throw new Error("Indique au moins un type de poste.");
+  }
+  if (roles.length > MAX_JOB_ROLES) {
+    throw new Error(`Choisis au plus ${MAX_JOB_ROLES} postes.`);
   }
   const locations = resolveLocations(prefs.locations).map((entry) => entry.id);
   if (prefs.workMode === "onsite" && locations.length === 0) {
@@ -77,7 +82,8 @@ export async function saveJobSearchConfig(prefs: JobSearchPrefs): Promise<{
   }
 
   const saved = await saveJobSearchPrefs(user.id, {
-    roleQuery,
+    roles: roles.map((role) => role.id),
+    roleQuery: rolesToQuery(roles.map((role) => role.id)),
     locations,
     workMode: prefs.workMode,
   });

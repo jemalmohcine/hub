@@ -1,58 +1,49 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { MapPin, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Badge, Cluster, Input, Text } from "@/design-system";
-import {
-  MAX_JOB_LOCATIONS,
-  resolveLocation,
-  suggestLocations,
-  type JobLocation,
-} from "@/modules/job-board/locations";
 
-const KIND_LABEL: Record<JobLocation["kind"], string> = {
-  city: "Ville",
-  country: "Pays",
-  region: "Région",
+export type ChipOption = {
+  id: string;
+  label: string;
+  hint?: string;
 };
 
-export function LocationMultiSelect({
+export function ChipMultiSelect({
   id,
   value,
   onChange,
   invalid,
   disabled,
+  placeholder,
+  max,
+  suggest,
+  resolveLabel,
 }: {
   id?: string;
   value: string[];
   onChange: (ids: string[]) => void;
   invalid?: boolean;
   disabled?: boolean;
+  placeholder: string;
+  max: number;
+  suggest: (query: string, selected: string[]) => ChipOption[];
+  resolveLabel: (id: string) => string;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const selected = useMemo(
-    () => value.map((id) => resolveLocation(id)),
-    [value],
-  );
-  const suggestions = useMemo(
-    () => suggestLocations(query, value, 8),
-    [query, value],
-  );
+  const suggestions = useMemo(() => suggest(query, value), [query, value, suggest]);
   const canAddCustom =
     query.trim().length >= 2 &&
-    !suggestions.some(
-      (entry) => entry.id === resolveLocation(query).id,
-    ) &&
-    selected.length < MAX_JOB_LOCATIONS;
+    !suggestions.some((entry) => entry.id === query.trim().toLowerCase()) &&
+    value.length < max;
 
   function add(id: string) {
-    if (selected.length >= MAX_JOB_LOCATIONS) return;
-    const resolved = resolveLocation(id);
-    if (value.includes(resolved.id)) return;
-    onChange([...value, resolved.id]);
+    if (value.length >= max || value.includes(id)) return;
+    onChange([...value, id]);
     setQuery("");
     setOpen(true);
   }
@@ -71,21 +62,21 @@ export function LocationMultiSelect({
         }
       }}
     >
-      {selected.length > 0 ? (
+      {value.length > 0 ? (
         <Cluster gap={1} className="mb-2 flex-wrap">
-          {selected.map((entry) => (
+          {value.map((entry) => (
             <Badge
-              key={entry.id}
+              key={entry}
               tone="brand"
               className="inline-flex items-center gap-1 pr-1"
             >
-              {entry.label}
+              {resolveLabel(entry)}
               <button
                 type="button"
                 className="rounded-full p-0.5 hover:bg-background/40"
-                aria-label={`Retirer ${entry.label}`}
+                aria-label={`Retirer ${resolveLabel(entry)}`}
                 disabled={disabled}
-                onClick={() => remove(entry.id)}
+                onClick={() => remove(entry)}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -96,13 +87,9 @@ export function LocationMultiSelect({
       <Input
         id={id}
         value={query}
-        disabled={disabled || selected.length >= MAX_JOB_LOCATIONS}
+        disabled={disabled || value.length >= max}
         invalid={invalid}
-        placeholder={
-          selected.length >= MAX_JOB_LOCATIONS
-            ? "Maximum atteint"
-            : "Cherche Paris, Belgique, Lyon…"
-        }
+        placeholder={value.length >= max ? "Maximum atteint" : placeholder}
         autoComplete="off"
         onFocus={() => setOpen(true)}
         onChange={(event) => {
@@ -113,10 +100,10 @@ export function LocationMultiSelect({
           if (event.key === "Enter") {
             event.preventDefault();
             if (suggestions[0]) add(suggestions[0].id);
-            else if (canAddCustom) add(query);
+            else if (canAddCustom) add(query.trim());
           }
-          if (event.key === "Backspace" && !query && selected.length > 0) {
-            remove(selected[selected.length - 1]!.id);
+          if (event.key === "Backspace" && !query && value.length > 0) {
+            remove(value[value.length - 1]!);
           }
           if (event.key === "Escape") setOpen(false);
         }}
@@ -134,15 +121,14 @@ export function LocationMultiSelect({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => add(entry.id)}
               >
-                <Cluster gap={2}>
-                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                  <Text as="span" size="sm">
-                    {entry.label}
-                  </Text>
-                </Cluster>
-                <Text as="span" size="sm" tone="muted">
-                  {KIND_LABEL[entry.kind]}
+                <Text as="span" size="sm">
+                  {entry.label}
                 </Text>
+                {entry.hint ? (
+                  <Text as="span" size="sm" tone="muted">
+                    {entry.hint}
+                  </Text>
+                ) : null}
               </button>
             </li>
           ))}
@@ -152,7 +138,7 @@ export function LocationMultiSelect({
                 type="button"
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted"
                 onMouseDown={(event) => event.preventDefault()}
-                onClick={() => add(query)}
+                onClick={() => add(query.trim())}
               >
                 <Text as="span" size="sm">
                   Ajouter « {query.trim()} »
@@ -163,7 +149,7 @@ export function LocationMultiSelect({
           {suggestions.length === 0 && !canAddCustom ? (
             <li className="px-3 py-2">
               <Text size="sm" tone="muted">
-                Aucun lieu proche
+                Aucun choix proche — tape pour ajouter
               </Text>
             </li>
           ) : null}

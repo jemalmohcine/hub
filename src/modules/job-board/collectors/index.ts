@@ -6,13 +6,14 @@ import {
   expandWithParentCountries,
   resolveLocations,
 } from "@/modules/job-board/locations";
-import { isCredibleRegion, roleMatches } from "@/modules/job-board/match";
+import { isCredibleRegion, roleMatchesAny } from "@/modules/job-board/match";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
 
 export const DEFAULT_FRANCE_SEARCH: JobSearchPrefs = {
   ...EMPTY_JOB_SEARCH_PREFS,
-  roleQuery: "développeur",
+  roles: ["fullstack"],
+  roleQuery: "Développeur full stack",
   locations: ["france"],
   workMode: "hybrid",
 };
@@ -24,7 +25,7 @@ async function collectRemotiveForPrefs(prefs: JobSearchPrefs): Promise<RawJobHit
   return hits.filter((hit) => {
     const blob = `${hit.title} ${hit.description} ${hit.location ?? ""}`;
     if (!isCredibleRegion(hit.location, blob, selected)) return false;
-    return roleMatches(prefs.roleQuery, blob);
+    return roleMatchesAny(prefs, blob);
   });
 }
 

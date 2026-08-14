@@ -19,7 +19,9 @@ describe("suggestLocations", () => {
 });
 
 describe("resolveLocation", () => {
-  it("maps aliases to the catalog id", () => {
-    expect(resolveLocation("IDF").id).toBe("paris");
+  it("finds Casablanca and Maroc", () => {
+    expect(resolveLocation("casa").id).toBe("casablanca");
+    expect(resolveLocation("Morocco").id).toBe("maroc");
+    expect(suggestLocations("casa", []).some((entry) => entry.id === "casablanca")).toBe(true);
   });
 });
