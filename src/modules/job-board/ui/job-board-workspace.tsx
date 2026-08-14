@@ -6,7 +6,6 @@ import {
   ExternalLink,
   Loader2,
   MapPin,
-  Search,
 } from "lucide-react";
 import {
   Badge,
@@ -24,8 +23,9 @@ import {
 import {
   applyToJobListing,
   importJobFromUrl,
-  searchJobsForMe,
+  saveJobSearchConfig,
 } from "@/modules/job-board/actions";
+import { LocationMultiSelect } from "@/modules/job-board/ui/location-multi-select";
 import {
   WORK_MODE_LABELS,
   type JobListing,
@@ -61,22 +61,22 @@ export function JobBoardWorkspace({
   const [cvId, setCvId] = useState(cvDocuments[0]?.id ?? "");
   const [importUrl, setImportUrl] = useState("");
   const [tracked, setTracked] = useState(() => new Set(trackedListingIds));
-  const { run, pending } = useAsyncAction();
+  const [followingId, setFollowingId] = useState<string | null>(null);
+  const saveAction = useAsyncAction();
+  const importAction = useAsyncAction();
+  const followAction = useAsyncAction();
 
-  const canSearch =
+  const canSave =
     prefs.roleQuery.trim().length >= 2 &&
-    (prefs.workMode !== "onsite" || prefs.city.trim().length > 0);
+    (prefs.workMode !== "onsite" || prefs.locations.length > 0);
 
   const sorted = useMemo(() => listings, [listings]);
 
-  function handleSearch() {
-    if (!canSearch) return;
-    void run(() => searchJobsForMe(prefs), {
-      success: (result) =>
-        result.listings.length === 1
-          ? "1 offre trouvée"
-          : `${result.listings.length} offres trouvées`,
-      error: "Impossible de chercher les offres",
+  function handleSave() {
+    if (!canSave) return;
+    void saveAction.run(() => saveJobSearchConfig(prefs), {
+      success: "Config enregistrée — scrape chaque matin",
+      error: "Impossible d’enregistrer la recherche",
       onSuccess: (result) => {
         setPrefs(result.prefs);
         setListings(result.listings);
@@ -85,7 +85,8 @@ export function JobBoardWorkspace({
   }
 
   function handleFollow(listing: JobListing, openOffer: boolean) {
-    void run(() => applyToJobListing(listing.id, cvId || null), {
+    setFollowingId(listing.id);
+    void followAction.run(() => applyToJobListing(listing.id, cvId || null), {
       success: openOffer ? "Suivi — ouverture de l’offre" : "Ajouté au suivi",
       error: "Impossible de suivre cette offre",
       onSuccess: (application) => {
@@ -95,13 +96,13 @@ export function JobBoardWorkspace({
           window.open(listing.url, "_blank", "noopener,noreferrer");
         }
       },
-    });
+    }).finally(() => setFollowingId(null));
   }
 
   function handleImportUrl() {
     const url = importUrl.trim();
     if (!url) return;
-    void run(() => importJobFromUrl(url, cvId || null), {
+    void importAction.run(() => importJobFromUrl(url, cvId || null), {
       success: "Offre ajoutée au suivi",
       error: "Impossible d’importer cette URL",
       onSuccess: (application) => {
@@ -116,10 +117,10 @@ export function JobBoardWorkspace({
       <Card className="p-4">
         <Stack gap={3}>
           <div>
-            <Text weight="medium">Ce que tu cherches</Text>
+            <Text weight="medium">Ta recherche</Text>
             <Text size="sm" tone="muted" className="mt-1">
-              Poste, ville, télétravail ou présentiel. On scrape des sources FR
-              (pas le mondial) et on te ramène les offres.
+              Enregistre le poste, les villes ou pays, et le mode. Le scrape
+              tourne chaque matin — pas besoin de relancer à la main.
             </Text>
           </div>
           <Field label="Type de poste" htmlFor="job-role-query">
@@ -131,19 +132,14 @@ export function JobBoardWorkspace({
             />
           </Field>
           <Field
-            label="Ville"
-            htmlFor="job-city"
-            hint={
-              prefs.workMode === "remote"
-                ? "Optionnel en télétravail (France)."
-                : "Ex. Paris, Lyon, Nantes…"
-            }
+            label="Villes ou pays"
+            htmlFor="job-locations"
+            hint="Multi-choix. Tape pour les plus proches (Paris, Belgique, Lyon…)."
           >
-            <Input
-              id="job-city"
-              value={prefs.city}
-              onChange={(e) => setPrefs({ ...prefs, city: e.target.value })}
-              placeholder={prefs.workMode === "remote" ? "France" : "Paris"}
+            <LocationMultiSelect
+              id="job-locations"
+              value={prefs.locations}
+              onChange={(locations) => setPrefs({ ...prefs, locations })}
             />
           </Field>
           <div>
@@ -182,11 +178,13 @@ export function JobBoardWorkspace({
           ) : null}
           <Button
             type="button"
-            disabled={pending || !canSearch}
-            onClick={handleSearch}
+            disabled={saveAction.pending || !canSave}
+            onClick={handleSave}
           >
-            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-            Trouver des offres
+            {saveAction.pending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : null}
+            Enregistrer la config
           </Button>
         </Stack>
       </Card>
@@ -205,10 +203,12 @@ export function JobBoardWorkspace({
             />
             <Button
               type="button"
-              disabled={pending || !importUrl.trim()}
+              disabled={importAction.pending || !importUrl.trim()}
               onClick={handleImportUrl}
             >
-              {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {importAction.pending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : null}
               Suivre
             </Button>
           </Cluster>
@@ -216,12 +216,13 @@ export function JobBoardWorkspace({
       </Card>
 
       <Text size="sm" tone="muted">
-        {sorted.length} offre{sorted.length !== 1 ? "s" : ""}
+        {sorted.length} offre{sorted.length !== 1 ? "s" : ""} · scrape du matin
       </Text>
 
       <Stack gap={2}>
         {sorted.map((listing) => {
           const isTracked = tracked.has(listing.id);
+          const followingThis = followAction.pending && followingId === listing.id;
           return (
             <Card key={listing.id} className="p-4">
               <Stack gap={2}>
@@ -271,10 +272,10 @@ export function JobBoardWorkspace({
                   <Button
                     type="button"
                     size="sm"
-                    disabled={pending}
+                    disabled={followingThis}
                     onClick={() => handleFollow(listing, true)}
                   >
-                    {pending ? (
+                    {followingThis ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <ExternalLink className="h-4 w-4" />
@@ -285,7 +286,7 @@ export function JobBoardWorkspace({
                     type="button"
                     size="sm"
                     variant="outline"
-                    disabled={pending || isTracked}
+                    disabled={followingThis || isTracked}
                     onClick={() => handleFollow(listing, false)}
                   >
                     {isTracked ? "Déjà suivi" : "Suivre"}
@@ -299,8 +300,8 @@ export function JobBoardWorkspace({
         {sorted.length === 0 ? (
           <EmptyState
             icon={Briefcase}
-            title="Aucune offre pour l’instant"
-            hint="Remplis le poste, la ville et le mode, puis lance la recherche."
+            title="Les offres arrivent chaque matin"
+            hint="Enregistre poste, lieux et mode. Le scrape quotidien s’en sert — tu peux aussi coller un lien tout de suite."
           />
         ) : null}
       </Stack>

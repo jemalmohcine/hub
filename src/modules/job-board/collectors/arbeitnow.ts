@@ -1,5 +1,9 @@
 import { fetchJson, HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
-import { isCredibleRegion } from "@/modules/job-board/match";
+import {
+  expandWithParentCountries,
+  resolveLocations,
+} from "@/modules/job-board/locations";
+import { isCredibleRegion, roleMatches } from "@/modules/job-board/match";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 
 type ArbeitnowJob = {
@@ -19,26 +23,21 @@ type ArbeitnowResponse = {
   data?: ArbeitnowJob[];
 };
 
-/** European job board (no key). We keep France / EU rows only. */
+/** European job board (no key). Filtered to the selected cities / countries. */
 export async function collectArbeitnow(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
   const data = await fetchJson<ArbeitnowResponse>(
     "https://www.arbeitnow.com/api/job-board-api",
     { timeoutMs: HTTP_TIMEOUTS.slow },
   );
 
-  const role = prefs.roleQuery.trim().toLowerCase();
+  const selected = expandWithParentCountries(resolveLocations(prefs.locations));
   const hits: RawJobHit[] = [];
 
   for (const job of data.data ?? []) {
     if (!job.title || !job.company_name || !job.url) continue;
     const blob = `${job.title} ${job.description ?? ""} ${job.location ?? ""} ${(job.tags ?? []).join(" ")}`;
-    if (!isCredibleRegion(job.location, blob)) continue;
-    if (role && !blob.toLowerCase().includes(role.split(" ")[0] ?? role)) {
-      const tokens = role.split(/\s+/).filter((t) => t.length >= 3);
-      if (tokens.length > 0 && !tokens.some((t) => blob.toLowerCase().includes(t))) {
-        continue;
-      }
-    }
+    if (!isCredibleRegion(job.location, blob, selected)) continue;
+    if (!roleMatches(prefs.roleQuery, blob)) continue;
 
     hits.push({
       source: "arbeitnow",

@@ -2,28 +2,29 @@ import { collectArbeitnow } from "@/modules/job-board/collectors/arbeitnow";
 import { collectIndeedFr } from "@/modules/job-board/collectors/indeed-fr";
 import { collectJobicy } from "@/modules/job-board/collectors/jobicy";
 import { collectRemotive } from "@/modules/job-board/collectors/remotive";
-import { isCredibleRegion } from "@/modules/job-board/match";
+import {
+  expandWithParentCountries,
+  resolveLocations,
+} from "@/modules/job-board/locations";
+import { isCredibleRegion, roleMatches } from "@/modules/job-board/match";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
 
 export const DEFAULT_FRANCE_SEARCH: JobSearchPrefs = {
   ...EMPTY_JOB_SEARCH_PREFS,
   roleQuery: "développeur",
-  city: "France",
+  locations: ["france"],
   workMode: "hybrid",
 };
 
-async function collectRemotiveFrance(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
+async function collectRemotiveForPrefs(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
   if (prefs.workMode === "onsite") return [];
   const hits = await collectRemotive();
-  const role = prefs.roleQuery.trim().toLowerCase();
+  const selected = expandWithParentCountries(resolveLocations(prefs.locations));
   return hits.filter((hit) => {
     const blob = `${hit.title} ${hit.description} ${hit.location ?? ""}`;
-    if (!isCredibleRegion(hit.location, blob)) return false;
-    if (!role) return true;
-    const tokens = role.split(/\s+/).filter((t) => t.length >= 3);
-    if (tokens.length === 0) return true;
-    return tokens.some((token) => blob.toLowerCase().includes(token));
+    if (!isCredibleRegion(hit.location, blob, selected)) return false;
+    return roleMatches(prefs.roleQuery, blob);
   });
 }
 
@@ -32,7 +33,7 @@ export async function collectJobsForPrefs(prefs: JobSearchPrefs): Promise<RawJob
     collectIndeedFr(prefs),
     collectJobicy(prefs),
     collectArbeitnow(prefs),
-    collectRemotiveFrance(prefs),
+    collectRemotiveForPrefs(prefs),
   ]);
 
   const hits: RawJobHit[] = [];

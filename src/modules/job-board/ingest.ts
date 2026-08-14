@@ -4,6 +4,7 @@ import {
   collectJobsForPrefs,
   DEFAULT_FRANCE_SEARCH,
 } from "@/modules/job-board/collectors";
+import { resolveLocations } from "@/modules/job-board/locations";
 import { classifyWorkMode, matchesSearchPrefs } from "@/modules/job-board/match";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 
@@ -18,10 +19,17 @@ function prefsFromRow(row: {
   role_query: string;
   city: string;
   work_mode: string;
+  locations?: string[] | null;
 }): JobSearchPrefs {
+  const fromColumn = Array.isArray(row.locations) ? row.locations : [];
+  const fallback = row.city
+    ? row.city.split(",").map((part) => part.trim()).filter(Boolean)
+    : [];
   return {
     roleQuery: row.role_query,
-    city: row.city,
+    locations: resolveLocations(fromColumn.length > 0 ? fromColumn : fallback).map(
+      (entry) => entry.id,
+    ),
     workMode: row.work_mode as JobSearchPrefs["workMode"],
   };
 }
@@ -101,14 +109,14 @@ export async function runJobBoardIngest() {
   const admin = createAdminClient();
   const { data: prefRows } = await admin
     .from("job_search_prefs")
-    .select("role_query, city, work_mode");
+    .select("role_query, city, work_mode, locations");
 
   const unique = new Map<string, JobSearchPrefs>();
   for (const row of prefRows ?? []) {
     const prefs = prefsFromRow(row);
     if (!prefs.roleQuery.trim()) continue;
     unique.set(
-      `${prefs.roleQuery}|${prefs.city}|${prefs.workMode}`.toLowerCase(),
+      `${prefs.roleQuery}|${prefs.locations.slice().sort().join(",")}|${prefs.workMode}`.toLowerCase(),
       prefs,
     );
   }

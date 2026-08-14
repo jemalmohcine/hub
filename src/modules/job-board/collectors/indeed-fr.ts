@@ -1,4 +1,8 @@
 import { decodeXmlEntities, fetchText, HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
+import {
+  expandWithParentCountries,
+  resolveLocations,
+} from "@/modules/job-board/locations";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 
 function tagContent(block: string, tag: string): string {
@@ -15,27 +19,25 @@ function cleanText(raw: string): string {
     .trim();
 }
 
-/**
- * Indeed France RSS — city + query, the most useful public feed for FR roles.
- */
-export async function collectIndeedFr(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
-  const q = prefs.roleQuery.trim() || "développeur";
-  const location =
-    prefs.workMode === "remote"
-      ? prefs.city.trim() || "France"
-      : prefs.city.trim() || "France";
-  const query =
-    prefs.workMode === "remote"
-      ? `${q} télétravail`
-      : prefs.workMode === "hybrid"
-        ? `${q} hybride`
-        : q;
+function indeedPlaces(prefs: JobSearchPrefs): string[] {
+  const selected = resolveLocations(prefs.locations);
+  const expanded =
+    prefs.workMode === "remote" ? expandWithParentCountries(selected) : selected;
+  const places = expanded.map((entry) => entry.indeed);
+  if (places.length === 0) return ["France"];
+  return [...new Set(places)].slice(0, 5);
+}
 
+async function collectIndeedLocation(
+  query: string,
+  location: string,
+  workMode: JobSearchPrefs["workMode"],
+): Promise<RawJobHit[]> {
   const url = `https://fr.indeed.com/rss?q=${encodeURIComponent(query)}&l=${encodeURIComponent(location)}`;
   const xml = await fetchText(url, { timeoutMs: HTTP_TIMEOUTS.slow });
   const items = xml.match(/<item[\s\S]*?<\/item>/gi) ?? [];
 
-  return items.slice(0, 40).flatMap((block) => {
+  return items.slice(0, 25).flatMap((block) => {
     const titleRaw = cleanText(tagContent(block, "title"));
     const link = tagContent(block, "link") || tagContent(block, "guid");
     if (!titleRaw || !link.startsWith("http")) return [];
@@ -61,8 +63,20 @@ export async function collectIndeedFr(prefs: JobSearchPrefs): Promise<RawJobHit[
         url: link,
         location,
         publishedAt,
-        workMode: prefs.workMode,
+        workMode,
       },
     ];
   });
+}
+
+/**
+ * Indeed France RSS — one request per selected city/country, role as the query.
+ */
+export async function collectIndeedFr(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
+  const q = prefs.roleQuery.trim() || "développeur";
+  const places = indeedPlaces(prefs);
+  const batches = await Promise.allSettled(
+    places.map((place) => collectIndeedLocation(q, place, prefs.workMode)),
+  );
+  return batches.flatMap((batch) => (batch.status === "fulfilled" ? batch.value : []));
 }
