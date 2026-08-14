@@ -6,6 +6,7 @@ import {
   matchesSearchPrefs,
   roleMatches,
 } from "@/modules/job-board/match";
+import type { JobSearchPrefs } from "@/modules/job-board/types";
 
 describe("classifyWorkMode", () => {
   it("detects télétravail", () => {
@@ -62,7 +63,7 @@ describe("matchesSearchPrefs", () => {
           tags: ["react"],
           workMode: "hybrid",
         },
-        { roleQuery: "react", roles: ["react"], locations: ["paris"], workMode: "hybrid" },
+        { roleQuery: "react", roles: ["react"], locations: ["paris"], workModes: ["hybrid"], workMode: "hybrid" },
       ),
     ).toBe(true);
   });
@@ -77,9 +78,43 @@ describe("matchesSearchPrefs", () => {
           tags: [],
           workMode: "remote",
         },
-        { roleQuery: "react", roles: ["react"], locations: ["paris"], workMode: "remote" },
+        { roleQuery: "react", roles: ["react"], locations: ["paris"], workModes: ["remote"], workMode: "remote" },
       ),
     ).toBe(false);
+  });
+
+  it("keeps remote and onsite when both modes are selected", () => {
+    const prefs: JobSearchPrefs = {
+      roleQuery: "react",
+      roles: ["react"],
+      locations: ["casablanca"],
+      workModes: ["remote", "onsite"],
+      workMode: "remote",
+    };
+    expect(
+      matchesSearchPrefs(
+        {
+          title: "React engineer",
+          description: "Full remote, Maroc",
+          location: "Casablanca, Maroc",
+          tags: ["react"],
+          workMode: "remote",
+        },
+        prefs,
+      ),
+    ).toBe(true);
+    expect(
+      matchesSearchPrefs(
+        {
+          title: "React engineer",
+          description: "Présentiel à Casablanca",
+          location: "Casablanca, Maroc",
+          tags: ["react"],
+          workMode: "onsite",
+        },
+        prefs,
+      ),
+    ).toBe(true);
   });
 
   it("keeps Belgium when selected", () => {
@@ -92,7 +127,13 @@ describe("matchesSearchPrefs", () => {
           tags: ["react"],
           workMode: "hybrid",
         },
-        { roleQuery: "react", roles: ["react"], locations: ["belgique"], workMode: "hybrid" },
+        {
+          roleQuery: "react",
+          roles: ["react"],
+          locations: ["belgique"],
+          workModes: ["hybrid"],
+          workMode: "hybrid",
+        },
       ),
     ).toBe(true);
   });

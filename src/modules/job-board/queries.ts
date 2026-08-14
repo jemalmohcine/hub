@@ -2,6 +2,7 @@ import { createClient } from "@/core/auth/supabase/server";
 import { resolveLocations } from "@/modules/job-board/locations";
 import { matchesSearchPrefs } from "@/modules/job-board/match";
 import { resolveRoles, rolesToQuery } from "@/modules/job-board/roles";
+import { normalizeWorkModes } from "@/modules/job-board/work-modes";
 import type {
   JobListing,
   JobListingFilter,
@@ -64,6 +65,7 @@ function rowToPrefs(data: {
   work_mode: string;
   locations?: string[] | null;
   roles?: string[] | null;
+  work_modes?: string[] | null;
 }): JobSearchPrefs {
   const fromLocations = Array.isArray(data.locations) ? data.locations : [];
   const fallbackLocations = data.city
@@ -81,32 +83,40 @@ function rowToPrefs(data: {
     (entry) => entry.id,
   );
 
+  const workModes = normalizeWorkModes({
+    workModes: Array.isArray(data.work_modes) ? (data.work_modes as JobSearchPrefs["workModes"]) : [],
+    workMode: data.work_mode as JobSearchPrefs["workMode"],
+  });
+
   return {
     roles,
     roleQuery: rolesToQuery(roles) || data.role_query,
     locations,
-    workMode: data.work_mode as JobSearchPrefs["workMode"],
+    workModes,
+    workMode: workModes[0] ?? "hybrid",
   };
 }
 
 export async function getJobSearchPrefs(userId: string): Promise<JobSearchPrefs> {
   const supabase = await createClient();
-  const full = await supabase
-    .from("job_search_prefs")
-    .select("role_query, city, work_mode, locations, roles")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const selects = [
+    "role_query, city, work_mode, locations, roles, work_modes",
+    "role_query, city, work_mode, locations, roles",
+    "role_query, city, work_mode",
+  ];
+  for (const columns of selects) {
+    const result = await supabase
+      .from("job_search_prefs")
+      .select(columns)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!result.error && result.data) {
+      return rowToPrefs(result.data as unknown as Parameters<typeof rowToPrefs>[0]);
+    }
+    if (result.error && !missingColumn(result.error)) break;
+  }
 
-  if (!full.error && full.data) return rowToPrefs(full.data);
-
-  const basic = await supabase
-    .from("job_search_prefs")
-    .select("role_query, city, work_mode")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (basic.error || !basic.data) return { ...EMPTY_JOB_SEARCH_PREFS };
-  return rowToPrefs(basic.data);
+  return { ...EMPTY_JOB_SEARCH_PREFS };
 }
 
 export async function saveJobSearchPrefs(
@@ -119,6 +129,8 @@ export async function saveJobSearchPrefs(
     (entry) => entry.id,
   );
   const roleQuery = (rolesToQuery(roles) || prefs.roleQuery.trim()).slice(0, 240);
+  const workModes = normalizeWorkModes(prefs);
+  const workMode = workModes[0] ?? "hybrid";
   const city = locations.join(",").slice(0, 400);
 
   const fullRow = {
@@ -127,12 +139,24 @@ export async function saveJobSearchPrefs(
     city,
     locations,
     roles,
-    work_mode: prefs.workMode,
+    work_mode: workMode,
+    work_modes: workModes,
   };
 
   const attempts: Array<{ row: Record<string, unknown>; columns: string }> = [
     {
       row: fullRow,
+      columns: "role_query, city, work_mode, locations, roles, work_modes",
+    },
+    {
+      row: {
+        user_id: userId,
+        role_query: roleQuery,
+        city,
+        locations,
+        roles,
+        work_mode: workMode,
+      },
       columns: "role_query, city, work_mode, locations, roles",
     },
     {
@@ -141,7 +165,7 @@ export async function saveJobSearchPrefs(
         role_query: roleQuery,
         city,
         locations,
-        work_mode: prefs.workMode,
+        work_mode: workMode,
       },
       columns: "role_query, city, work_mode, locations",
     },
@@ -150,7 +174,7 @@ export async function saveJobSearchPrefs(
         user_id: userId,
         role_query: roleQuery.slice(0, 80),
         city: city.slice(0, 80),
-        work_mode: prefs.workMode,
+        work_mode: workMode,
       },
       columns: "role_query, city, work_mode",
     },

@@ -5,6 +5,7 @@ import {
 } from "@/modules/job-board/locations";
 import { isCredibleRegion, roleMatchesAny } from "@/modules/job-board/match";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
+import { wantsRemote } from "@/modules/job-board/work-modes";
 
 type JobicyJob = {
   id?: number | string;
@@ -64,7 +65,7 @@ async function collectJobicyGeo(geo: string, prefs: JobSearchPrefs): Promise<Raw
 
 /** Remote jobs for the selected countries — skip the worldwide dump. */
 export async function collectJobicy(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
-  if (prefs.workMode === "onsite") return [];
+  if (!wantsRemote(prefs)) return [];
   const batches = await Promise.allSettled(
     jobicyGeos(prefs).map((geo) => collectJobicyGeo(geo, prefs)),
   );

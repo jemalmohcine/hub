@@ -5,8 +5,10 @@ import { createClient } from "@/core/auth/supabase/server";
 import { assertEntitled } from "@/core/entitlements/assert-entitled";
 import { ENTITLEMENTS } from "@/core/entitlements/keys";
 import { addDaysIso } from "@/lib/dates";
+import { ingestJobsForPrefs } from "@/modules/job-board/ingest";
 import { MAX_JOB_LOCATIONS, resolveLocations } from "@/modules/job-board/locations";
 import { MAX_JOB_ROLES, resolveRoles, rolesToQuery } from "@/modules/job-board/roles";
+import { normalizeWorkModes, onsiteOnly } from "@/modules/job-board/work-modes";
 import {
   getJobListingById,
   getJobListingByUrl,
@@ -73,9 +75,10 @@ export async function saveJobSearchConfig(prefs: JobSearchPrefs): Promise<{
   if (roles.length > MAX_JOB_ROLES) {
     throw new Error(`Choisis au plus ${MAX_JOB_ROLES} postes.`);
   }
+  const workModes = normalizeWorkModes(prefs);
   const locations = resolveLocations(prefs.locations).map((entry) => entry.id);
-  if (prefs.workMode === "onsite" && locations.length === 0) {
-    throw new Error("Pour du présentiel, choisis au moins une ville ou un pays.");
+  if (onsiteOnly(prefs) && locations.length === 0) {
+    throw new Error("Pour du présentiel seul, choisis au moins une ville ou un pays.");
   }
   if (locations.length > MAX_JOB_LOCATIONS) {
     throw new Error(`Choisis au plus ${MAX_JOB_LOCATIONS} lieux.`);
@@ -85,8 +88,14 @@ export async function saveJobSearchConfig(prefs: JobSearchPrefs): Promise<{
     roles: roles.map((role) => role.id),
     roleQuery: rolesToQuery(roles.map((role) => role.id)),
     locations,
-    workMode: prefs.workMode,
+    workModes,
+    workMode: workModes[0] ?? "hybrid",
   });
+  try {
+    await ingestJobsForPrefs(saved);
+  } catch (err) {
+    console.error("[jobs] scrape after save failed", err);
+  }
   const listings = await listJobListingsForPrefs(saved);
   revalidatePath("/app/career");
   return { prefs: saved, listings };

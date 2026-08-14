@@ -5,6 +5,7 @@ import {
   resolveLocations,
   type JobLocation,
 } from "@/modules/job-board/locations";
+import { acceptsWorkMode, wantsRemote } from "@/modules/job-board/work-modes";
 import type { JobSearchPrefs, JobWorkMode } from "@/modules/job-board/types";
 
 const FRANCE_HINT =
@@ -192,7 +193,7 @@ export function matchesSearchPrefs(
   prefs: JobSearchPrefs,
 ): boolean {
   const selected = resolveLocations(prefs.locations);
-  const region = prefs.workMode === "remote" ? expandWithParentCountries(selected) : selected;
+  const region = wantsRemote(prefs) ? expandWithParentCountries(selected) : selected;
   const blob = `${listing.title} ${listing.description ?? ""} ${listing.tags.join(" ")}`;
   if (!isCredibleRegion(listing.location, blob, region)) return false;
 
@@ -203,17 +204,10 @@ export function matchesSearchPrefs(
     tags: listing.tags,
   });
 
-  if (prefs.workMode === "remote") {
-    if (mode === "onsite") return false;
-  } else if (prefs.workMode === "onsite") {
-    if (mode === "remote") return false;
-    if (selected.length > 0 && !anyLocationMatches(selected, listing.location, blob)) {
-      return false;
-    }
-  } else if (prefs.workMode === "hybrid") {
-    if (mode !== "remote" && selected.length > 0) {
-      if (!anyLocationMatches(selected, listing.location, blob)) return false;
-    }
+  if (!acceptsWorkMode(prefs, mode)) return false;
+
+  if (mode !== "remote" && selected.length > 0) {
+    if (!anyLocationMatches(selected, listing.location, blob)) return false;
   }
 
   const roleNeedles =

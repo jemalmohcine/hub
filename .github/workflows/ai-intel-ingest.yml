@@ -1,14 +1,11 @@
 name: AI Intel Ingest
 
 # Triggered on every main merge via post-merge-main.yml (workflow_call).
-# Nightly schedule + manual dispatch. Not on Vercel Cron.
+# Every 3 hours + manual dispatch. Not on Vercel Cron.
 on:
   workflow_call:
   schedule:
-    # 06:00 UTC = 08:00 Paris (summer) / 07:00 Paris (winter).
-    # Late enough that GitHub "stars today" has real volume; early enough
-    # that the digest is dated "today" when the user opens the app.
-    - cron: "0 6 * * *"
+    - cron: "0 */3 * * *"
   workflow_dispatch:
     inputs:
       mode:
