@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/core/auth/supabase/server";
 import { assertEntitled } from "@/core/entitlements/assert-entitled";
 import { ENTITLEMENTS } from "@/core/entitlements/keys";
+import { normalizeSnippetImage } from "@/modules/dev-snippets/image";
 import { rankSnippetsWithLlm } from "@/modules/dev-snippets/llm-search";
 import { rankSnippets } from "@/modules/dev-snippets/match";
 import {
@@ -39,6 +40,7 @@ function rowFromInput(input: DevSnippetInput, userId: string) {
     tags: normalizeTags(input.tags),
     category_id: input.categoryId?.trim() || null,
     reference_url: input.referenceUrl?.trim() || null,
+    image_url: normalizeSnippetImage(input.imageUrl),
     is_pinned: input.isPinned ?? false,
   };
 }
@@ -88,6 +90,7 @@ export async function updateDevSnippet(id: string, input: Partial<DevSnippetInpu
     patch.category_id = input.categoryId?.trim() || null;
   }
   if (input.referenceUrl !== undefined) patch.reference_url = input.referenceUrl?.trim() || null;
+  if (input.imageUrl !== undefined) patch.image_url = normalizeSnippetImage(input.imageUrl);
   if (input.isPinned !== undefined) patch.is_pinned = input.isPinned;
 
   const { error } = await supabase

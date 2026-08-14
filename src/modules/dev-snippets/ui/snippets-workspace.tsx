@@ -42,6 +42,7 @@ import {
   updateDevSnippet,
 } from "@/modules/dev-snippets/actions";
 import { SNIPPET_LANGUAGES } from "@/modules/dev-snippets/languages";
+import { SnippetImageField } from "@/modules/dev-snippets/ui/snippet-image-field";
 import { mergeRankedIds, rankSnippets } from "@/modules/dev-snippets/match";
 import {
   buildSmartSearchQuery,
@@ -65,6 +66,7 @@ const EMPTY_FORM = {
   tags: "",
   categoryId: "",
   referenceUrl: "",
+  imageUrl: "",
 };
 
 export function SnippetsWorkspace({
@@ -180,6 +182,7 @@ export function SnippetsWorkspace({
       tags: item.tags.join(", "),
       categoryId: item.categoryId ?? "",
       referenceUrl: item.referenceUrl ?? "",
+      imageUrl: item.imageUrl ?? "",
     });
   }
 
@@ -205,6 +208,7 @@ export function SnippetsWorkspace({
       tags: parseTags(form.tags),
       categoryId: form.categoryId || null,
       referenceUrl: form.referenceUrl || null,
+      imageUrl: form.imageUrl || null,
     };
     const categoryName = payload.categoryId
       ? (categoryNameById.get(payload.categoryId) ?? null)
@@ -223,6 +227,7 @@ export function SnippetsWorkspace({
                     ...payload,
                     categoryName,
                     referenceUrl: payload.referenceUrl,
+                    imageUrl: payload.imageUrl,
                     updatedAt: new Date().toISOString(),
                   }
                 : item,
@@ -567,9 +572,19 @@ export function SnippetsWorkspace({
                   </Cluster>
                   {item.isPinned ? <Pin className="h-3.5 w-3.5 text-primary" /> : null}
                 </Cluster>
-                <Text size="sm" tone="muted" className="mt-1 line-clamp-2 text-xs">
-                  {item.content}
-                </Text>
+                {item.content.trim() ? (
+                  <Text size="sm" tone="muted" className="mt-1 line-clamp-2">
+                    {item.content}
+                  </Text>
+                ) : null}
+                {item.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- data URLs and arbitrary user URLs
+                  <img
+                    src={item.imageUrl}
+                    alt=""
+                    className="mt-2 h-16 w-full rounded-lg object-cover"
+                  />
+                ) : null}
                 <Cluster gap={2} className="mt-2 flex-wrap">
                   {item.categoryName ? (
                     <Badge tone="info">{item.categoryName}</Badge>
@@ -655,6 +670,13 @@ export function SnippetsWorkspace({
                   placeholder="https://…"
                 />
               </Field>
+              <SnippetImageField
+                value={form.imageUrl}
+                onChange={(imageUrl) =>
+                  setForm((current) => ({ ...current, imageUrl }))
+                }
+                onError={(message) => toast.error(message)}
+              />
               <Field label="Contenu" htmlFor="snippet-content">
                 <Textarea
                   id="snippet-content"
@@ -662,7 +684,7 @@ export function SnippetsWorkspace({
                   onChange={(e) => setForm({ ...form, content: e.target.value })}
                   rows={12}
                   className="font-mono text-sm"
-                  placeholder="Collez votre code ou note ici…"
+                  placeholder="Collez votre code, une note, ou joignez une image…"
                 />
               </Field>
               <Cluster gap={2}>
@@ -715,6 +737,7 @@ export function SnippetsWorkspace({
                     type="button"
                     size="sm"
                     variant="ghost"
+                    disabled={!selected.content.trim()}
                     onClick={() => copyContent(selected.content)}
                   >
                     <Copy className="h-4 w-4" />
@@ -749,9 +772,20 @@ export function SnippetsWorkspace({
                 </Cluster>
               ) : null}
 
-              <pre className="overflow-x-auto rounded-xl bg-muted/50 p-4 font-mono text-sm leading-relaxed whitespace-pre-wrap">
-                {selected.content}
-              </pre>
+              {selected.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- data URLs and arbitrary user URLs
+                <img
+                  src={selected.imageUrl}
+                  alt={selected.title}
+                  className="max-h-80 w-full rounded-xl bg-muted/40 object-contain"
+                />
+              ) : null}
+
+              {selected.content.trim() ? (
+                <pre className="overflow-x-auto rounded-xl bg-muted/50 p-4 font-mono text-sm leading-relaxed whitespace-pre-wrap">
+                  {selected.content}
+                </pre>
+              ) : null}
 
               {selected.referenceUrl ? (
                 <a
