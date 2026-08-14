@@ -663,7 +663,7 @@ export function SnippetsWorkspace({
                 />
               </Field>
               <Text size="sm" tone="muted">
-                L’IA choisit la catégorie d’après ce que tu écris.
+                L’IA range le snippet juste après la sauvegarde.
               </Text>
               <Cluster gap={2}>
                 <Button
