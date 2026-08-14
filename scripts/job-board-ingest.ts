@@ -1,5 +1,6 @@
 /**
- * Scrape remote job boards into Supabase (job_listings).
+ * Scrape France-first job sources into Supabase (job_listings),
+ * using saved user search prefs when they exist.
  *
  * Usage:
  *   npm run job-board:ingest

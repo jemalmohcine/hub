@@ -7,7 +7,7 @@ import { Stack } from "@/design-system";
 import type { CvDocument, CvDocumentSummary } from "@/modules/cv-builder/types";
 import { CvBuilderWorkspace } from "@/modules/cv-builder/ui/cv-builder-workspace";
 import { JobBoardWorkspace } from "@/modules/job-board/ui/job-board-workspace";
-import type { JobListing } from "@/modules/job-board/types";
+import type { JobListing, JobSearchPrefs } from "@/modules/job-board/types";
 import type { JobApplication } from "@/modules/job-tracker/types";
 import { JobTrackerWorkspace } from "@/modules/job-tracker/ui/job-tracker-workspace";
 import { cn } from "@/lib/utils";
@@ -34,6 +34,7 @@ export function CareerWorkspace({
   initialDocuments,
   initialJobs,
   initialListings,
+  initialPrefs,
 }: {
   initialTab: CareerTab;
   cvEntitled: boolean;
@@ -42,6 +43,7 @@ export function CareerWorkspace({
   initialDocuments: CvDocumentSummary[];
   initialJobs: JobApplication[];
   initialListings: JobListing[];
+  initialPrefs: JobSearchPrefs;
 }) {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<CareerTab>(() =>
@@ -107,6 +109,7 @@ export function CareerWorkspace({
         >
           <JobBoardWorkspace
             initialListings={initialListings}
+            initialPrefs={initialPrefs}
             cvDocuments={initialDocuments}
             trackedListingIds={trackedListingIds}
             onApplicationCreated={(application) => {

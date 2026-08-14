@@ -1,5 +1,11 @@
 import { createClient } from "@/core/auth/supabase/server";
-import type { JobListing, JobListingFilter } from "@/modules/job-board/types";
+import { matchesSearchPrefs } from "@/modules/job-board/match";
+import type {
+  JobListing,
+  JobListingFilter,
+  JobSearchPrefs,
+} from "@/modules/job-board/types";
+import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
 
 type ListingRow = {
   id: string;
@@ -12,6 +18,7 @@ type ListingRow = {
   url: string;
   employment_category: string;
   freelance_subtype: string | null;
+  work_mode: string | null;
   location: string | null;
   salary_hint: string | null;
   tags: string[] | null;
@@ -31,11 +38,53 @@ function rowToListing(row: ListingRow): JobListing {
     url: row.url,
     employmentCategory: row.employment_category as JobListing["employmentCategory"],
     freelanceSubtype: row.freelance_subtype as JobListing["freelanceSubtype"],
+    workMode: (row.work_mode as JobListing["workMode"]) ?? null,
     location: row.location,
     salaryHint: row.salary_hint,
     tags: row.tags ?? [],
     publishedAt: row.published_at,
     scrapedAt: row.scraped_at,
+  };
+}
+
+export async function getJobSearchPrefs(userId: string): Promise<JobSearchPrefs> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("job_search_prefs")
+    .select("role_query, city, work_mode")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error || !data) return { ...EMPTY_JOB_SEARCH_PREFS };
+  return {
+    roleQuery: data.role_query as string,
+    city: data.city as string,
+    workMode: data.work_mode as JobSearchPrefs["workMode"],
+  };
+}
+
+export async function saveJobSearchPrefs(
+  userId: string,
+  prefs: JobSearchPrefs,
+): Promise<JobSearchPrefs> {
+  const supabase = await createClient();
+  const row = {
+    user_id: userId,
+    role_query: prefs.roleQuery.trim().slice(0, 80),
+    city: prefs.city.trim().slice(0, 80),
+    work_mode: prefs.workMode,
+  };
+  const { data, error } = await supabase
+    .from("job_search_prefs")
+    .upsert(row, { onConflict: "user_id" })
+    .select("role_query, city, work_mode")
+    .single();
+
+  if (error || !data) throw new Error(error?.message ?? "Impossible d’enregistrer la recherche");
+  return {
+    roleQuery: data.role_query as string,
+    city: data.city as string,
+    workMode: data.work_mode as JobSearchPrefs["workMode"],
   };
 }
 
@@ -75,6 +124,14 @@ export async function listJobListings(
   const { data, error } = await dbQuery;
   if (error || !data) return [];
   return (data as ListingRow[]).map(rowToListing);
+}
+
+export async function listJobListingsForPrefs(
+  prefs: JobSearchPrefs,
+): Promise<JobListing[]> {
+  const listings = await listJobListings("all");
+  if (!prefs.roleQuery.trim()) return [];
+  return listings.filter((listing) => matchesSearchPrefs(listing, prefs)).slice(0, 60);
 }
 
 export async function getJobListingById(id: string): Promise<JobListing | null> {

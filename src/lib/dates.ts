@@ -92,3 +92,14 @@ export function daysBetween(from: string | number | Date, to: string | number | 
   if (!start || !end) return 0;
   return Math.floor((end.getTime() - start.getTime()) / 86_400_000);
 }
+
+/** Local calendar day plus `days` (can be negative), as YYYY-MM-DD. */
+export function addDaysIso(
+  value: string | number | Date | null | undefined,
+  days: number,
+): string {
+  const date = toDate(value) ?? new Date();
+  const next = new Date(date.getTime());
+  next.setDate(next.getDate() + days);
+  return toDayKey(next);
+}

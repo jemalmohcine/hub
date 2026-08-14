@@ -4,6 +4,7 @@ import {
   formatDate,
   formatDateTime,
   formatRelativeTime,
+  addDaysIso,
   toDate,
   toDayKey,
   toMonthKey,
@@ -76,6 +77,12 @@ describe("day and month keys", () => {
 
   it("returns an empty string for invalid input", () => {
     expect(toDayKey(null)).toBe("");
+  });
+});
+
+describe("addDaysIso", () => {
+  it("shifts a calendar day", () => {
+    expect(addDaysIso("2026-08-07T12:00:00", 7)).toBe("2026-08-14");
   });
 });
 

@@ -4,8 +4,15 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/core/auth/supabase/server";
 import { assertEntitled } from "@/core/entitlements/assert-entitled";
 import { ENTITLEMENTS } from "@/core/entitlements/keys";
-import { getJobListingById } from "@/modules/job-board/queries";
+import { addDaysIso } from "@/lib/dates";
+import { ingestJobsForPrefs } from "@/modules/job-board/ingest";
+import {
+  getJobListingById,
+  listJobListingsForPrefs,
+  saveJobSearchPrefs,
+} from "@/modules/job-board/queries";
 import { scrapeJobOfferPage } from "@/modules/job-board/scrape-offer";
+import type { JobListing, JobSearchPrefs } from "@/modules/job-board/types";
 import type { JobApplication } from "@/modules/job-tracker/types";
 
 /** Every action in this file requires the jobs module. */
@@ -51,7 +58,31 @@ function mapApplication(row: {
   };
 }
 
-/** Start tracking an offer: creates a candidature linked to the listing. */
+export async function searchJobsForMe(prefs: JobSearchPrefs): Promise<{
+  prefs: JobSearchPrefs;
+  listings: JobListing[];
+}> {
+  const user = await requireUser();
+  const roleQuery = prefs.roleQuery.trim();
+  if (roleQuery.length < 2) {
+    throw new Error("Indique le type de poste (ex. développeur React).");
+  }
+  if (prefs.workMode === "onsite" && !prefs.city.trim()) {
+    throw new Error("Pour du présentiel, indique une ville.");
+  }
+
+  const saved = await saveJobSearchPrefs(user.id, {
+    roleQuery,
+    city: prefs.city.trim(),
+    workMode: prefs.workMode,
+  });
+  await ingestJobsForPrefs(saved);
+  const listings = await listJobListingsForPrefs(saved);
+  revalidatePath("/app/career");
+  return { prefs: saved, listings };
+}
+
+/** Start tracking an offer — no extra scrape, so it stays instant. */
 export async function applyToJobListing(
   listingId: string,
   cvDocumentId?: string | null,
@@ -73,12 +104,6 @@ export async function applyToJobListing(
     return mapApplication(existing);
   }
 
-  let description = listing.description;
-  if (!description || description.length < 200) {
-    const scraped = await scrapeJobOfferPage(listing.url);
-    if (scraped?.description) description = scraped.description;
-  }
-
   const { data, error } = await supabase
     .from("job_applications")
     .insert({
@@ -90,10 +115,11 @@ export async function applyToJobListing(
       listing_id: listingId,
       employment_category: listing.employmentCategory,
       freelance_subtype: listing.freelanceSubtype,
-      description: description?.slice(0, 4000) || null,
+      description: listing.description?.slice(0, 4000) || null,
       location: listing.location,
       salary_hint: listing.salaryHint,
       cv_document_id: cvDocumentId || null,
+      follow_up_at: addDaysIso(new Date(), 7),
       notes: `Source: ${listing.source}`,
     })
     .select("*")
@@ -129,6 +155,7 @@ export async function importJobFromUrl(
       location: scraped.location,
       salary_hint: scraped.salaryHint,
       cv_document_id: cvDocumentId || null,
+      follow_up_at: addDaysIso(new Date(), 7),
     })
     .select("*")
     .single();
@@ -142,13 +169,14 @@ export async function importJobFromUrl(
 export async function markJobApplicationApplied(id: string) {
   const user = await requireUser();
   const supabase = await createClient();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = addDaysIso(new Date(), 0);
 
   const { data, error } = await supabase
     .from("job_applications")
     .update({
       status: "applied",
       applied_at: today,
+      follow_up_at: addDaysIso(new Date(), 7),
     })
     .eq("id", id)
     .eq("user_id", user.id)

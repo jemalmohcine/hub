@@ -2,6 +2,8 @@ export type JobEmploymentCategory = "salaried" | "freelance";
 
 export type FreelanceSubtype = "part_time" | "full_time";
 
+export type JobWorkMode = "remote" | "hybrid" | "onsite";
+
 export type JobListing = {
   id: string;
   canonicalKey: string;
@@ -13,11 +15,18 @@ export type JobListing = {
   url: string;
   employmentCategory: JobEmploymentCategory;
   freelanceSubtype: FreelanceSubtype | null;
+  workMode: JobWorkMode | null;
   location: string | null;
   salaryHint: string | null;
   tags: string[];
   publishedAt: string | null;
   scrapedAt: string;
+};
+
+export type JobSearchPrefs = {
+  roleQuery: string;
+  city: string;
+  workMode: JobWorkMode;
 };
 
 export type JobListingFilter =
@@ -37,6 +46,7 @@ export type RawJobHit = {
   salaryHint?: string;
   tags?: string[];
   publishedAt?: string | null;
+  workMode?: JobWorkMode | null;
 };
 
 export const EMPLOYMENT_CATEGORY_LABELS: Record<JobEmploymentCategory, string> = {
@@ -49,9 +59,22 @@ export const FREELANCE_SUBTYPE_LABELS: Record<FreelanceSubtype, string> = {
   full_time: "Full-time",
 };
 
+export const WORK_MODE_LABELS: Record<JobWorkMode, string> = {
+  remote: "Télétravail",
+  hybrid: "Hybride",
+  onsite: "Présentiel",
+};
+
 export const JOB_LISTING_FILTER_LABELS: Record<JobListingFilter, string> = {
   all: "Toutes",
   salaried: "Salariat",
   freelance_part_time: "Freelance · temps partiel",
   freelance_full_time: "Freelance · full-time",
 };
+
+export const EMPTY_JOB_SEARCH_PREFS: JobSearchPrefs = {
+  roleQuery: "",
+  city: "",
+  workMode: "hybrid",
+};
+
