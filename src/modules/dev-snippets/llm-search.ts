@@ -49,7 +49,7 @@ export async function rankSnippetsWithLlm(
     "Tu ranges la bibliothèque de snippets / notes d'un développeur.",
     "La requête peut être un mot (docker), un langage (javascript), ou une intention (healthcheck postgres).",
     "Retourne uniquement les ids qui correspondent vraiment, du plus pertinent au moins pertinent.",
-    "Lis le titre, la catégorie (créée par l'utilisateur), les tags, le langage et l'extrait. N'invente aucun id.",
+    "Lis le titre, la catégorie (générée d'après le contenu), les tags, le langage et l'extrait. N'invente aucun id.",
     `Requête: ${query.trim()}`,
     "Catalogue (id | kind | language | category | title | tags | excerpt):",
     catalog,
