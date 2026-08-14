@@ -28,7 +28,6 @@ export type DevSnippetInput = {
   language?: string | null;
   content: string;
   tags?: string[];
-  categoryId?: string | null;
   referenceUrl?: string | null;
   imageUrl?: string | null;
   isPinned?: boolean;

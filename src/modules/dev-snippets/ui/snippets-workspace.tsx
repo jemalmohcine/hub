@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Copy,
   ExternalLink,
-  FolderPlus,
   Loader2,
   Pin,
   PinOff,
@@ -34,7 +33,6 @@ import {
 } from "@/design-system";
 import {
   createDevSnippet,
-  createDevSnippetCategory,
   deleteDevSnippet,
   deleteDevSnippetCategory,
   searchDevSnippets,
@@ -64,7 +62,6 @@ const EMPTY_FORM = {
   language: "typescript",
   content: "",
   tags: "",
-  categoryId: "",
   referenceUrl: "",
   imageUrl: "",
 };
@@ -86,8 +83,6 @@ export function SnippetsWorkspace({
   const searchSeq = useRef(0);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [kindFilter, setKindFilter] = useState<DevSnippetKind | "all">("all");
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [addingCategory, setAddingCategory] = useState(false);
   const [quickSearch, setQuickSearch] = useState("");
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -95,10 +90,6 @@ export function SnippetsWorkspace({
   const toast = useToast();
 
   const selected = snippets.find((item) => item.id === selectedId) ?? null;
-
-  const categoryNameById = useMemo(() => {
-    return new Map(categories.map((category) => [category.id, category.name]));
-  }, [categories]);
 
   const scoped = useMemo(() => {
     return snippets.filter((item) => {
@@ -180,7 +171,6 @@ export function SnippetsWorkspace({
       language: item.language ?? "other",
       content: item.content,
       tags: item.tags.join(", "),
-      categoryId: item.categoryId ?? "",
       referenceUrl: item.referenceUrl ?? "",
       imageUrl: item.imageUrl ?? "",
     });
@@ -199,6 +189,22 @@ export function SnippetsWorkspace({
       .filter(Boolean);
   }
 
+  function rememberCategory(snippet: DevSnippet) {
+    if (!snippet.categoryId || !snippet.categoryName) return;
+    const id = snippet.categoryId;
+    const name = snippet.categoryName;
+    setCategories((prev) => {
+      if (prev.some((category) => category.id === id)) {
+        return prev.map((category) =>
+          category.id === id ? { ...category, name } : category,
+        );
+      }
+      return [...prev, { id, name, createdAt: snippet.createdAt }].sort((a, b) =>
+        a.name.localeCompare(b.name, "fr"),
+      );
+    });
+  }
+
   function handleSave() {
     const payload = {
       title: form.title,
@@ -206,33 +212,22 @@ export function SnippetsWorkspace({
       language: form.language,
       content: form.content,
       tags: parseTags(form.tags),
-      categoryId: form.categoryId || null,
       referenceUrl: form.referenceUrl || null,
       imageUrl: form.imageUrl || null,
     };
-    const categoryName = payload.categoryId
-      ? (categoryNameById.get(payload.categoryId) ?? null)
-      : null;
 
     if (selectedId) {
       void run(() => updateDevSnippet(selectedId, payload), {
-        success: "Snippet mis à jour",
+        success: (updated) =>
+          updated.categoryName
+            ? `Snippet mis à jour · ${updated.categoryName}`
+            : "Snippet mis à jour",
         error: "Impossible de sauvegarder",
-        onSuccess: () => {
+        onSuccess: (updated) => {
           setSnippets((prev) =>
-            prev.map((item) =>
-              item.id === selectedId
-                ? {
-                    ...item,
-                    ...payload,
-                    categoryName,
-                    referenceUrl: payload.referenceUrl,
-                    imageUrl: payload.imageUrl,
-                    updatedAt: new Date().toISOString(),
-                  }
-                : item,
-            ),
+            prev.map((item) => (item.id === selectedId ? updated : item)),
           );
+          rememberCategory(updated);
           setEditing(false);
         },
       });
@@ -240,30 +235,17 @@ export function SnippetsWorkspace({
     }
 
     void run(() => createDevSnippet(payload), {
-      success: "Snippet créé",
+      success: (created) =>
+        created.categoryName
+          ? `Snippet créé · ${created.categoryName}`
+          : "Snippet créé",
       error: "Impossible de créer le snippet",
       onSuccess: (created) => {
         setSnippets((prev) => [created, ...prev]);
+        rememberCategory(created);
         setSelectedId(created.id);
         setEditing(false);
         setForm(EMPTY_FORM);
-      },
-    });
-  }
-
-  function handleCreateCategory() {
-    const name = newCategoryName.trim();
-    if (!name) return;
-    void run(() => createDevSnippetCategory(name), {
-      success: "Catégorie créée",
-      error: "Impossible de créer la catégorie",
-      onSuccess: (created) => {
-        setCategories((prev) =>
-          [...prev, created].sort((a, b) => a.name.localeCompare(b.name, "fr")),
-        );
-        setNewCategoryName("");
-        setAddingCategory(false);
-        setCategoryFilter(created.id);
       },
     });
   }
@@ -278,7 +260,6 @@ export function SnippetsWorkspace({
       ),
     );
     if (categoryFilter === id) setCategoryFilter(null);
-    if (form.categoryId === id) setForm((current) => ({ ...current, categoryId: "" }));
     void run(() => deleteDevSnippetCategory(id), {
       success: "Catégorie supprimée",
       error: "Impossible de supprimer la catégorie",
@@ -430,16 +411,19 @@ export function SnippetsWorkspace({
         </Cluster>
       ) : (
         <Text size="sm" tone="muted">
-          Tape un mot, un langage ou une intention. Filtre aussi par tes catégories.
+          Tape un mot, un langage ou une intention. Filtre aussi par les catégories.
         </Text>
       )}
 
       <Stack gap={2}>
-        <Text size="sm" weight="medium">
-          Tes catégories
-        </Text>
+        <Cluster gap={2} className="items-center">
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
+          <Text size="sm" weight="medium">
+            Catégories
+          </Text>
+        </Cluster>
         <Text size="sm" tone="muted">
-          Tu les crées toi-même pour classer tes snippets. L’IA ne les invente pas.
+          L’IA les génère d’après le titre et le contenu. Tu n’as rien à ajouter.
         </Text>
         <Cluster gap={2} className="flex-wrap items-center">
           <Button
@@ -465,55 +449,6 @@ export function SnippetsWorkspace({
               {category.name}
             </Button>
           ))}
-          {addingCategory ? (
-            <Cluster gap={2} className="items-center">
-              <Input
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder="Ex. Docker, Frontend…"
-                className="h-9 w-[10rem]"
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    handleCreateCategory();
-                  }
-                  if (event.key === "Escape") {
-                    setAddingCategory(false);
-                    setNewCategoryName("");
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                size="sm"
-                disabled={pending || !newCategoryName.trim()}
-                onClick={handleCreateCategory}
-              >
-                Ajouter
-              </Button>
-              <IconButton
-                type="button"
-                label="Annuler"
-                size="sm"
-                onClick={() => {
-                  setAddingCategory(false);
-                  setNewCategoryName("");
-                }}
-              >
-                <X className="h-4 w-4" />
-              </IconButton>
-            </Cluster>
-          ) : (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => setAddingCategory(true)}
-            >
-              <FolderPlus className="h-3.5 w-3.5" />
-              Nouvelle catégorie
-            </Button>
-          )}
           {categoryFilter ? (
             <Button
               type="button"
@@ -539,7 +474,7 @@ export function SnippetsWorkspace({
                 search.trim()
                   ? `Aucun snippet ne correspond à « ${search.trim()} ».`
                   : categoryFilter
-                    ? "Cette catégorie est vide. Ajoute un snippet ou choisis une autre catégorie."
+                    ? "Cette catégorie est vide."
                     : "Crée ta première note ou ton premier extrait de code."
               }
             />
@@ -640,20 +575,6 @@ export function SnippetsWorkspace({
                   </Select>
                 </Field>
               </div>
-              <Field label="Catégorie" htmlFor="snippet-category">
-                <Select
-                  id="snippet-category"
-                  value={form.categoryId}
-                  onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                >
-                  <option value="">Sans catégorie</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
               <Field label="Tags (séparés par des virgules)" htmlFor="snippet-tags">
                 <Input
                   id="snippet-tags"
@@ -687,6 +608,9 @@ export function SnippetsWorkspace({
                   placeholder="Collez votre code, une note, ou joignez une image…"
                 />
               </Field>
+              <Text size="sm" tone="muted">
+                L’IA choisit la catégorie d’après ce que tu écris.
+              </Text>
               <Cluster gap={2}>
                 <Button
                   type="button"

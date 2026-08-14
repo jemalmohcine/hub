@@ -56,7 +56,7 @@ describe("scoreSnippet", () => {
     expect(scoreSnippet("js", item)).toBeGreaterThan(0);
   });
 
-  it("finds a user-created category name", () => {
+  it("finds a category name", () => {
     const item = snippet({
       id: "5",
       title: "Healthcheck",
