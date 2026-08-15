@@ -1,6 +1,8 @@
 import * as cheerio from "cheerio";
-import { absoluteUrl } from "@/lib/http/fetch-text";
-import { fetchHtml } from "@/lib/scrape/firecrawl";
+import {
+  absoluteUrl,
+  fetchText,
+} from "@/lib/http/fetch-text";
 import type { RawHit } from "@/modules/ai-intel/types";
 
 const SKIP_PATHS = new Set([
@@ -62,7 +64,7 @@ async function enrichToolPage(
   sourceId: string,
   toolUrl: string,
 ): Promise<RawHit | null> {
-  const html = await fetchHtml(toolUrl);
+  const html = await fetchText(toolUrl, { timeoutMs: 14_000 });
   const $ = cheerio.load(html);
   const jsonLd = parseJsonLd($);
 
@@ -220,7 +222,7 @@ async function discoverToolUrls(baseUrl: string): Promise<string[]> {
 
   for (const page of pages) {
     try {
-      const html = await fetchHtml(page);
+      const html = await fetchText(page, { timeoutMs: 12_000 });
       const $ = cheerio.load(html);
       $("a[href*='/tools/']").each((_, el) => {
         const abs = absoluteUrl(page, $(el).attr("href") ?? "");
@@ -250,7 +252,7 @@ export async function collectFutureTools(
   sourceId: string,
   url: string,
 ): Promise<RawHit[]> {
-  const homeHtml = await fetchHtml(url);
+  const homeHtml = await fetchText(url, { timeoutMs: 12_000 });
   const toolUrls = await discoverToolUrls(url);
   const limited = toolUrls.slice(0, 22);
 

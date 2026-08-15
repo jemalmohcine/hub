@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/core/auth/supabase/admin";
 import { collectFromSource } from "@/modules/ai-intel/collectors";
+import { firecrawlArticleStats } from "@/modules/ai-intel/article-scrape";
 import {
   enrichClassifiedItem,
   resetArticleScrapeBudget,
@@ -252,6 +253,7 @@ export async function runAiIntelIngest() {
           inserted,
           refreshed,
           notify,
+          firecrawl: firecrawlArticleStats(),
         },
       })
       .eq("id", runId);
@@ -267,6 +269,7 @@ export async function runAiIntelIngest() {
         inserted,
         refreshed,
         notify,
+        firecrawl: firecrawlArticleStats(),
       },
     };
   } catch (err) {

@@ -1,7 +1,6 @@
 import * as cheerio from "cheerio";
 import { formatCompactNumber } from "@/lib/numbers";
-import { fetchJson } from "@/lib/http/fetch-text";
-import { fetchHtml } from "@/lib/scrape/firecrawl";
+import { fetchJson, fetchText } from "@/lib/http/fetch-text";
 import { DEV_SIGNAL_RE } from "@/modules/ai-intel/score";
 import type { RawHit } from "@/modules/ai-intel/types";
 
@@ -42,7 +41,10 @@ export async function collectGithubTrending(
   sourceId: string,
   url: string,
 ): Promise<RawHit[]> {
-  const html = await fetchHtml(url);
+  const html = await fetchText(url, {
+    headers: { Accept: "text/html" },
+    timeoutMs: 14_000,
+  });
   const $ = cheerio.load(html);
   const rows: {
     repo: string;

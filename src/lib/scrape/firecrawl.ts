@@ -7,10 +7,12 @@ const DEFAULT_MAX_AGE_MS = 3 * 60 * 60 * 1000;
 
 export type FirecrawlFormat = "markdown" | "html" | "rawHtml" | "links";
 
+export type ScrapeVia = "auto" | "firecrawl" | "direct";
+
 export type ScrapePageOptions = {
   /**
-   * Strip nav/footer before generating markdown. True for articles, offers and
-   * pricing pages. List collectors that need links / JSON-LD pass false.
+   * Strip nav/footer before generating markdown. True for articles.
+   * List collectors that need links / JSON-LD pass false.
    */
   onlyMainContent?: boolean;
   formats?: FirecrawlFormat[];
@@ -19,7 +21,13 @@ export type ScrapePageOptions = {
   maxAgeMs?: number;
   /** Skip the in-process URL cache. */
   noCache?: boolean;
-};
+  /**
+   * `auto` — Firecrawl when the key is set (default).
+   * `firecrawl` — must call Firecrawl (falls back only if the request fails).
+   * `direct` — never spend a Firecrawl credit.
+   */
+  via?: ScrapeVia;
+}
 
 export type ScrapedPage = {
   url: string;
@@ -61,7 +69,8 @@ export function clearScrapeCache(): void {
 function cacheKey(url: string, opts: ScrapePageOptions): string {
   const onlyMain = opts.onlyMainContent !== false;
   const formats = (opts.formats ?? ["markdown", "rawHtml", "html"]).join(",");
-  return `${url}|${onlyMain}|${formats}`;
+  const via = opts.via ?? "auto";
+  return `${url}|${onlyMain}|${formats}|${via}`;
 }
 
 function firstString(value: unknown): string | null {
@@ -153,8 +162,14 @@ async function scrapeDirect(
   };
 }
 
+function wantsFirecrawl(via: ScrapeVia | undefined): boolean {
+  if (via === "direct") return false;
+  if (!hasFirecrawl()) return false;
+  return true;
+}
+
 /**
- * Fetch a page through Firecrawl when `FIRECRAWL_API_KEY` is set.
+ * Fetch a page through Firecrawl when asked to.
  * Falls back to a direct GET so local/tests still work without the key.
  */
 export async function scrapePage(
@@ -167,7 +182,7 @@ export async function scrapePage(
     if (cached) return cached;
   }
 
-  const page = hasFirecrawl()
+  const page = wantsFirecrawl(opts.via)
     ? await scrapeWithFirecrawl(url, opts).catch(() => scrapeDirect(url, opts))
     : await scrapeDirect(url, opts);
 
@@ -198,6 +213,7 @@ export async function fetchHtml(
   const page = await scrapePage(url, {
     onlyMainContent: false,
     formats: ["rawHtml", "html"],
+    via: "direct",
     ...opts,
   });
   return page.html;

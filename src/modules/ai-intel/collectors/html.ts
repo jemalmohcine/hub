@@ -1,13 +1,15 @@
 import * as cheerio from "cheerio";
-import { absoluteUrl } from "@/lib/http/fetch-text";
-import { fetchHtml } from "@/lib/scrape/firecrawl";
+import {
+  absoluteUrl,
+  fetchText,
+} from "@/lib/http/fetch-text";
 import type { RawHit } from "@/modules/ai-intel/types";
 
 export async function collectGenericHtmlList(
   sourceId: string,
   url: string,
 ): Promise<RawHit[]> {
-  const html = await fetchHtml(url);
+  const html = await fetchText(url);
   const $ = cheerio.load(html);
   const hits: RawHit[] = [];
 

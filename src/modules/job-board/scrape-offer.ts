@@ -1,6 +1,5 @@
 import * as cheerio from "cheerio";
-import { HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
-import { scrapePage } from "@/lib/scrape/firecrawl";
+import { fetchText, HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
 import { extractMainText, metaContent, readOpenGraph } from "@/lib/scrape/page";
 import { clampField, collapseWhitespace } from "@/lib/text";
 
@@ -122,29 +121,20 @@ export function readJobPostingJsonLd($: cheerio.CheerioAPI): ScrapedJobOffer | n
 /** Fetch readable job posting content from a URL. */
 export async function scrapeJobOfferPage(url: string): Promise<ScrapedJobOffer | null> {
   try {
-    const page = await scrapePage(url, {
-      onlyMainContent: true,
-      timeoutMs: HTTP_TIMEOUTS.scrape,
+    const html = await fetchText(url, {
+      timeoutMs: HTTP_TIMEOUTS.page,
+      headers: { Accept: "text/html,application/xhtml+xml" },
     });
-    const $ = cheerio.load(page.html);
+    const $ = cheerio.load(html);
     const jsonLd = readJobPostingJsonLd($);
     const og = readOpenGraph($);
-    const body =
-      (page.markdown && page.markdown.length >= 120
-        ? collapseWhitespace(page.markdown)
-        : "") ||
-      extractMainText($, {
-        selectors: DESCRIPTION_SELECTORS,
-        minLength: 120,
-        maxParagraphs: 10,
-      });
+    const body = extractMainText($, {
+      selectors: DESCRIPTION_SELECTORS,
+      minLength: 120,
+      maxParagraphs: 10,
+    });
 
-    const title =
-      jsonLd?.title ||
-      (page.title ? clampField(collapseWhitespace(page.title), "title") : null) ||
-      (og.title ? clampField(collapseWhitespace(og.title), "title") : null);
-
-    if (!title && !og.description && !page.description && !body) return null;
+    if (!jsonLd?.title && !og.title && !og.description && !body) return null;
 
     const location =
       jsonLd?.location ||
@@ -158,10 +148,10 @@ export async function scrapeJobOfferPage(url: string): Promise<ScrapedJobOffer |
       null;
 
     return {
-      title,
+      title: jsonLd?.title || (og.title ? clampField(collapseWhitespace(og.title), "title") : null),
       company: jsonLd?.company ?? null,
       description: collapseWhitespace(
-        jsonLd?.description || body || page.description || og.description || "",
+        jsonLd?.description || body || og.description || "",
       ).slice(0, DESCRIPTION_MAX),
       location: location ? collapseWhitespace(location).slice(0, SHORT_FIELD_MAX) : null,
       salaryHint: salaryHint

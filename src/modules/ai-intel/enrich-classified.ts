@@ -1,4 +1,4 @@
-import { scrapeArticlePage } from "@/modules/ai-intel/article-scrape";
+import { scrapeArticlePage, resetFirecrawlArticleBudget } from "@/modules/ai-intel/article-scrape";
 import { detectHardSignal, hardSignalScoreFloor } from "@/modules/ai-intel/hard-signals";
 import { sanitizePlainText } from "@/modules/ai-intel/html-to-text";
 import { isNearDuplicate } from "@/lib/text";
@@ -43,6 +43,7 @@ export function resetArticleScrapeBudget() {
   repoScrapeBudget = MAX_REPO_SCRAPES;
   toolScrapeBudget = MAX_TOOL_SCRAPES;
   resetLlmOrganizeBudget();
+  resetFirecrawlArticleBudget();
 }
 
 /** A title this long is a paragraph the pipeline failed to summarise. */
@@ -157,6 +158,7 @@ export async function enrichClassifiedItem(
         meta.articleExcerpt = sanitizePlainText(scraped.content, 500);
       }
       meta.fullPageScraped = true;
+      meta.scrapedVia = scraped.scrapedVia;
     }
   }
 
@@ -174,6 +176,7 @@ export async function enrichClassifiedItem(
       }
       if (scraped.siteName) meta.siteName = scraped.siteName;
       meta.fullPageScraped = true;
+      meta.scrapedVia = scraped.scrapedVia;
     }
   }
 

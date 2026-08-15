@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { fetchHtml } from "@/lib/scrape/firecrawl";
+import { fetchText } from "@/lib/http/fetch-text";
 import { formatCompactNumber } from "@/lib/numbers";
 import type { RawHit } from "@/modules/ai-intel/types";
 
@@ -17,7 +17,7 @@ async function enrichGitTrendRepo(
   pageUrl: string,
   rank: number | null,
 ): Promise<RawHit | null> {
-  const html = await fetchHtml(pageUrl);
+  const html = await fetchText(pageUrl, { timeoutMs: 12_000 });
   const $ = cheerio.load(html);
 
   type SoftwareSource = {
@@ -114,7 +114,7 @@ export async function collectGitTrend(
   sourceId: string,
   url: string,
 ): Promise<RawHit[]> {
-  const html = await fetchHtml(url);
+  const html = await fetchText(url, { timeoutMs: 12_000 });
   const $ = cheerio.load(html);
 
   const listItems: ListItem[] = [];

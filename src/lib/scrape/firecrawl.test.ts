@@ -124,6 +124,16 @@ describe("scrapePage", () => {
     expect(page.html).toContain("fallback");
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it("skips Firecrawl when via is direct, even with a key", async () => {
+    fetchMock.mockResolvedValueOnce(htmlResponse("<html>no-fc</html>"));
+
+    const page = await scrapePage("https://openai.com/news", { via: "direct" });
+    expect(page.source).toBe("direct");
+
+    const [calledUrl] = fetchMock.mock.calls[0] as [string, FetchInit];
+    expect(calledUrl).toBe("https://openai.com/news");
+  });
 });
 
 describe("fetchHtml", () => {
@@ -142,7 +152,17 @@ describe("fetchHtml", () => {
     vi.unstubAllEnvs();
   });
 
-  it("asks Firecrawl for the full DOM, not main content", async () => {
+  it("defaults to a direct GET so list collectors do not spend credits", async () => {
+    fetchMock.mockResolvedValueOnce(htmlResponse("<html><a href='/x'>list</a></html>"));
+
+    const html = await fetchHtml("https://example.com/list");
+    expect(html).toContain("href='/x'");
+
+    const [calledUrl] = fetchMock.mock.calls[0] as [string, FetchInit];
+    expect(calledUrl).toBe("https://example.com/list");
+  });
+
+  it("can still request Firecrawl for the full DOM", async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
         success: true,
@@ -150,7 +170,7 @@ describe("fetchHtml", () => {
       }),
     );
 
-    const html = await fetchHtml("https://example.com/list");
+    const html = await fetchHtml("https://example.com/list", { via: "firecrawl" });
     expect(html).toContain("href='/x'");
 
     const [, init] = fetchMock.mock.calls[0] as [string, { body?: string }];
