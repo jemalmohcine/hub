@@ -31,7 +31,9 @@ promoting it to `design-system` or `shared/ui`.
   no ad-hoc `slice(0, 240)`, no local `formatStars`.
 - **Outbound HTTP**: `@/lib/http/fetch-text`. It owns the user agent, the
   timeouts (`HTTP_TIMEOUTS`), and XML entity decoding.
-- **HTML scraping**: `@/lib/scrape/page` (`readOpenGraph`, `extractMainText`).
+- **HTML scraping**: `@/lib/scrape/firecrawl` (`scrapePage`, `fetchHtml`).
+  Firecrawl when `FIRECRAWL_API_KEY` is set; otherwise a direct GET.
+  DOM helpers stay in `@/lib/scrape/page` (`readOpenGraph`, `extractMainText`).
 - **Entitlements**: gate on `ENTITLEMENTS.*` keys, never raw strings.
   Server actions use `assertEntitled(key)`; pages use `ModulePage`.
 - **Page shell**: every module page is `requirePageUser()` + `<ModulePage>`.

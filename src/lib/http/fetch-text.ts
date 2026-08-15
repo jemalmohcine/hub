@@ -7,6 +7,8 @@ export const HTTP_TIMEOUTS = {
   page: 14_000,
   /** Slow third parties we still want to wait for. */
   slow: 20_000,
+  /** Firecrawl scrape — the remote browser can take a while. */
+  scrape: 45_000,
 } as const;
 
 const USER_AGENT = "DevHub/1.0 (+https://github.com/devhub; nightly digest)";
@@ -53,6 +55,39 @@ export async function fetchJson<T>(
 ): Promise<T> {
   const text = await fetchText(url, opts);
   return JSON.parse(text) as T;
+}
+
+/** POST JSON and parse the JSON response. Used by Firecrawl (and similar APIs). */
+export async function postJson<T>(
+  url: string,
+  body: unknown,
+  opts: FetchTextOptions = {},
+): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(),
+    opts.timeoutMs ?? HTTP_TIMEOUTS.api,
+  );
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "User-Agent": USER_AGENT,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...opts.headers,
+      },
+      body: JSON.stringify(body),
+      next: { revalidate: 0 },
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} for ${url}`);
+    }
+    return (await res.json()) as T;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** fetchText that resolves to null instead of throwing — for best-effort scrapes. */

@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
-import { fetchText, HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
+import { HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
+import { scrapePage } from "@/lib/scrape/firecrawl";
 import { extractMainText, readOpenGraph } from "@/lib/scrape/page";
 import { FIELD_LIMITS, clampField } from "@/lib/text";
 import { decodeHtmlEntities, sanitizePlainText } from "@/modules/ai-intel/html-to-text";
@@ -36,28 +37,33 @@ function cleanText(raw: string): string {
 /** Fetch and extract readable article content from a URL. */
 export async function scrapeArticlePage(url: string): Promise<ScrapedArticle | null> {
   try {
-    const html = await fetchText(url, {
-      timeoutMs: HTTP_TIMEOUTS.api,
-      headers: { Accept: "text/html,application/xhtml+xml" },
+    const page = await scrapePage(url, {
+      onlyMainContent: true,
+      timeoutMs: HTTP_TIMEOUTS.scrape,
     });
-    const $ = cheerio.load(html);
+    const $ = cheerio.load(page.html);
 
     const og = readOpenGraph($);
-    const content = extractMainText($, {
-      selectors: CONTENT_SELECTORS,
-      minLength: 200,
-      clean: cleanText,
-    });
+    const title = page.title || og.title;
+    const description = page.description || og.description;
+    const siteName = page.siteName || og.siteName;
+    const content =
+      (page.markdown && page.markdown.length >= 200
+        ? cleanText(page.markdown)
+        : "") ||
+      extractMainText($, {
+        selectors: CONTENT_SELECTORS,
+        minLength: 200,
+        clean: cleanText,
+      });
 
-    if (!og.title && !og.description && !content) return null;
+    if (!title && !description && !content) return null;
 
     return {
-      title: og.title ? clampField(cleanText(og.title), "title") : null,
-      description: og.description
-        ? cleanText(og.description).slice(0, 500)
-        : null,
+      title: title ? clampField(cleanText(title), "title") : null,
+      description: description ? cleanText(description).slice(0, 500) : null,
       content: content ? content.slice(0, FIELD_LIMITS.body) : null,
-      siteName: og.siteName ? clampField(cleanText(og.siteName), "name") : null,
+      siteName: siteName ? clampField(cleanText(siteName), "name") : null,
     };
   } catch {
     return null;

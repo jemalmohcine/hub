@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/core/auth/supabase/admin";
-import { fetchText } from "@/lib/http/fetch-text";
+import { fetchHtml } from "@/lib/scrape/firecrawl";
 import type { AiPillar, SourceKind } from "@/modules/ai-intel/types";
 
 type DiscoveredCandidate = {
@@ -67,7 +67,7 @@ async function searchTavily(query: string): Promise<TavilyResult[]> {
 
 async function detectRss(homeUrl: string): Promise<string | null> {
   try {
-    const html = await fetchText(homeUrl, { timeoutMs: 8_000 });
+    const html = await fetchHtml(homeUrl);
     const m = html.match(
       /<link[^>]+type=["']application\/(rss|atom)\+xml["'][^>]+href=["']([^"']+)["']/i,
     );

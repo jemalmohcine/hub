@@ -87,6 +87,8 @@ Module Pro `/app/ai` : digest multi-sources (4 piliers), merge cross-sites, save
    - `GOOGLE_GENERATIVE_AI_API_KEY` (Gemini gratuit — https://aistudio.google.com/apikey)
      Sans cette clé le scrape tourne quand même, mais titres, urgences, tags et scores
      retombent sur les heuristiques regex au lieu d'être décidés en lisant le contenu.
+   - `FIRECRAWL_API_KEY` (pages HTML : articles, offres, tarifs, listes)
+     Sans cette clé le scrape retombe sur un GET direct.
    - `TAVILY_API_KEY` (optionnel — découverte de nouveaux sites)
    - `CRON_SECRET` (optionnel — trigger manuel local via `/api/cron/ai-intel`)
    - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` (+ `VAPID_SUBJECT`) pour les push PWA
@@ -114,7 +116,7 @@ Module Pro `/app/ai` : digest multi-sources (4 piliers), merge cross-sites, save
      -H "Authorization: Bearer $CRON_SECRET"
    ```
 
-Secrets GitHub requis pour le workflow : `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (et `TAVILY_API_KEY` / `NEXT_PUBLIC_APP_URL` si tu les utilises).
+Secrets GitHub requis pour le workflow : `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `FIRECRAWL_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (et `TAVILY_API_KEY` / `NEXT_PUBLIC_APP_URL` si tu les utilises). Ajoute aussi `FIRECRAWL_API_KEY` sur Vercel (import d’offre, enrichissement).
 
 ### Comment une info devient une alerte
 

@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
-import { HTTP_TIMEOUTS, tryFetchText } from "@/lib/http/fetch-text";
+import { HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
+import { tryScrapePage } from "@/lib/scrape/firecrawl";
 import { extractMainText } from "@/lib/scrape/page";
 import { collapseWhitespace, truncateAtWord } from "@/lib/text";
 
@@ -12,10 +13,18 @@ import { collapseWhitespace, truncateAtWord } from "@/lib/text";
 const MAX_PRICING_CHARS = 6_000;
 
 export async function scrapePricingText(url: string): Promise<string | null> {
-  const html = await tryFetchText(url, { timeoutMs: HTTP_TIMEOUTS.page });
-  if (!html) return null;
+  const page = await tryScrapePage(url, {
+    onlyMainContent: true,
+    timeoutMs: HTTP_TIMEOUTS.scrape,
+  });
+  if (!page) return null;
 
-  const $ = cheerio.load(html);
+  const fromMarkdown = page.markdown ? collapseWhitespace(page.markdown) : "";
+  if (fromMarkdown.length >= 120) {
+    return fromMarkdown.slice(0, MAX_PRICING_CHARS);
+  }
+
+  const $ = cheerio.load(page.html);
   $("script, style, noscript, svg, nav, footer").remove();
 
   const text = extractMainText($, {
