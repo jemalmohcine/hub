@@ -5,7 +5,7 @@ import { Bookmark, Search } from "lucide-react";
 import {
   Card,
   Cluster,
-  Heading,
+  EmptyState,
   Input,
   Stack,
   Text,
@@ -42,10 +42,9 @@ import { useAsyncAction } from "@/design-system";
 type TabId = FeedTabId;
 
 const SECTION_LIMITS = {
-  urgent: 5,
-  github: 6,
-  tools: 5,
-  news: 6,
+  urgent: 4,
+  github: 5,
+  read: 8,
 } as const;
 
 function toLocalIsoDay(raw: string | null | undefined): string {
@@ -205,10 +204,13 @@ export function AiIntelWorkspace({
 
   const sections = useMemo(() => {
     const urgent = searchedPool.filter((i) => matchesTab(i, "urgent"));
-    const github = searchedPool.filter((i) => matchesTab(i, "github"));
-    const tools = searchedPool.filter((i) => matchesTab(i, "tools"));
-    const news = searchedPool.filter((i) => matchesTab(i, "news"));
-    return { urgent, github, tools, news };
+    const github = searchedPool.filter(
+      (i) => matchesTab(i, "github") && !isHotAlert(i),
+    );
+    const read = searchedPool.filter(
+      (i) => !isHotAlert(i) && !matchesTab(i, "github"),
+    );
+    return { urgent, github, read };
   }, [searchedPool]);
 
   const filtered = useMemo(() => {
@@ -386,46 +388,22 @@ export function AiIntelWorkspace({
             </FeedSection>
           ) : null}
 
-          {sections.tools.length > 0 ? (
+          {sections.read.length > 0 ? (
             <FeedSection
-              title={copy.tabTools}
-              count={sections.tools.length}
-              description={copy.sectionToolsDesc}
-              viewAllLabel={copy.viewAll}
-              onViewAll={() => setTab("tools")}
+              title={copy.sectionRead}
+              count={sections.read.length}
+              description={copy.sectionReadDesc}
             >
-              {renderItems(sections.tools.slice(0, SECTION_LIMITS.tools), true)}
-            </FeedSection>
-          ) : null}
-
-          {sections.news.length > 0 ? (
-            <FeedSection
-              title={copy.tabNews}
-              count={sections.news.length}
-              description={copy.sectionNewsDesc}
-              viewAllLabel={copy.viewAll}
-              onViewAll={() => setTab("news")}
-            >
-              {renderItems(sections.news.slice(0, SECTION_LIMITS.news), true)}
+              {renderItems(sections.read.slice(0, SECTION_LIMITS.read), true)}
             </FeedSection>
           ) : null}
 
           {searchedPool.length === 0 ? (
-            <Card className="p-6">
-              <Heading level={3}>{copy.noData}</Heading>
-              <Text size="sm" tone="muted" className="mt-1">
-                {copy.emptyHint}
-              </Text>
-            </Card>
+            <EmptyState title={copy.noData} hint={copy.emptyHint} />
           ) : null}
         </Stack>
       ) : filtered.length === 0 ? (
-        <Card className="p-6">
-          <Heading level={3}>{emptyMessage}</Heading>
-          <Text size="sm" tone="muted" className="mt-1">
-            {emptyHint}
-          </Text>
-        </Card>
+        <EmptyState title={emptyMessage} hint={emptyHint} />
       ) : (
         <Stack gap={1}>{renderItems(filtered)}</Stack>
       )}
