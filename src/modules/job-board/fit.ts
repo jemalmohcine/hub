@@ -80,7 +80,7 @@ export function scoreListingFit(
     if (cities.some((entry) => locationMatches(entry, listing.location, title))) {
       score += 28;
     } else if (
-      countries.some((entry) => locationMatches(entry, listing.location, blob))
+      countries.some((entry) => locationMatches(entry, listing.location, title))
     ) {
       score += 12;
     }
