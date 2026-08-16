@@ -21,7 +21,7 @@ type RemotiveResponse = {
 
 export async function collectRemotive(): Promise<RawJobHit[]> {
   const data = await fetchJson<RemotiveResponse>(
-    "https://remotive.com/api/remote-jobs",
+    "https://remotive.com/api/remote-jobs?category=software-dev",
     { timeoutMs: 16_000 },
   );
 

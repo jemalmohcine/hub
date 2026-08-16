@@ -141,15 +141,13 @@ export function anyLocationMatches(
   return selected.some((entry) => locationMatches(entry, location, extra));
 }
 
-const WORLDWIDE_REMOTE =
-  /\b(worldwide|anywhere|anywhere in the world|global remote|united states|\busa\b|\bus only\b)\b/i;
-
 const EMEA_HINT = /\b(emea|mena|maghreb)\b/i;
 
 function wantsMaghreb(selected: JobLocation[]): boolean {
-  return selected.some((entry) =>
-    ["maroc", "algerie", "tunisie", "egypte", "afrique"].includes(entry.id) ||
-    ["maroc", "algerie", "tunisie", "egypte"].includes(entry.countryId),
+  return selected.some(
+    (entry) =>
+      ["maroc", "algerie", "tunisie", "egypte", "afrique"].includes(entry.id) ||
+      ["maroc", "algerie", "tunisie", "egypte"].includes(entry.countryId),
   );
 }
 
@@ -160,10 +158,29 @@ export function remoteRegionMatches(
   extra = "",
 ): boolean {
   const hay = listingPlaceHay(location, extra);
-  if (!hay || WORLDWIDE_REMOTE.test(hay)) return false;
+  if (!hay) return false;
+  const hasOurRegion =
+    EUROPE_HINT.test(hay) ||
+    FRANCE_HINT.test(hay) ||
+    EMEA_HINT.test(hay) ||
+    /\b(morocco|maroc|africa|afrique)\b/i.test(hay);
+  if (
+    /\b(worldwide|anywhere|anywhere in the world|global remote)\b/i.test(hay) &&
+    !hasOurRegion
+  ) {
+    return false;
+  }
+  if (/\b(united states|\busa\b|\bus only\b)\b/i.test(hay) && !hasOurRegion) {
+    return false;
+  }
   const wantsEu = selected.some((entry) => isEuropeanPlace(entry));
-  if (wantsEu && (EUROPE_HINT.test(hay) || FRANCE_HINT.test(hay))) return true;
-  if (wantsMaghreb(selected) && (EMEA_HINT.test(hay) || /\b(africa|afrique|morocco|maroc)\b/i.test(hay))) {
+  if (wantsEu && (EUROPE_HINT.test(hay) || FRANCE_HINT.test(hay) || EMEA_HINT.test(hay))) {
+    return true;
+  }
+  if (
+    wantsMaghreb(selected) &&
+    (EMEA_HINT.test(hay) || /\b(africa|afrique|morocco|maroc)\b/i.test(hay))
+  ) {
     return true;
   }
   return false;

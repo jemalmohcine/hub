@@ -281,6 +281,18 @@ describe("matchesSearchPrefs", () => {
         prefs,
       ),
     ).toBe(false);
+    expect(
+      matchesSearchPrefs(
+        {
+          title: "Frontend engineer",
+          description: "",
+          location: "EMEA, USA",
+          tags: [],
+          workMode: "remote",
+        },
+        prefs,
+      ),
+    ).toBe(true);
   });
 
   it("does not treat a Europe-only remote job as présentiel in France", () => {

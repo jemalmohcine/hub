@@ -116,6 +116,12 @@ async function upsertHits(hits: RawJobHit[], prefs: JobSearchPrefs | null) {
 export async function ingestJobsForPrefs(prefs: JobSearchPrefs) {
   const hits = await collectJobsForPrefs(prefs);
   const result = await upsertHits(hits, prefs);
+  console.info("[jobs] ingest", {
+    roles: prefs.roles,
+    locations: prefs.locations,
+    raw: hits.length,
+    ...result,
+  });
   return { raw: hits.length, ...result };
 }
 
