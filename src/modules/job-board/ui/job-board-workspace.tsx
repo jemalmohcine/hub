@@ -49,6 +49,15 @@ const KIND_HINT = {
   region: "Région",
 } as const;
 
+const SOURCE_LABEL: Record<string, string> = {
+  wttj: "WTTJ",
+  remotive: "Remotive",
+  jobicy: "Jobicy",
+  arbeitnow: "Arbeitnow",
+  wwr: "WWR",
+  "indeed-fr": "Indeed",
+};
+
 const FIT_COPY = {
   excellent: { label: "Bon match", tone: "success" as const },
   good: { label: "Proche", tone: "brand" as const },
@@ -208,8 +217,8 @@ export function JobBoardWorkspace({
 
       {listings.length > 0 ? (
         <Text size="sm" tone="muted">
-          {listings.length} offre{listings.length !== 1 ? "s" : ""} dédiée
-          {listings.length !== 1 ? "s" : ""} · les plus proches de toi d’abord
+          {listings.length} offre{listings.length !== 1 ? "s" : ""} scrapée
+          {listings.length !== 1 ? "s" : ""} · WTTJ d’abord, les plus proches de toi en tête
         </Text>
       ) : null}
 
@@ -242,6 +251,9 @@ export function JobBoardWorkspace({
                   </div>
                   <Cluster gap={1} className="flex-wrap">
                     {fit ? <Badge tone={fit.tone}>{fit.label}</Badge> : null}
+                    {SOURCE_LABEL[listing.source] ? (
+                      <Badge tone="neutral">{SOURCE_LABEL[listing.source]}</Badge>
+                    ) : null}
                     {listing.workMode ? (
                       <Badge tone={modeTone(listing.workMode)}>
                         {WORK_MODE_LABELS[listing.workMode]}
@@ -287,8 +299,8 @@ export function JobBoardWorkspace({
             title={hasSearch ? "Rien d’assez proche pour l’instant" : "Dis-nous ce que tu cherches"}
             hint={
               hasSearch
-                ? "Les boards publics n’ont rien d’assez proche. Postule sur LinkedIn, Indeed ou le site de ton pays — la recherche est déjà remplie."
-                : "Un poste et une ville. Ensuite LinkedIn, Indeed et les meilleurs boards s’ouvrent tout seuls."
+                ? "Rien d’assez proche dans le scrape. Relance Voir les offres, ou postule sur LinkedIn / Indeed."
+                : "Un poste et une ville. On scrape WTTJ, Remotive et Jobicy tout de suite."
             }
             action={
               <Stack gap={3} className="items-center">
@@ -307,7 +319,7 @@ export function JobBoardWorkspace({
         onOpenChange={setSheetOpen}
         desktop="full"
         title="Ta recherche"
-        description="Poste, villes, mode. LinkedIn, Indeed et les boards de ton pays s’ouvrent déjà remplis."
+        description="Poste, villes, mode. On scrape WTTJ et les boards publics à l’enregistrement."
         headerActions={
           <IconButton label="Fermer" size="sm" onClick={() => setSheetOpen(false)}>
             <X className="h-4 w-4" />

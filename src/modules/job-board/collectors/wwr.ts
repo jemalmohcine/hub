@@ -21,7 +21,7 @@ function cleanText(raw: string): string {
     .trim();
 }
 
-function parseWwrTitle(raw: string): { company: string; title: string } {
+export function parseWwrTitle(raw: string): { company: string; title: string } {
   const cleaned = cleanText(raw);
   const cut = cleaned.indexOf(": ");
   if (cut <= 0) return { company: "Entreprise", title: cleaned };
@@ -31,9 +31,7 @@ function parseWwrTitle(raw: string): { company: string; title: string } {
   };
 }
 
-/**
- * We Work Remotely programming RSS — no key, remote-only.
- */
+/** We Work Remotely programming RSS — no key, remote-only. */
 export async function collectWwr(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
   if (!wantsRemote(prefs)) return [];
   const xml = await fetchText(
