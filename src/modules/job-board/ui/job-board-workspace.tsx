@@ -30,11 +30,13 @@ import {
   saveJobSearchConfig,
 } from "@/modules/job-board/actions";
 import { applyBoardsForPrefs } from "@/modules/job-board/apply-boards";
+import type { CvJobProfile } from "@/modules/job-board/cv-skills";
 import type { RankedJobListing } from "@/modules/job-board/fit";
 import { MAX_JOB_LOCATIONS, resolveLocation, suggestLocations } from "@/modules/job-board/locations";
 import { MAX_JOB_ROLES, resolveRole, rolesToQuery, suggestRoles } from "@/modules/job-board/roles";
 import { ApplyBoardLinks } from "@/modules/job-board/ui/apply-board-links";
 import { ChipMultiSelect } from "@/modules/job-board/ui/chip-multi-select";
+import { truncateAtWord } from "@/lib/text";
 import {
   WORK_MODE_LABELS,
   type JobSearchPrefs,
@@ -72,16 +74,14 @@ function modeTone(mode: RankedJobListing["workMode"]): "info" | "brand" | "neutr
 export function JobBoardWorkspace({
   initialListings,
   initialPrefs,
-  cvHint,
-  cvSkills,
+  cvProfiles,
   cvDocuments,
   trackedListingIds,
   onApplicationCreated,
 }: {
   initialListings: RankedJobListing[];
   initialPrefs: JobSearchPrefs;
-  cvHint: { roles: string[]; locations: string[] };
-  cvSkills: string[];
+  cvProfiles: CvJobProfile[];
   cvDocuments: CvDocumentSummary[];
   trackedListingIds: string[];
   onApplicationCreated?: (application: JobApplication) => void;
@@ -89,7 +89,7 @@ export function JobBoardWorkspace({
   const [listings, setListings] = useState(initialListings);
   const [prefs, setPrefs] = useState(initialPrefs);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [cvId, setCvId] = useState(cvDocuments[0]?.id ?? "");
+  const [cvId, setCvId] = useState(cvProfiles[0]?.id ?? cvDocuments[0]?.id ?? "");
   const [importUrl, setImportUrl] = useState("");
   const [tracked, setTracked] = useState(() => new Set(trackedListingIds));
   const [followingId, setFollowingId] = useState<string | null>(null);
@@ -111,9 +111,13 @@ export function JobBoardWorkspace({
 
   const hasSearch = prefs.roles.length > 0 || prefs.roleQuery.trim().length >= 2;
   const boards = useMemo(() => (hasSearch ? applyBoardsForPrefs(prefs) : []), [hasSearch, prefs]);
+  const activeCv = useMemo(
+    () => cvProfiles.find((profile) => profile.id === cvId) ?? cvProfiles[0] ?? null,
+    [cvId, cvProfiles],
+  );
 
-  function persist(next: JobSearchPrefs, success: string) {
-    void saveAction.run(() => saveJobSearchConfig(next, cvSkills), {
+  function persist(next: JobSearchPrefs, success: string, nextCvId = cvId) {
+    void saveAction.run(() => saveJobSearchConfig(next, nextCvId || null), {
       success,
       error: (err) =>
         err instanceof Error ? err.message : "Impossible d’enregistrer la recherche",
@@ -127,8 +131,9 @@ export function JobBoardWorkspace({
 
   useEffect(() => {
     if (autoSaved.current) return;
-    const roles = prefs.roles.length > 0 ? prefs.roles : cvHint.roles;
-    const locations = prefs.locations.length > 0 ? prefs.locations : cvHint.locations;
+    const profile = cvProfiles[0];
+    const roles = prefs.roles.length > 0 ? prefs.roles : profile?.roles ?? [];
+    const locations = prefs.locations.length > 0 ? prefs.locations : profile?.locations ?? [];
     if (roles.length === 0 && locations.length === 0) return;
     if (roles === prefs.roles && locations === prefs.locations) return;
     autoSaved.current = true;
@@ -140,13 +145,31 @@ export function JobBoardWorkspace({
     };
     setPrefs(next);
     persist(next, "Recherche reprise depuis ton CV");
-    // First paint only — prefs/cvHint are the server snapshot.
+    // First paint only — prefs and the first CV are the server snapshot.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleSave() {
     if (!canSave) return;
-    persist(prefs, "Offres ciblées mises à jour");
+    persist(prefs, "Offres filtrées selon ton CV");
+  }
+
+  function handleCvChange(nextId: string) {
+    setCvId(nextId);
+    const profile = cvProfiles.find((entry) => entry.id === nextId);
+    if (!profile) {
+      persist(prefs, "Offres mises à jour", nextId);
+      return;
+    }
+    const roles = profile.roles.length > 0 ? profile.roles : prefs.roles;
+    const next: JobSearchPrefs = {
+      ...prefs,
+      roles,
+      roleQuery: rolesToQuery(roles) || prefs.roleQuery,
+      locations: profile.locations.length > 0 ? profile.locations : prefs.locations,
+    };
+    setPrefs(next);
+    persist(next, "Offres adaptées à ce CV", nextId);
   }
 
   function handleFollow(listing: RankedJobListing) {
@@ -197,11 +220,38 @@ export function JobBoardWorkspace({
             </Text>
           )}
         </Cluster>
-        <Button type="button" size="sm" variant="outline" onClick={() => setSheetOpen(true)}>
-          <Pencil className="h-4 w-4" />
-          Modifier
-        </Button>
+        <Cluster gap={2} className="flex-wrap items-center">
+          {cvProfiles.length > 0 ? (
+            <Select
+              id="offers-cv"
+              value={cvId}
+              onChange={(e) => handleCvChange(e.target.value)}
+              className="h-9 w-[min(100%,16rem)]"
+            >
+              {cvProfiles.map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.title}
+                  {profile.years > 0 ? ` · ${Math.round(profile.years)} ans` : ""}
+                </option>
+              ))}
+            </Select>
+          ) : null}
+          <Button type="button" size="sm" variant="outline" onClick={() => setSheetOpen(true)}>
+            <Pencil className="h-4 w-4" />
+            Modifier
+          </Button>
+        </Cluster>
       </Cluster>
+
+      {activeCv && (activeCv.years > 0 || activeCv.skills.length > 0) ? (
+        <Text size="sm" tone="muted">
+          Matché sur ce CV
+          {activeCv.years > 0 ? ` · ${Math.round(activeCv.years)} ans` : ""}
+          {activeCv.skills.length > 0
+            ? ` · ${truncateAtWord(activeCv.skills.join(", "), 120)}`
+            : ""}
+        </Text>
+      ) : null}
 
       {boards.length > 0 && listings.length > 0 ? (
         <Stack gap={2}>
@@ -217,8 +267,7 @@ export function JobBoardWorkspace({
 
       {listings.length > 0 ? (
         <Text size="sm" tone="muted">
-          {listings.length} offre{listings.length !== 1 ? "s" : ""} scrapée
-          {listings.length !== 1 ? "s" : ""} · WTTJ d’abord, les plus proches de toi en tête
+          {listings.length} offre{listings.length !== 1 ? "s" : ""} du pool, les plus adaptées à ton CV
         </Text>
       ) : null}
 
@@ -299,8 +348,8 @@ export function JobBoardWorkspace({
             title={hasSearch ? "Rien d’assez proche pour l’instant" : "Dis-nous ce que tu cherches"}
             hint={
               hasSearch
-                ? "Rien d’assez proche dans le scrape. Relance Voir les offres, ou postule sur LinkedIn / Indeed."
-                : "Un poste et une ville. On scrape WTTJ, Remotive et Jobicy tout de suite."
+                ? "Le pool d’offres dev se remplit toutes les 3 h. Change de CV ou de ville pour filtrer, sans re-scraper."
+                : "Choisis un CV. On filtre les offres déjà scrapées selon ta stack et tes années d’expérience."
             }
             action={
               <Stack gap={3} className="items-center">
@@ -319,7 +368,7 @@ export function JobBoardWorkspace({
         onOpenChange={setSheetOpen}
         desktop="full"
         title="Ta recherche"
-        description="Poste, villes, mode. On scrape WTTJ et les boards publics à l’enregistrement."
+        description="Le scrape tourne toutes les 3 h. Ici tu filtres selon le CV, la ville et le mode."
         headerActions={
           <IconButton label="Fermer" size="sm" onClick={() => setSheetOpen(false)}>
             <X className="h-4 w-4" />
@@ -403,24 +452,30 @@ export function JobBoardWorkspace({
             </Cluster>
           </div>
           {cvDocuments.length > 0 ? (
-            <Field label="CV à lier au suivi" htmlFor="board-cv">
+            <Field label="CV pour matcher les offres" htmlFor="board-cv">
               <Select
                 id="board-cv"
                 value={cvId}
-                onChange={(e) => setCvId(e.target.value)}
+                onChange={(e) => handleCvChange(e.target.value)}
               >
-                <option value="">Aucun CV lié</option>
-                {cvDocuments.map((cv) => (
-                  <option key={cv.id} value={cv.id}>
-                    {cv.title}
-                  </option>
-                ))}
+                {cvProfiles.length > 0
+                  ? cvProfiles.map((profile) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.title}
+                        {profile.years > 0 ? ` · ${Math.round(profile.years)} ans` : ""}
+                      </option>
+                    ))
+                  : cvDocuments.map((cv) => (
+                      <option key={cv.id} value={cv.id}>
+                        {cv.title}
+                      </option>
+                    ))}
               </Select>
             </Field>
           ) : null}
           <Button type="button" disabled={saveAction.pending || !canSave} onClick={handleSave}>
             {saveAction.pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Voir les offres
+            Filtrer les offres
           </Button>
           {boards.length > 0 ? (
             <Stack gap={2}>

@@ -70,6 +70,18 @@ describe("wttjHitToRaw", () => {
     );
     expect(hit?.salaryHint).toContain("47");
     expect(hit?.salaryHint).toContain("€");
+    expect(hit?.tags).toEqual([]);
+  });
+
+  it("stores WTTJ minimum experience as a tag", () => {
+    const hit = wttjHitToRaw({
+      name: "Backend",
+      slug: "backend",
+      experience_level_minimum: 5,
+      organization: { name: "Acme", slug: "acme" },
+      offices: [{ city: "Paris", country: "France" }],
+    });
+    expect(hit?.tags).toEqual(["exp-min-5"]);
   });
 });
 

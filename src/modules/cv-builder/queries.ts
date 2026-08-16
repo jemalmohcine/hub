@@ -45,6 +45,20 @@ export async function listCvDocuments(userId: string): Promise<CvDocumentSummary
   }));
 }
 
+export async function listCvDocumentsFull(userId: string): Promise<CvDocument[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("cv_documents")
+    .select(
+      "id, title, theme_id, content, target_job_title, job_description_snippet, is_tailored, updated_at",
+    )
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data.map((row) => rowToDocument(row as CvRow));
+}
+
 export async function getCvDocumentById(
   userId: string,
   documentId: string,

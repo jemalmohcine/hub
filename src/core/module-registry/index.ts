@@ -65,7 +65,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     label: "Candidatures",
     description: "Offres près de chez toi et suivi des candidatures",
     pageDescription:
-      "Offres scrapées sur WTTJ, Remotive et Jobicy. Postule depuis la carte, LinkedIn et Indeed en complément.",
+      "Pool d’offres dev scrapé en continu, filtré selon le CV choisi (stack, expérience, poste).",
     upsell:
       "Télétravail et présentiel en même temps : les offres arrivent dès que tu enregistres, puis toutes les 3 heures.",
     href: "/app/career?tab=jobs",

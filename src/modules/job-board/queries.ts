@@ -1,6 +1,5 @@
 import { createClient } from "@/core/auth/supabase/server";
 import { resolveLocations } from "@/modules/job-board/locations";
-import { matchesSearchPrefs } from "@/modules/job-board/match";
 import { resolveRoles, rolesToQuery } from "@/modules/job-board/roles";
 import { normalizeWorkModes } from "@/modules/job-board/work-modes";
 import type {
@@ -9,7 +8,11 @@ import type {
   JobSearchPrefs,
 } from "@/modules/job-board/types";
 import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
-import { rankListingsForPrefs, type RankedJobListing } from "@/modules/job-board/fit";
+import {
+  rankListingsForPrefs,
+  type CvFitInput,
+  type RankedJobListing,
+} from "@/modules/job-board/fit";
 
 type ListingRow = {
   id: string;
@@ -208,7 +211,7 @@ export async function listJobListings(
     .from("job_listings")
     .select("*")
     .order("scraped_at", { ascending: false })
-    .limit(400);
+    .limit(500);
 
   if (filter === "salaried") {
     dbQuery = dbQuery.eq("employment_category", "salaried");
@@ -237,12 +240,16 @@ export async function listJobListings(
 
 export async function listJobListingsForPrefs(
   prefs: JobSearchPrefs,
-  skills: string[] = [],
+  cv: CvFitInput | string[] = [],
 ): Promise<RankedJobListing[]> {
   const listings = await listJobListings("all");
-  if (!prefs.roleQuery.trim() && prefs.roles.length === 0) return [];
-  const matched = listings.filter((listing) => matchesSearchPrefs(listing, prefs));
-  return rankListingsForPrefs(matched, prefs, skills);
+  const hasSearch =
+    prefs.roles.length > 0 ||
+    prefs.roleQuery.trim().length >= 2 ||
+    (!Array.isArray(cv) && (cv.roles.length > 0 || cv.skills.length > 0)) ||
+    (Array.isArray(cv) && cv.length > 0);
+  if (!hasSearch) return [];
+  return rankListingsForPrefs(listings, prefs, cv);
 }
 
 export async function getJobListingById(id: string): Promise<JobListing | null> {

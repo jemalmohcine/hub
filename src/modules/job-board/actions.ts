@@ -5,7 +5,8 @@ import { createClient } from "@/core/auth/supabase/server";
 import { assertEntitled } from "@/core/entitlements/assert-entitled";
 import { ENTITLEMENTS } from "@/core/entitlements/keys";
 import { addDaysIso } from "@/lib/dates";
-import { ingestJobsForPrefs } from "@/modules/job-board/ingest";
+import { getCvDocumentById } from "@/modules/cv-builder/queries";
+import { profileFromCv } from "@/modules/job-board/cv-skills";
 import { MAX_JOB_LOCATIONS, resolveLocations } from "@/modules/job-board/locations";
 import { MAX_JOB_ROLES, resolveRoles, rolesToQuery } from "@/modules/job-board/roles";
 import { normalizeWorkModes, onsiteOnly } from "@/modules/job-board/work-modes";
@@ -65,7 +66,7 @@ function mapApplication(row: {
 
 export async function saveJobSearchConfig(
   prefs: JobSearchPrefs,
-  skills: string[] = [],
+  cvDocumentId?: string | null,
 ): Promise<{
   prefs: JobSearchPrefs;
   listings: RankedJobListing[];
@@ -95,12 +96,8 @@ export async function saveJobSearchConfig(
     workModes,
     workMode: workModes[0] ?? "hybrid",
   });
-  try {
-    await ingestJobsForPrefs(saved);
-  } catch (err) {
-    console.error("[jobs] scrape after save failed", err);
-  }
-  const listings = await listJobListingsForPrefs(saved, skills);
+  const cv = cvDocumentId ? await getCvDocumentById(user.id, cvDocumentId) : null;
+  const listings = await listJobListingsForPrefs(saved, profileFromCv(cv) ?? []);
   revalidatePath("/app/career");
   return { prefs: saved, listings };
 }

@@ -98,6 +98,26 @@ describe("scoreListingFit", () => {
     );
     expect(withSkills).toBeGreaterThan(without);
   });
+
+  it("demotes an 8-year ask when the CV only has two years", () => {
+    const cv = { skills: ["React"], years: 2, roles: ["frontend"] };
+    const mid = scoreListingFit(
+      listing({ title: "Développeur React", location: "Paris" }),
+      PREFS,
+      cv,
+    );
+    const senior = scoreListingFit(
+      listing({
+        title: "Développeur React",
+        description: "8+ years of experience",
+        tags: ["exp-min-8"],
+        location: "Paris",
+      }),
+      PREFS,
+      cv,
+    );
+    expect(senior).toBeLessThan(mid);
+  });
 });
 
 describe("rankListingsForPrefs", () => {

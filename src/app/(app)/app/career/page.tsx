@@ -3,9 +3,9 @@ import { requirePageUser } from "@/core/auth/get-user";
 import { hasEntitlement, ENTITLEMENTS } from "@/core/entitlements";
 import { PageSkeleton } from "@/design-system";
 import { defaultCvDocument } from "@/modules/cv-builder/defaults";
-import { getCvDocumentById, listCvDocuments } from "@/modules/cv-builder/queries";
+import { listCvDocuments, listCvDocumentsFull } from "@/modules/cv-builder/queries";
 import { CareerWorkspace } from "@/modules/career/ui/career-workspace";
-import { skillsFromCv } from "@/modules/job-board/cv-skills";
+import { profileFromCv } from "@/modules/job-board/cv-skills";
 import { listJobListingsForPrefs, getJobSearchPrefs } from "@/modules/job-board/queries";
 import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
 import { listJobApplications } from "@/modules/job-tracker/queries";
@@ -17,7 +17,7 @@ const CAREER_MODULES = ["cv", "jobs"] as const;
 
 const CAREER_COPY = {
   title: "Carrière",
-  description: "CV Builder, recherche d’offres selon tes villes et suivi des candidatures.",
+  description: "CV Builder, offres filtrées selon ton CV et suivi des candidatures.",
   upsell: "Crée tes CV, adapte-les aux offres et suis tes candidatures.",
 };
 
@@ -46,20 +46,22 @@ export default async function CareerPage({ searchParams }: PageProps) {
     ? await getJobSearchPrefs(user.id).catch(() => ({ ...EMPTY_JOB_SEARCH_PREFS }))
     : { ...EMPTY_JOB_SEARCH_PREFS };
 
-  const documents = cvEntitled
-    ? await listCvDocuments(user.id).catch(() => [])
-    : [];
-  const activeId = documents[0]?.id;
-  const saved =
-    cvEntitled && activeId
-      ? await getCvDocumentById(user.id, activeId).catch(() => null)
-      : null;
-  const cvSkills = skillsFromCv(saved);
+  const [documents, fullCvs] = cvEntitled
+    ? await Promise.all([
+        listCvDocuments(user.id).catch(() => []),
+        listCvDocumentsFull(user.id).catch(() => []),
+      ])
+    : [[], []];
+  const saved = fullCvs[0] ?? null;
+  const cvProfiles = fullCvs
+    .map((doc) => profileFromCv(doc))
+    .filter((profile): profile is NonNullable<typeof profile> => Boolean(profile));
+  const activeProfile = cvProfiles[0];
 
   const [jobs, listings] = await Promise.all([
     jobsEntitled ? listJobApplications(user.id).catch(() => []) : Promise.resolve([]),
     jobsEntitled
-      ? listJobListingsForPrefs(prefs, cvSkills).catch(() => [])
+      ? listJobListingsForPrefs(prefs, activeProfile ?? []).catch(() => [])
       : Promise.resolve([]),
   ]);
 
@@ -75,7 +77,7 @@ export default async function CareerPage({ searchParams }: PageProps) {
           initialJobs={jobs}
           initialListings={listings}
           initialPrefs={prefs}
-          cvSkills={cvSkills}
+          cvProfiles={cvProfiles}
         />
       </Suspense>
     </ModulePage>
