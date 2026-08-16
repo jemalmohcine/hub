@@ -1,4 +1,4 @@
-import { decodeXmlEntities, fetchText, HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
+import { decodeXmlEntities, tryFetchText } from "@/lib/http/fetch-text";
 import {
   expandWithParentCountries,
   resolveLocations,
@@ -83,7 +83,7 @@ function indeedTargets(prefs: JobSearchPrefs): { query: string; location: string
     const host = indeedHostFor(place.id ?? "france", place.countryId ?? "france");
     for (const query of queries) {
       targets.push({ query, location: place.indeed, host });
-      if (targets.length >= 6) return targets;
+      if (targets.length >= 2) return targets;
     }
   }
   return targets;
@@ -95,7 +95,8 @@ async function collectIndeedLocation(
   host: string,
 ): Promise<RawJobHit[]> {
   const url = `https://${host}/rss?q=${encodeURIComponent(query)}&l=${encodeURIComponent(location)}`;
-  const xml = await fetchText(url, { timeoutMs: HTTP_TIMEOUTS.slow });
+  const xml = await tryFetchText(url, { timeoutMs: 4_000 });
+  if (!xml || /security check/i.test(xml) || !xml.includes("<item")) return [];
   const items = xml.match(/<item[\s\S]*?<\/item>/gi) ?? [];
 
   return items.slice(0, 25).flatMap((block) => {

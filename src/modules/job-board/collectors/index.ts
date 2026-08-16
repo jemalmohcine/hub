@@ -2,6 +2,7 @@ import { collectArbeitnow } from "@/modules/job-board/collectors/arbeitnow";
 import { collectIndeedFr } from "@/modules/job-board/collectors/indeed-fr";
 import { collectJobicy } from "@/modules/job-board/collectors/jobicy";
 import { collectRemotive } from "@/modules/job-board/collectors/remotive";
+import { collectWwr } from "@/modules/job-board/collectors/wwr";
 import {
   expandWithParentCountries,
   resolveLocations,
@@ -30,25 +31,41 @@ async function collectRemotiveForPrefs(prefs: JobSearchPrefs): Promise<RawJobHit
   });
 }
 
+async function settled(label: string, task: Promise<RawJobHit[]>): Promise<RawJobHit[]> {
+  try {
+    const hits = await task;
+    console.info(`[jobs] ${label}`, hits.length);
+    return hits;
+  } catch (err) {
+    console.warn(`[jobs] ${label} failed`, err instanceof Error ? err.message : err);
+    return [];
+  }
+}
+
+/**
+ * Live sources that still answer. Indeed RSS is 403 most of the time —
+ * we try it with a short timeout so it cannot block Jobicy / Remotive.
+ */
 export async function collectJobsForPrefs(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
-  const batches = await Promise.allSettled([
-    collectIndeedFr(prefs),
-    collectJobicy(prefs),
-    collectArbeitnow(prefs),
-    collectRemotiveForPrefs(prefs),
+  const batches = await Promise.all([
+    settled("jobicy", collectJobicy(prefs)),
+    settled("remotive", collectRemotiveForPrefs(prefs)),
+    settled("wwr", collectWwr(prefs)),
+    settled("arbeitnow", collectArbeitnow(prefs)),
+    settled("indeed", collectIndeedFr(prefs)),
   ]);
 
   const hits: RawJobHit[] = [];
   const seen = new Set<string>();
   for (const batch of batches) {
-    if (batch.status !== "fulfilled") continue;
-    for (const hit of batch.value) {
+    for (const hit of batch) {
       const key = hit.url.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
       hits.push(hit);
     }
   }
+  console.info("[jobs] collected", hits.length);
   return hits;
 }
 

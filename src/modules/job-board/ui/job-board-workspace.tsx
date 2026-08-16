@@ -287,7 +287,7 @@ export function JobBoardWorkspace({
             title={hasSearch ? "Rien d’assez proche pour l’instant" : "Dis-nous ce que tu cherches"}
             hint={
               hasSearch
-                ? "On ne garde que le bon poste dans tes villes. Clique le titre pour voir la source, puis Suivre."
+                ? "Indeed ne répond plus. On prend les boards publics (Jobicy, Remotive, Europe). Relance Voir les offres, ou LinkedIn pour le présentiel Maroc."
                 : "Un poste, une ville, un mode. Enregistrer scrape tout de suite."
             }
             action={

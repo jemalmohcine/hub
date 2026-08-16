@@ -207,9 +207,8 @@ export async function listJobListings(
   let dbQuery = supabase
     .from("job_listings")
     .select("*")
-    .order("published_at", { ascending: false, nullsFirst: false })
     .order("scraped_at", { ascending: false })
-    .limit(200);
+    .limit(400);
 
   if (filter === "salaried") {
     dbQuery = dbQuery.eq("employment_category", "salaried");
