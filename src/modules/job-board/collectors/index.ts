@@ -2,6 +2,7 @@ import { collectArbeitnow } from "@/modules/job-board/collectors/arbeitnow";
 import { collectIndeedFr } from "@/modules/job-board/collectors/indeed-fr";
 import { collectJobicy } from "@/modules/job-board/collectors/jobicy";
 import { collectRemotive } from "@/modules/job-board/collectors/remotive";
+import { collectWttj } from "@/modules/job-board/collectors/wttj";
 import { collectWwr } from "@/modules/job-board/collectors/wwr";
 import {
   expandWithParentCountries,
@@ -43,11 +44,12 @@ async function settled(label: string, task: Promise<RawJobHit[]>): Promise<RawJo
 }
 
 /**
- * Live sources that still answer. Indeed RSS is 403 most of the time —
- * we try it with a short timeout so it cannot block Jobicy / Remotive.
+ * WTTJ is the volume source for France/Maroc. Remote APIs fill Europe.
+ * Indeed RSS is 403 most of the time — short timeout so it cannot block the rest.
  */
 export async function collectJobsForPrefs(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
   const batches = await Promise.all([
+    settled("wttj", collectWttj(prefs)),
     settled("jobicy", collectJobicy(prefs)),
     settled("remotive", collectRemotiveForPrefs(prefs)),
     settled("wwr", collectWwr(prefs)),

@@ -29,10 +29,11 @@ import {
   importJobFromUrl,
   saveJobSearchConfig,
 } from "@/modules/job-board/actions";
+import { applyBoardsForPrefs } from "@/modules/job-board/apply-boards";
 import type { RankedJobListing } from "@/modules/job-board/fit";
-import { linkedinJobsSearchUrl } from "@/modules/job-board/linkedin-search";
 import { MAX_JOB_LOCATIONS, resolveLocation, suggestLocations } from "@/modules/job-board/locations";
 import { MAX_JOB_ROLES, resolveRole, rolesToQuery, suggestRoles } from "@/modules/job-board/roles";
+import { ApplyBoardLinks } from "@/modules/job-board/ui/apply-board-links";
 import { ChipMultiSelect } from "@/modules/job-board/ui/chip-multi-select";
 import {
   WORK_MODE_LABELS,
@@ -47,6 +48,15 @@ const KIND_HINT = {
   country: "Pays",
   region: "Région",
 } as const;
+
+const SOURCE_LABEL: Record<string, string> = {
+  wttj: "WTTJ",
+  remotive: "Remotive",
+  jobicy: "Jobicy",
+  arbeitnow: "Arbeitnow",
+  wwr: "WWR",
+  "indeed-fr": "Indeed",
+};
 
 const FIT_COPY = {
   excellent: { label: "Bon match", tone: "success" as const },
@@ -100,7 +110,7 @@ export function JobBoardWorkspace({
   }, [prefs]);
 
   const hasSearch = prefs.roles.length > 0 || prefs.roleQuery.trim().length >= 2;
-  const linkedinUrl = hasSearch ? linkedinJobsSearchUrl(prefs) : "";
+  const boards = useMemo(() => (hasSearch ? applyBoardsForPrefs(prefs) : []), [hasSearch, prefs]);
 
   function persist(next: JobSearchPrefs, success: string) {
     void saveAction.run(() => saveJobSearchConfig(next, cvSkills), {
@@ -187,29 +197,30 @@ export function JobBoardWorkspace({
             </Text>
           )}
         </Cluster>
-        <Cluster gap={2}>
-          <Button type="button" size="sm" variant="outline" onClick={() => setSheetOpen(true)}>
-            <Pencil className="h-4 w-4" />
-            Modifier
-          </Button>
-          {linkedinUrl ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => window.open(linkedinUrl, "_blank", "noopener,noreferrer")}
-            >
-              <ExternalLink className="h-4 w-4" />
-              LinkedIn
-            </Button>
-          ) : null}
-        </Cluster>
+        <Button type="button" size="sm" variant="outline" onClick={() => setSheetOpen(true)}>
+          <Pencil className="h-4 w-4" />
+          Modifier
+        </Button>
       </Cluster>
 
-      <Text size="sm" tone="muted">
-        {listings.length} offre{listings.length !== 1 ? "s" : ""} dédiée
-        {listings.length !== 1 ? "s" : ""} · les plus proches de toi d’abord
-      </Text>
+      {boards.length > 0 && listings.length > 0 ? (
+        <Stack gap={2}>
+          <Text size="sm" weight="medium">
+            Postuler sur
+          </Text>
+          <ApplyBoardLinks boards={boards} />
+          <Text size="sm" tone="muted">
+            La recherche s’ouvre déjà remplie. Tu postules sur le site, puis tu suis ici.
+          </Text>
+        </Stack>
+      ) : null}
+
+      {listings.length > 0 ? (
+        <Text size="sm" tone="muted">
+          {listings.length} offre{listings.length !== 1 ? "s" : ""} scrapée
+          {listings.length !== 1 ? "s" : ""} · WTTJ d’abord, les plus proches de toi en tête
+        </Text>
+      ) : null}
 
       <Stack gap={2}>
         {listings.map((listing) => {
@@ -240,6 +251,9 @@ export function JobBoardWorkspace({
                   </div>
                   <Cluster gap={1} className="flex-wrap">
                     {fit ? <Badge tone={fit.tone}>{fit.label}</Badge> : null}
+                    {SOURCE_LABEL[listing.source] ? (
+                      <Badge tone="neutral">{SOURCE_LABEL[listing.source]}</Badge>
+                    ) : null}
                     {listing.workMode ? (
                       <Badge tone={modeTone(listing.workMode)}>
                         {WORK_MODE_LABELS[listing.workMode]}
@@ -255,18 +269,16 @@ export function JobBoardWorkspace({
                 ) : null}
 
                 <Cluster gap={2} className="flex-wrap">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openSource(listing.url)}
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Voir
+                  <Button asChild size="sm">
+                    <a href={listing.url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4" />
+                      Postuler
+                    </a>
                   </Button>
                   <Button
                     type="button"
                     size="sm"
+                    variant="outline"
                     disabled={followingThis || isTracked}
                     onClick={() => handleFollow(listing)}
                   >
@@ -287,25 +299,16 @@ export function JobBoardWorkspace({
             title={hasSearch ? "Rien d’assez proche pour l’instant" : "Dis-nous ce que tu cherches"}
             hint={
               hasSearch
-                ? "Indeed ne répond plus. On prend les boards publics (Jobicy, Remotive, Europe). Relance Voir les offres, ou LinkedIn pour le présentiel Maroc."
-                : "Un poste, une ville, un mode. Enregistrer scrape tout de suite."
+                ? "Rien d’assez proche dans le scrape. Relance Voir les offres, ou postule sur LinkedIn / Indeed."
+                : "Un poste et une ville. On scrape WTTJ, Remotive et Jobicy tout de suite."
             }
             action={
-              <Cluster gap={2} className="justify-center">
-                <Button type="button" size="sm" onClick={() => setSheetOpen(true)}>
+              <Stack gap={3} className="items-center">
+                {boards.length > 0 ? <ApplyBoardLinks boards={boards} /> : null}
+                <Button type="button" size="sm" variant="outline" onClick={() => setSheetOpen(true)}>
                   {hasSearch ? "Ajuster" : "Choisir"}
                 </Button>
-                {linkedinUrl ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => window.open(linkedinUrl, "_blank", "noopener,noreferrer")}
-                  >
-                    LinkedIn
-                  </Button>
-                ) : null}
-              </Cluster>
+              </Stack>
             }
           />
         ) : null}
@@ -316,7 +319,7 @@ export function JobBoardWorkspace({
         onOpenChange={setSheetOpen}
         desktop="full"
         title="Ta recherche"
-        description="Poste, villes, mode. On ne garde que les offres dédiées."
+        description="Poste, villes, mode. On scrape WTTJ et les boards publics à l’enregistrement."
         headerActions={
           <IconButton label="Fermer" size="sm" onClick={() => setSheetOpen(false)}>
             <X className="h-4 w-4" />
@@ -419,6 +422,14 @@ export function JobBoardWorkspace({
             {saveAction.pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Voir les offres
           </Button>
+          {boards.length > 0 ? (
+            <Stack gap={2}>
+              <Text size="sm" weight="medium">
+                Ou postuler maintenant
+              </Text>
+              <ApplyBoardLinks boards={boards} />
+            </Stack>
+          ) : null}
 
           <Field label="J’ai déjà un lien" htmlFor="job-import-url">
             <Cluster gap={2} className="flex-col sm:flex-row">
