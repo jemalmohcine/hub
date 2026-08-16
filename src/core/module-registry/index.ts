@@ -64,7 +64,8 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     id: "jobs",
     label: "Candidatures",
     description: "Offres près de chez toi et suivi des candidatures",
-    pageDescription: "Enregistre poste, villes et modes — scrape à la sauvegarde, puis toutes les 3 heures.",
+    pageDescription:
+      "Postule sur LinkedIn, Indeed et les boards de ton pays — la recherche s’ouvre déjà remplie.",
     upsell:
       "Télétravail et présentiel en même temps : les offres arrivent dès que tu enregistres, puis toutes les 3 heures.",
     href: "/app/career?tab=jobs",
