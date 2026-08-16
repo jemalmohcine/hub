@@ -1,9 +1,10 @@
 import { fetchJson, HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
 import {
   expandWithParentCountries,
+  isEuropeanPlace,
   resolveLocations,
 } from "@/modules/job-board/locations";
-import { isCredibleRegion, roleMatchesAny } from "@/modules/job-board/match";
+import { placeFitsPrefs, roleMatchesAny } from "@/modules/job-board/match";
 import { resolveRoles } from "@/modules/job-board/roles";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 import { wantsRemote } from "@/modules/job-board/work-modes";
@@ -30,16 +31,29 @@ function jobicyTag(prefs: JobSearchPrefs): string {
     prefs.roles.length > 0 ? prefs.roles : prefs.roleQuery ? [prefs.roleQuery] : [],
   )[0];
   if (!role) return "";
-  return (role.aliases[0] || role.id).replace(/-/g, " ");
+  const compact = [...role.aliases, role.id]
+    .map((value) => value.replace(/-/g, " ").trim())
+    .find((value) => value.length >= 3 && !value.includes(" "));
+  return compact ?? "";
 }
+
+const JOBICY_GEO_REWRITE: Record<string, string> = {
+  morocco: "emea",
+  algeria: "emea",
+  tunisia: "emea",
+  egypt: "emea",
+};
 
 function jobicyGeos(prefs: JobSearchPrefs): string[] {
   const selected = expandWithParentCountries(resolveLocations(prefs.locations));
-  const geos = selected
-    .map((entry) => entry.jobicyGeo)
-    .filter((geo): geo is string => Boolean(geo));
-  if (geos.length === 0) return ["france"];
-  return [...new Set(geos)].slice(0, 4);
+  const geos = new Set<string>();
+  for (const entry of selected) {
+    if (isEuropeanPlace(entry)) geos.add("europe");
+    const raw = entry.jobicyGeo ? JOBICY_GEO_REWRITE[entry.jobicyGeo] ?? entry.jobicyGeo : null;
+    if (raw) geos.add(raw);
+  }
+  if (geos.size === 0) geos.add("europe");
+  return [...geos].slice(0, 4);
 }
 
 async function collectJobicyGeo(geo: string, prefs: JobSearchPrefs): Promise<RawJobHit[]> {
@@ -52,7 +66,7 @@ async function collectJobicyGeo(geo: string, prefs: JobSearchPrefs): Promise<Raw
 
   return (data.jobs ?? []).flatMap((job) => {
     if (!job.jobTitle || !job.companyName || !job.url) return [];
-    if (!isCredibleRegion(job.jobGeo, job.jobTitle, selected)) return [];
+    if (!placeFitsPrefs(selected, job.jobGeo, job.jobTitle, true)) return [];
     if (!roleMatchesAny(prefs, job.jobTitle)) return [];
     return [
       {

@@ -41,7 +41,7 @@ function city(
 /** Every ISO country (French label) so the picker is not France-only. */
 export const CATALOG_COUNTRIES: JobLocation[] = [
   country("france", "France", ["fr", "french", "hexagone"], "France", "france"),
-  country("maroc", "Maroc", ["morocco", "ma", "moroccan"], "Morocco", "morocco"),
+  country("maroc", "Maroc", ["morocco", "ma", "moroccan"], "Morocco", "emea"),
   country("algerie", "Algérie", ["algeria", "dz", "algerie"], "Algeria", "algeria"),
   country("tunisie", "Tunisie", ["tunisia", "tn"], "Tunisia", "tunisia"),
   country("senegal", "Sénégal", ["senegal", "sn"], "Senegal", "senegal"),

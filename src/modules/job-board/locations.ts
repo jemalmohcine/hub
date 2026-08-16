@@ -64,6 +64,48 @@ export function expandWithParentCountries(selected: JobLocation[]): JobLocation[
   return resolveLocations(ids, MAX_JOB_LOCATIONS + 8);
 }
 
+export function citiesInCountry(countryId: string): JobLocation[] {
+  return CATALOG_CITIES.filter((city) => city.countryId === countryId);
+}
+
+/** European catalog ids — Arbeitnow / remote "Europe" feeds. */
+export const EUROPEAN_COUNTRY_IDS = new Set([
+  "europe",
+  "france",
+  "belgique",
+  "suisse",
+  "luxembourg",
+  "allemagne",
+  "pays-bas",
+  "espagne",
+  "portugal",
+  "italie",
+  "royaume-uni",
+  "irlande",
+  "autriche",
+  "pologne",
+  "roumanie",
+  "republique-tcheque",
+  "suede",
+  "norvege",
+  "danemark",
+  "finlande",
+  "grece",
+  "hongrie",
+  "bulgarie",
+  "croatie",
+  "serbie",
+]);
+
+export function isEuropeanPlace(entry: JobLocation): boolean {
+  return (
+    entry.id === "europe" ||
+    entry.id === "monde" ||
+    EUROPEAN_COUNTRY_IDS.has(entry.id) ||
+    EUROPEAN_COUNTRY_IDS.has(entry.countryId)
+  );
+}
+
 function scoreMatch(location: JobLocation, query: string): number {
   const folded = foldCase(query);
   if (!folded) return 0;

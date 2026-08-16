@@ -6,7 +6,7 @@ import {
   expandWithParentCountries,
   resolveLocations,
 } from "@/modules/job-board/locations";
-import { isCredibleRegion, roleMatchesAny } from "@/modules/job-board/match";
+import { placeFitsPrefs, roleMatchesAny } from "@/modules/job-board/match";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
 import { wantsRemote } from "@/modules/job-board/work-modes";
@@ -25,7 +25,7 @@ async function collectRemotiveForPrefs(prefs: JobSearchPrefs): Promise<RawJobHit
   const hits = await collectRemotive();
   const selected = expandWithParentCountries(resolveLocations(prefs.locations));
   return hits.filter((hit) => {
-    if (!isCredibleRegion(hit.location, hit.title, selected)) return false;
+    if (!placeFitsPrefs(selected, hit.location, hit.title, true)) return false;
     return roleMatchesAny(prefs, hit.title);
   });
 }
