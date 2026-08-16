@@ -5,6 +5,7 @@ import { PageSkeleton } from "@/design-system";
 import { defaultCvDocument } from "@/modules/cv-builder/defaults";
 import { getCvDocumentById, listCvDocuments } from "@/modules/cv-builder/queries";
 import { CareerWorkspace } from "@/modules/career/ui/career-workspace";
+import { skillsFromCv } from "@/modules/job-board/cv-skills";
 import { listJobListingsForPrefs, getJobSearchPrefs } from "@/modules/job-board/queries";
 import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
 import { listJobApplications } from "@/modules/job-tracker/queries";
@@ -45,17 +46,22 @@ export default async function CareerPage({ searchParams }: PageProps) {
     ? await getJobSearchPrefs(user.id).catch(() => ({ ...EMPTY_JOB_SEARCH_PREFS }))
     : { ...EMPTY_JOB_SEARCH_PREFS };
 
-  const [documents, jobs, listings] = await Promise.all([
-    cvEntitled ? listCvDocuments(user.id).catch(() => []) : Promise.resolve([]),
-    jobsEntitled ? listJobApplications(user.id).catch(() => []) : Promise.resolve([]),
-    jobsEntitled ? listJobListingsForPrefs(prefs).catch(() => []) : Promise.resolve([]),
-  ]);
-
+  const documents = cvEntitled
+    ? await listCvDocuments(user.id).catch(() => [])
+    : [];
   const activeId = documents[0]?.id;
   const saved =
     cvEntitled && activeId
       ? await getCvDocumentById(user.id, activeId).catch(() => null)
       : null;
+  const cvSkills = skillsFromCv(saved);
+
+  const [jobs, listings] = await Promise.all([
+    jobsEntitled ? listJobApplications(user.id).catch(() => []) : Promise.resolve([]),
+    jobsEntitled
+      ? listJobListingsForPrefs(prefs, cvSkills).catch(() => [])
+      : Promise.resolve([]),
+  ]);
 
   return (
     <ModulePage module={[...CAREER_MODULES]} user={user} {...CAREER_COPY}>
@@ -69,6 +75,7 @@ export default async function CareerPage({ searchParams }: PageProps) {
           initialJobs={jobs}
           initialListings={listings}
           initialPrefs={prefs}
+          cvSkills={cvSkills}
         />
       </Suspense>
     </ModulePage>

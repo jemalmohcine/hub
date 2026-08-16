@@ -6,6 +6,8 @@ import {
   ExternalLink,
   Loader2,
   MapPin,
+  Pencil,
+  X,
 } from "lucide-react";
 import {
   Badge,
@@ -14,8 +16,10 @@ import {
   Cluster,
   EmptyState,
   Field,
+  IconButton,
   Input,
   Select,
+  Sheet,
   Stack,
   Text,
   useAsyncAction,
@@ -25,12 +29,13 @@ import {
   importJobFromUrl,
   saveJobSearchConfig,
 } from "@/modules/job-board/actions";
+import type { RankedJobListing } from "@/modules/job-board/fit";
+import { linkedinJobsSearchUrl } from "@/modules/job-board/linkedin-search";
 import { MAX_JOB_LOCATIONS, resolveLocation, suggestLocations } from "@/modules/job-board/locations";
 import { MAX_JOB_ROLES, resolveRole, rolesToQuery, suggestRoles } from "@/modules/job-board/roles";
 import { ChipMultiSelect } from "@/modules/job-board/ui/chip-multi-select";
 import {
   WORK_MODE_LABELS,
-  type JobListing,
   type JobSearchPrefs,
 } from "@/modules/job-board/types";
 import { JOB_WORK_MODES, normalizeWorkModes, onsiteOnly } from "@/modules/job-board/work-modes";
@@ -43,7 +48,12 @@ const KIND_HINT = {
   region: "Région",
 } as const;
 
-function modeTone(mode: JobListing["workMode"]): "info" | "brand" | "neutral" {
+const FIT_COPY = {
+  excellent: { label: "Bon match", tone: "success" as const },
+  good: { label: "Proche", tone: "brand" as const },
+};
+
+function modeTone(mode: RankedJobListing["workMode"]): "info" | "brand" | "neutral" {
   if (mode === "remote") return "info";
   if (mode === "hybrid") return "brand";
   return "neutral";
@@ -53,19 +63,22 @@ export function JobBoardWorkspace({
   initialListings,
   initialPrefs,
   cvHint,
+  cvSkills,
   cvDocuments,
   trackedListingIds,
   onApplicationCreated,
 }: {
-  initialListings: JobListing[];
+  initialListings: RankedJobListing[];
   initialPrefs: JobSearchPrefs;
   cvHint: { roles: string[]; locations: string[] };
+  cvSkills: string[];
   cvDocuments: CvDocumentSummary[];
   trackedListingIds: string[];
   onApplicationCreated?: (application: JobApplication) => void;
 }) {
   const [listings, setListings] = useState(initialListings);
   const [prefs, setPrefs] = useState(initialPrefs);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [cvId, setCvId] = useState(cvDocuments[0]?.id ?? "");
   const [importUrl, setImportUrl] = useState("");
   const [tracked, setTracked] = useState(() => new Set(trackedListingIds));
@@ -79,16 +92,25 @@ export function JobBoardWorkspace({
     (prefs.roles.length > 0 || prefs.roleQuery.trim().length >= 2) &&
     (!onsiteOnly(prefs) || prefs.locations.length > 0);
 
-  const sorted = useMemo(() => listings, [listings]);
+  const summaryChips = useMemo(() => {
+    const roles = prefs.roles.map((id) => resolveRole(id).label);
+    const places = prefs.locations.map((id) => resolveLocation(id).label);
+    const modes = normalizeWorkModes(prefs).map((mode) => WORK_MODE_LABELS[mode]);
+    return [...roles, ...places, ...modes];
+  }, [prefs]);
+
+  const hasSearch = prefs.roles.length > 0 || prefs.roleQuery.trim().length >= 2;
+  const linkedinUrl = hasSearch ? linkedinJobsSearchUrl(prefs) : "";
 
   function persist(next: JobSearchPrefs, success: string) {
-    void saveAction.run(() => saveJobSearchConfig(next), {
+    void saveAction.run(() => saveJobSearchConfig(next, cvSkills), {
       success,
       error: (err) =>
         err instanceof Error ? err.message : "Impossible d’enregistrer la recherche",
       onSuccess: (result) => {
         setPrefs(result.prefs);
         setListings(result.listings);
+        setSheetOpen(false);
       },
     });
   }
@@ -107,17 +129,17 @@ export function JobBoardWorkspace({
       roleQuery: rolesToQuery(roles) || prefs.roleQuery,
     };
     setPrefs(next);
-    persist(next, "Config reprise depuis ton CV");
+    persist(next, "Recherche reprise depuis ton CV");
     // First paint only — prefs/cvHint are the server snapshot.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleSave() {
     if (!canSave) return;
-    persist(prefs, "Config enregistrée — offres scrapées");
+    persist(prefs, "Offres ciblées mises à jour");
   }
 
-  function handleFollow(listing: JobListing, openOffer: boolean) {
+  function handleFollow(listing: RankedJobListing, openOffer: boolean) {
     setFollowingId(listing.id);
     void followAction
       .run(() => applyToJobListing(listing.id, cvId || null), {
@@ -142,6 +164,7 @@ export function JobBoardWorkspace({
       error: "Impossible d’importer cette URL",
       onSuccess: (application) => {
         setImportUrl("");
+        setSheetOpen(false);
         onApplicationCreated?.(application);
       },
     });
@@ -149,15 +172,153 @@ export function JobBoardWorkspace({
 
   return (
     <Stack gap={4} className="pb-8">
-      <Card className="p-4">
-        <Stack gap={3}>
-          <div>
-            <Text weight="medium">Ta recherche</Text>
-            <Text size="sm" tone="muted" className="mt-1">
-              Postes, villes et modes : multi-choix. Enregistrer scrape tout de
-              suite ; ensuite ça tourne toutes les 3 heures.
+      <Cluster gap={2} className="flex-wrap items-center justify-between">
+        <Cluster gap={1} className="min-w-0 flex-1 flex-wrap">
+          {summaryChips.length > 0 ? (
+            summaryChips.map((chip) => (
+              <Badge key={chip} tone="neutral">
+                {chip}
+              </Badge>
+            ))
+          ) : (
+            <Text size="sm" tone="muted">
+              Choisis un poste et une ville
             </Text>
-          </div>
+          )}
+        </Cluster>
+        <Cluster gap={2}>
+          <Button type="button" size="sm" variant="outline" onClick={() => setSheetOpen(true)}>
+            <Pencil className="h-4 w-4" />
+            Modifier
+          </Button>
+          {linkedinUrl ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => window.open(linkedinUrl, "_blank", "noopener,noreferrer")}
+            >
+              <ExternalLink className="h-4 w-4" />
+              LinkedIn
+            </Button>
+          ) : null}
+        </Cluster>
+      </Cluster>
+
+      <Text size="sm" tone="muted">
+        {listings.length} offre{listings.length !== 1 ? "s" : ""} dédiée
+        {listings.length !== 1 ? "s" : ""} · les plus proches de toi d’abord
+      </Text>
+
+      <Stack gap={2}>
+        {listings.map((listing) => {
+          const isTracked = tracked.has(listing.id);
+          const followingThis = followAction.pending && followingId === listing.id;
+          const fit = listing.fitLabel === "ok" ? null : FIT_COPY[listing.fitLabel];
+          return (
+            <Card key={listing.id} className="p-4">
+              <Stack gap={2}>
+                <Cluster gap={2} className="flex-wrap items-start justify-between">
+                  <div className="min-w-0">
+                    <Text weight="medium" className="leading-snug">
+                      {listing.title}
+                    </Text>
+                    <Cluster gap={1} className="mt-0.5 flex-wrap">
+                      <Briefcase className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <Text size="sm" tone="muted">
+                        {listing.company}
+                        {listing.location ? ` · ${listing.location}` : ""}
+                      </Text>
+                    </Cluster>
+                  </div>
+                  <Cluster gap={1} className="flex-wrap">
+                    {fit ? <Badge tone={fit.tone}>{fit.label}</Badge> : null}
+                    {listing.workMode ? (
+                      <Badge tone={modeTone(listing.workMode)}>
+                        {WORK_MODE_LABELS[listing.workMode]}
+                      </Badge>
+                    ) : null}
+                  </Cluster>
+                </Cluster>
+
+                {listing.salaryHint ? (
+                  <Text size="sm" tone="muted">
+                    {listing.salaryHint}
+                  </Text>
+                ) : null}
+
+                <Cluster gap={2} className="flex-wrap">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={followingThis}
+                    onClick={() => handleFollow(listing, true)}
+                  >
+                    {followingThis ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ExternalLink className="h-4 w-4" />
+                    )}
+                    {isTracked ? "Ouvrir" : "Postuler"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={followingThis || isTracked}
+                    onClick={() => handleFollow(listing, false)}
+                  >
+                    {isTracked ? "Déjà suivi" : "Suivre"}
+                  </Button>
+                </Cluster>
+              </Stack>
+            </Card>
+          );
+        })}
+
+        {listings.length === 0 ? (
+          <EmptyState
+            icon={hasSearch ? MapPin : Briefcase}
+            title={hasSearch ? "Rien d’assez proche pour l’instant" : "Dis-nous ce que tu cherches"}
+            hint={
+              hasSearch
+                ? "On ne garde que les offres du bon poste, dans tes villes, classées par chance de match. LinkedIn ouvre la même recherche."
+                : "Un poste, une ville, un mode. Enregistrer scrape tout de suite."
+            }
+            action={
+              <Cluster gap={2} className="justify-center">
+                <Button type="button" size="sm" onClick={() => setSheetOpen(true)}>
+                  {hasSearch ? "Ajuster" : "Choisir"}
+                </Button>
+                {linkedinUrl ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => window.open(linkedinUrl, "_blank", "noopener,noreferrer")}
+                  >
+                    LinkedIn
+                  </Button>
+                ) : null}
+              </Cluster>
+            }
+          />
+        ) : null}
+      </Stack>
+
+      <Sheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        desktop="full"
+        title="Ta recherche"
+        description="Poste, villes, mode. On ne garde que les offres dédiées."
+        headerActions={
+          <IconButton label="Fermer" size="sm" onClick={() => setSheetOpen(false)}>
+            <X className="h-4 w-4" />
+          </IconButton>
+        }
+      >
+        <Stack gap={3}>
           <Field
             label="Type de poste"
             htmlFor="job-roles"
@@ -232,9 +393,6 @@ export function JobBoardWorkspace({
                 );
               })}
             </Cluster>
-            <Text size="sm" tone="muted" className="mt-1">
-              Tu peux cocher télétravail et présentiel en même temps.
-            </Text>
           </div>
           {cvDocuments.length > 0 ? (
             <Field label="CV à lier au suivi" htmlFor="board-cv">
@@ -252,135 +410,32 @@ export function JobBoardWorkspace({
               </Select>
             </Field>
           ) : null}
-          <Button
-            type="button"
-            disabled={saveAction.pending || !canSave}
-            onClick={handleSave}
-          >
-            {saveAction.pending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : null}
-            Enregistrer la config
+          <Button type="button" disabled={saveAction.pending || !canSave} onClick={handleSave}>
+            {saveAction.pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Voir les offres
           </Button>
+
+          <Field label="J’ai déjà un lien" htmlFor="job-import-url">
+            <Cluster gap={2} className="flex-col sm:flex-row">
+              <Input
+                id="job-import-url"
+                value={importUrl}
+                onChange={(e) => setImportUrl(e.target.value)}
+                placeholder="https://…"
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                disabled={importAction.pending || !importUrl.trim()}
+                onClick={handleImportUrl}
+              >
+                {importAction.pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Suivre
+              </Button>
+            </Cluster>
+          </Field>
         </Stack>
-      </Card>
-
-      <Card className="p-4">
-        <Stack gap={2}>
-          <Text size="sm" weight="medium">
-            J’ai déjà un lien
-          </Text>
-          <Cluster gap={2} className="flex-col sm:flex-row">
-            <Input
-              value={importUrl}
-              onChange={(e) => setImportUrl(e.target.value)}
-              placeholder="https://…"
-              className="flex-1"
-            />
-            <Button
-              type="button"
-              disabled={importAction.pending || !importUrl.trim()}
-              onClick={handleImportUrl}
-            >
-              {importAction.pending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : null}
-              Suivre
-            </Button>
-          </Cluster>
-        </Stack>
-      </Card>
-
-      <Text size="sm" tone="muted">
-        {sorted.length} offre{sorted.length !== 1 ? "s" : ""} · scrape toutes les 3 h
-      </Text>
-
-      <Stack gap={2}>
-        {sorted.map((listing) => {
-          const isTracked = tracked.has(listing.id);
-          const followingThis = followAction.pending && followingId === listing.id;
-          return (
-            <Card key={listing.id} className="p-4">
-              <Stack gap={2}>
-                <Cluster gap={2} className="flex-wrap items-start justify-between">
-                  <div className="min-w-0">
-                    <Text weight="medium" className="leading-snug">
-                      {listing.title}
-                    </Text>
-                    <Cluster gap={1}>
-                      <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                      <Text size="sm" tone="muted">
-                        {listing.company}
-                      </Text>
-                    </Cluster>
-                  </div>
-                  <Cluster gap={1} className="flex-wrap">
-                    {listing.workMode ? (
-                      <Badge tone={modeTone(listing.workMode)}>
-                        {WORK_MODE_LABELS[listing.workMode]}
-                      </Badge>
-                    ) : null}
-                  </Cluster>
-                </Cluster>
-
-                {listing.location ? (
-                  <Cluster gap={1}>
-                    <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                    <Text size="sm" tone="muted">
-                      {listing.location}
-                    </Text>
-                  </Cluster>
-                ) : null}
-
-                {listing.salaryHint ? (
-                  <Text size="sm" tone="muted">
-                    {listing.salaryHint}
-                  </Text>
-                ) : null}
-
-                {listing.description ? (
-                  <Text size="sm" tone="muted" className="line-clamp-3">
-                    {listing.description.replace(/<[^>]+>/g, " ")}
-                  </Text>
-                ) : null}
-
-                <Cluster gap={2} className="flex-wrap">
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={followingThis}
-                    onClick={() => handleFollow(listing, true)}
-                  >
-                    {followingThis ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <ExternalLink className="h-4 w-4" />
-                    )}
-                    {isTracked ? "Ouvrir" : "Postuler"}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={followingThis || isTracked}
-                    onClick={() => handleFollow(listing, false)}
-                  >
-                    {isTracked ? "Déjà suivi" : "Suivre"}
-                  </Button>
-                </Cluster>
-              </Stack>
-            </Card>
-          );
-        })}
-
-        {sorted.length === 0 ? (
-          <EmptyState
-            icon={Briefcase}
-            title="Enregistre pour scraper maintenant"
-            hint="Télétravail et présentiel peuvent coexister. Le scrape tourne aussi toutes les 3 heures."
-          />
-        ) : null}
-      </Stack>
+      </Sheet>
     </Stack>
   );
 }

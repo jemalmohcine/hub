@@ -9,6 +9,7 @@ import type {
   JobSearchPrefs,
 } from "@/modules/job-board/types";
 import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
+import { rankListingsForPrefs, type RankedJobListing } from "@/modules/job-board/fit";
 
 type ListingRow = {
   id: string;
@@ -208,7 +209,7 @@ export async function listJobListings(
     .select("*")
     .order("published_at", { ascending: false, nullsFirst: false })
     .order("scraped_at", { ascending: false })
-    .limit(120);
+    .limit(200);
 
   if (filter === "salaried") {
     dbQuery = dbQuery.eq("employment_category", "salaried");
@@ -237,10 +238,12 @@ export async function listJobListings(
 
 export async function listJobListingsForPrefs(
   prefs: JobSearchPrefs,
-): Promise<JobListing[]> {
+  skills: string[] = [],
+): Promise<RankedJobListing[]> {
   const listings = await listJobListings("all");
   if (!prefs.roleQuery.trim() && prefs.roles.length === 0) return [];
-  return listings.filter((listing) => matchesSearchPrefs(listing, prefs)).slice(0, 60);
+  const matched = listings.filter((listing) => matchesSearchPrefs(listing, prefs));
+  return rankListingsForPrefs(matched, prefs, skills);
 }
 
 export async function getJobListingById(id: string): Promise<JobListing | null> {

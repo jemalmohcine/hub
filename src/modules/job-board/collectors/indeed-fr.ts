@@ -1,9 +1,9 @@
 import { decodeXmlEntities, fetchText, HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
-import { resolveRoles } from "@/modules/job-board/roles";
 import {
   expandWithParentCountries,
   resolveLocations,
 } from "@/modules/job-board/locations";
+import { resolveRoles } from "@/modules/job-board/roles";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 import { wantsRemote } from "@/modules/job-board/work-modes";
 
@@ -40,6 +40,22 @@ function indeedHostFor(locationId: string, countryId: string): string {
   return INDEED_HOST[locationId] ?? INDEED_HOST[countryId] ?? "fr.indeed.com";
 }
 
+/** Indeed RSS titles look like `Title - Company - Place`. */
+export function parseIndeedRssTitle(titleRaw: string): {
+  title: string;
+  company: string;
+  location: string;
+} {
+  const parts = titleRaw.split(" - ");
+  const title = parts[0]?.trim() || titleRaw;
+  const company = parts[1]?.replace(/Indeed\.com$/i, "").trim() || "Entreprise";
+  const location =
+    parts.length >= 3
+      ? parts.slice(2).join(" - ").replace(/Indeed\.com$/i, "").trim()
+      : "";
+  return { title, company, location };
+}
+
 function indeedQueries(prefs: JobSearchPrefs): string[] {
   const roles = resolveRoles(
     prefs.roles.length > 0 ? prefs.roles : prefs.roleQuery ? [prefs.roleQuery] : [],
@@ -72,7 +88,6 @@ async function collectIndeedLocation(
   query: string,
   location: string,
   host: string,
-  workMode: JobSearchPrefs["workMode"],
 ): Promise<RawJobHit[]> {
   const url = `https://${host}/rss?q=${encodeURIComponent(query)}&l=${encodeURIComponent(location)}`;
   const xml = await fetchText(url, { timeoutMs: HTTP_TIMEOUTS.slow });
@@ -83,9 +98,7 @@ async function collectIndeedLocation(
     const link = tagContent(block, "link") || tagContent(block, "guid");
     if (!titleRaw || !link.startsWith("http")) return [];
 
-    const parts = titleRaw.split(" - ");
-    const title = parts[0]?.trim() || titleRaw;
-    const company = parts[1]?.replace(/Indeed\.com$/i, "").trim() || "Entreprise";
+    const parsed = parseIndeedRssTitle(titleRaw);
     const description = cleanText(tagContent(block, "description"));
     const published = tagContent(block, "pubDate");
     let publishedAt: string | null = null;
@@ -98,13 +111,12 @@ async function collectIndeedLocation(
       {
         source: "indeed-fr",
         externalId: link,
-        company,
-        title,
+        company: parsed.company,
+        title: parsed.title,
         description,
         url: link,
-        location,
+        location: parsed.location || location,
         publishedAt,
-        workMode,
       },
     ];
   });
@@ -116,7 +128,7 @@ async function collectIndeedLocation(
 export async function collectIndeedFr(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
   const batches = await Promise.allSettled(
     indeedTargets(prefs).map((target) =>
-      collectIndeedLocation(target.query, target.location, target.host, prefs.workMode),
+      collectIndeedLocation(target.query, target.location, target.host),
     ),
   );
   return batches.flatMap((batch) => (batch.status === "fulfilled" ? batch.value : []));

@@ -5,6 +5,7 @@ import {
   resolveLocations,
   type JobLocation,
 } from "@/modules/job-board/locations";
+import { resolveRole } from "@/modules/job-board/roles";
 import { acceptsWorkMode, wantsRemote } from "@/modules/job-board/work-modes";
 import type { JobSearchPrefs, JobWorkMode } from "@/modules/job-board/types";
 
@@ -42,6 +43,10 @@ const ROLE_STOPWORDS = new Set([
   "junior",
   "confirmé",
   "confirme",
+  "full",
+  "stack",
+  "end",
+  "web",
 ]);
 
 const CITY_ALIASES: Record<string, string[]> = {
@@ -165,14 +170,51 @@ function roleTokens(roleQuery: string): { specific: string[]; generic: string[] 
   return { specific, generic };
 }
 
+function uniqueNeedles(values: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const value of values) {
+    const needle = foldCase(value).trim();
+    if (needle.length < 3 || seen.has(needle)) continue;
+    seen.add(needle);
+    out.push(needle);
+  }
+  return out;
+}
+
+/** Distinctive phrases for a role id or free-text query — aliases, not "dev". */
+export function roleNeedles(roleQuery: string): string[] {
+  const role = resolveRole(roleQuery);
+  const fromLabel = roleTokens(role.label).specific;
+  const fromId = foldCase(role.id).replace(/-/g, " ");
+  return uniqueNeedles([fromId, ...fromLabel, ...role.aliases]);
+}
+
+function escapeRe(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function hayHasNeedle(hay: string, needle: string): boolean {
+  const token = needle.replace(/-/g, " ").trim();
+  if (!token) return false;
+  if (token.includes(" ")) {
+    const compact = token.replace(/\s+/g, "");
+    return hay.includes(token) || (compact.length >= 5 && hayHasNeedle(hay, compact));
+  }
+  if (token.length < 2) return false;
+  return new RegExp(`(?:^|[^a-z0-9+])${escapeRe(token)}(?:$|[^a-z0-9+])`).test(hay);
+}
+
 export function roleMatches(roleQuery: string, blob: string): boolean {
-  const role = foldCase(roleQuery);
-  if (role.length < 2) return true;
+  if (foldCase(roleQuery).length < 2) return true;
   const hay = foldCase(blob);
-  const { specific, generic } = roleTokens(roleQuery);
-  const needles = specific.length > 0 ? specific : generic;
-  if (needles.length === 0) return true;
-  return needles.some((token) => hay.includes(token));
+  const needles = roleNeedles(roleQuery);
+  if (needles.length === 0) {
+    const { specific, generic } = roleTokens(roleQuery);
+    const fallback = specific.length > 0 ? specific : generic;
+    return fallback.some((token) => hayHasNeedle(hay, token));
+  }
+  return needles.some((needle) => hayHasNeedle(hay, needle));
 }
 
 export function roleMatchesAny(prefs: JobSearchPrefs, blob: string): boolean {
@@ -213,5 +255,6 @@ export function matchesSearchPrefs(
   const roleNeedles =
     prefs.roles.length > 0 ? prefs.roles : prefs.roleQuery.trim() ? [prefs.roleQuery] : [];
   if (roleNeedles.length === 0) return true;
-  return roleMatchesAny(prefs, blob);
+  // Title + tags only — a buried "react" in the description is not a dedicated offer.
+  return roleMatchesAny(prefs, `${listing.title} ${listing.tags.join(" ")}`);
 }

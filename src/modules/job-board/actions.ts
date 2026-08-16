@@ -16,7 +16,8 @@ import {
   saveJobSearchPrefs,
 } from "@/modules/job-board/queries";
 import { scrapeJobOfferPage } from "@/modules/job-board/scrape-offer";
-import type { JobListing, JobSearchPrefs } from "@/modules/job-board/types";
+import type { RankedJobListing } from "@/modules/job-board/fit";
+import type { JobSearchPrefs } from "@/modules/job-board/types";
 import type { JobApplication } from "@/modules/job-tracker/types";
 
 /** Every action in this file requires the jobs module. */
@@ -62,9 +63,12 @@ function mapApplication(row: {
   };
 }
 
-export async function saveJobSearchConfig(prefs: JobSearchPrefs): Promise<{
+export async function saveJobSearchConfig(
+  prefs: JobSearchPrefs,
+  skills: string[] = [],
+): Promise<{
   prefs: JobSearchPrefs;
-  listings: JobListing[];
+  listings: RankedJobListing[];
 }> {
   const user = await requireUser();
   const roleQuery = prefs.roleQuery.trim();
@@ -96,7 +100,7 @@ export async function saveJobSearchConfig(prefs: JobSearchPrefs): Promise<{
   } catch (err) {
     console.error("[jobs] scrape after save failed", err);
   }
-  const listings = await listJobListingsForPrefs(saved);
+  const listings = await listJobListingsForPrefs(saved, skills);
   revalidatePath("/app/career");
   return { prefs: saved, listings };
 }
