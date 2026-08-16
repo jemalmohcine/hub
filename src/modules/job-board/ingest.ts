@@ -4,6 +4,7 @@ import {
   collectDevJobPool,
   collectJobsForPrefs,
 } from "@/modules/job-board/collectors";
+import { listingTtlCutoffIso } from "@/modules/job-board/listing-ttl";
 import { classifyWorkMode, matchesSearchPrefs } from "@/modules/job-board/match";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 
@@ -79,6 +80,20 @@ async function upsertHits(hits: RawJobHit[], prefs: JobSearchPrefs | null) {
   return { upserted, skipped, sourceStats };
 }
 
+async function purgeStaleListings() {
+  const admin = createAdminClient();
+  const cutoff = listingTtlCutoffIso();
+  const { error, count } = await admin
+    .from("job_listings")
+    .delete({ count: "exact" })
+    .lt("scraped_at", cutoff);
+  if (error) {
+    console.warn("[jobs] purge stale", error.message);
+    return 0;
+  }
+  return count ?? 0;
+}
+
 export async function ingestJobsForPrefs(prefs: JobSearchPrefs) {
   const hits = await collectJobsForPrefs(prefs);
   const result = await upsertHits(hits, prefs);
@@ -94,8 +109,9 @@ export async function ingestJobsForPrefs(prefs: JobSearchPrefs) {
 export async function ingestDevJobPool() {
   const hits = await collectDevJobPool();
   const result = await upsertHits(hits, null);
-  console.info("[jobs] pool ingest", { raw: hits.length, ...result });
-  return { raw: hits.length, ...result };
+  const purged = await purgeStaleListings();
+  console.info("[jobs] pool ingest", { raw: hits.length, purged, ...result });
+  return { raw: hits.length, purged, ...result };
 }
 
 export async function runJobBoardIngest() {

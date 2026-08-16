@@ -56,7 +56,9 @@ export default async function CareerPage({ searchParams }: PageProps) {
   const cvProfiles = fullCvs
     .map((doc) => profileFromCv(doc))
     .filter((profile): profile is NonNullable<typeof profile> => Boolean(profile));
-  const activeProfile = cvProfiles[0];
+  const activeProfile = prefs.cvDocumentId
+    ? (cvProfiles.find((profile) => profile.id === prefs.cvDocumentId) ?? null)
+    : null;
 
   const [jobs, listings] = await Promise.all([
     jobsEntitled ? listJobApplications(user.id).catch(() => []) : Promise.resolve([]),

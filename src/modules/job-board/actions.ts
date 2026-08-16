@@ -74,9 +74,6 @@ export async function saveJobSearchConfig(
   const user = await requireUser();
   const roleQuery = prefs.roleQuery.trim();
   const roles = resolveRoles(prefs.roles.length ? prefs.roles : roleQuery ? [roleQuery] : []);
-  if (roles.length === 0) {
-    throw new Error("Indique au moins un type de poste.");
-  }
   if (roles.length > MAX_JOB_ROLES) {
     throw new Error(`Choisis au plus ${MAX_JOB_ROLES} postes.`);
   }
@@ -89,14 +86,18 @@ export async function saveJobSearchConfig(
     throw new Error(`Choisis au plus ${MAX_JOB_LOCATIONS} lieux.`);
   }
 
+  const cvId = cvDocumentId !== undefined ? cvDocumentId : prefs.cvDocumentId;
   const saved = await saveJobSearchPrefs(user.id, {
+    ...prefs,
     roles: roles.map((role) => role.id),
     roleQuery: rolesToQuery(roles.map((role) => role.id)),
     locations,
     workModes,
     workMode: workModes[0] ?? "hybrid",
+    cvDocumentId: cvId || null,
+    keyword: (prefs.keyword ?? "").trim().slice(0, 80),
   });
-  const cv = cvDocumentId ? await getCvDocumentById(user.id, cvDocumentId) : null;
+  const cv = saved.cvDocumentId ? await getCvDocumentById(user.id, saved.cvDocumentId) : null;
   const listings = await listJobListingsForPrefs(saved, profileFromCv(cv) ?? []);
   revalidatePath("/app/career");
   return { prefs: saved, listings };

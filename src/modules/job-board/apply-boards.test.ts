@@ -8,16 +8,17 @@ import {
   wttjJobsSearchUrl,
 } from "@/modules/job-board/apply-boards";
 import type { JobSearchPrefs } from "@/modules/job-board/types";
+import { withJobSearchPrefs } from "@/modules/job-board/types";
 
 function prefs(partial: Partial<JobSearchPrefs>): JobSearchPrefs {
-  return {
+  return withJobSearchPrefs({
     roles: ["frontend"],
     roleQuery: "Développeur frontend",
     locations: ["paris"],
     workModes: ["hybrid"],
     workMode: "hybrid",
     ...partial,
-  };
+  });
 }
 
 describe("applyBoardsForPrefs", () => {

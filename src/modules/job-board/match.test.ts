@@ -8,7 +8,9 @@ import {
   roleMatches,
 } from "@/modules/job-board/match";
 import { resolveLocation } from "@/modules/job-board/locations";
-import type { JobSearchPrefs } from "@/modules/job-board/types";
+import { withJobSearchPrefs } from "@/modules/job-board/types";
+
+const jobPrefs = withJobSearchPrefs;
 
 describe("classifyWorkMode", () => {
   it("detects télétravail", () => {
@@ -96,7 +98,7 @@ describe("matchesSearchPrefs", () => {
           tags: ["react"],
           workMode: "hybrid",
         },
-        { roleQuery: "react", roles: ["react"], locations: ["paris"], workModes: ["hybrid"], workMode: "hybrid" },
+        jobPrefs({ roleQuery: "react", roles: ["react"], locations: ["paris"], workModes: ["hybrid"], workMode: "hybrid" }),
       ),
     ).toBe(true);
   });
@@ -111,19 +113,19 @@ describe("matchesSearchPrefs", () => {
           tags: [],
           workMode: "remote",
         },
-        { roleQuery: "react", roles: ["react"], locations: ["paris"], workModes: ["remote"], workMode: "remote" },
+        jobPrefs({ roleQuery: "react", roles: ["react"], locations: ["paris"], workModes: ["remote"], workMode: "remote" }),
       ),
     ).toBe(false);
   });
 
   it("keeps remote and onsite when both modes are selected", () => {
-    const prefs: JobSearchPrefs = {
+    const search = jobPrefs({
       roleQuery: "react",
       roles: ["react"],
       locations: ["casablanca"],
       workModes: ["remote", "onsite"],
       workMode: "remote",
-    };
+    });
     expect(
       matchesSearchPrefs(
         {
@@ -133,7 +135,7 @@ describe("matchesSearchPrefs", () => {
           tags: ["react"],
           workMode: "remote",
         },
-        prefs,
+        search,
       ),
     ).toBe(true);
     expect(
@@ -145,7 +147,7 @@ describe("matchesSearchPrefs", () => {
           tags: ["react"],
           workMode: "onsite",
         },
-        prefs,
+        search,
       ),
     ).toBe(true);
   });
@@ -160,7 +162,7 @@ describe("matchesSearchPrefs", () => {
           tags: [],
           workMode: "hybrid",
         },
-        { roleQuery: "react", roles: ["frontend"], locations: ["paris"], workModes: ["hybrid"], workMode: "hybrid" },
+        jobPrefs({ roleQuery: "react", roles: ["frontend"], locations: ["paris"], workModes: ["hybrid"], workMode: "hybrid" }),
       ),
     ).toBe(false);
   });
@@ -175,13 +177,13 @@ describe("matchesSearchPrefs", () => {
           tags: ["react"],
           workMode: "hybrid",
         },
-        {
+        jobPrefs({
           roleQuery: "react",
           roles: ["react"],
           locations: ["belgique"],
           workModes: ["hybrid"],
           workMode: "hybrid",
-        },
+        }),
       ),
     ).toBe(true);
   });
@@ -196,13 +198,13 @@ describe("matchesSearchPrefs", () => {
           tags: ["react", "javascript"],
           workMode: "onsite",
         },
-        {
+        jobPrefs({
           roleQuery: "frontend",
           roles: ["frontend"],
           locations: ["maroc"],
           workModes: ["onsite"],
           workMode: "onsite",
-        },
+        }),
       ),
     ).toBe(false);
   });
@@ -217,13 +219,13 @@ describe("matchesSearchPrefs", () => {
           tags: [],
           workMode: "onsite",
         },
-        {
+        jobPrefs({
           roleQuery: "frontend",
           roles: ["frontend"],
           locations: ["maroc"],
           workModes: ["onsite"],
           workMode: "onsite",
-        },
+        }),
       ),
     ).toBe(false);
   });
@@ -238,25 +240,25 @@ describe("matchesSearchPrefs", () => {
           tags: [],
           workMode: "onsite",
         },
-        {
+        jobPrefs({
           roleQuery: "frontend",
           roles: ["frontend"],
           locations: ["maroc"],
           workModes: ["onsite"],
           workMode: "onsite",
-        },
+        }),
       ),
     ).toBe(true);
   });
 
   it("keeps a Europe remote React job when France is selected with télétravail", () => {
-    const prefs: JobSearchPrefs = {
+    const search = jobPrefs({
       roleQuery: "frontend",
       roles: ["frontend"],
       locations: ["france", "maroc"],
       workModes: ["remote", "hybrid", "onsite"],
       workMode: "remote",
-    };
+    });
     expect(
       matchesSearchPrefs(
         {
@@ -266,7 +268,7 @@ describe("matchesSearchPrefs", () => {
           tags: [],
           workMode: "remote",
         },
-        prefs,
+        search,
       ),
     ).toBe(true);
     expect(
@@ -278,7 +280,7 @@ describe("matchesSearchPrefs", () => {
           tags: [],
           workMode: "remote",
         },
-        prefs,
+        search,
       ),
     ).toBe(false);
     expect(
@@ -290,7 +292,7 @@ describe("matchesSearchPrefs", () => {
           tags: [],
           workMode: "remote",
         },
-        prefs,
+        search,
       ),
     ).toBe(true);
   });
@@ -305,14 +307,15 @@ describe("matchesSearchPrefs", () => {
           tags: [],
           workMode: "onsite",
         },
-        {
+        jobPrefs({
           roleQuery: "frontend",
           roles: ["frontend"],
           locations: ["france"],
           workModes: ["onsite"],
           workMode: "onsite",
-        },
+        }),
       ),
     ).toBe(false);
   });
 });
+

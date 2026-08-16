@@ -4,40 +4,47 @@ import {
   wttjHitToRaw,
   wttjWorkMode,
 } from "@/modules/job-board/collectors/wttj";
+import { withJobSearchPrefs } from "@/modules/job-board/types";
 
 describe("wttjCountryFilter", () => {
   it("filters France when Paris is selected", () => {
     expect(
-      wttjCountryFilter({
+      wttjCountryFilter(
+        withJobSearchPrefs({
         roles: ["frontend"],
         roleQuery: "Développeur frontend",
         locations: ["paris"],
         workModes: ["hybrid"],
         workMode: "hybrid",
       }),
+      ),
     ).toBe("offices.country_code:FR");
   });
 
   it("filters Morocco for Casablanca", () => {
     expect(
-      wttjCountryFilter({
+      wttjCountryFilter(
+        withJobSearchPrefs({
         roles: ["frontend"],
         roleQuery: "Développeur frontend",
         locations: ["casablanca"],
         workModes: ["onsite"],
         workMode: "onsite",
       }),
+      ),
     ).toBe("offices.country_code:MA");
   });
 
   it("keeps both countries when France and Maroc are selected", () => {
-    const filter = wttjCountryFilter({
+    const filter = wttjCountryFilter(
+      withJobSearchPrefs({
       roles: ["frontend"],
       roleQuery: "Développeur frontend",
       locations: ["paris", "casablanca"],
       workModes: ["hybrid"],
       workMode: "hybrid",
-    });
+    }),
+    );
     expect(filter).toContain("offices.country_code:FR");
     expect(filter).toContain("offices.country_code:MA");
   });

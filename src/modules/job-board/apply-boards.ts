@@ -38,7 +38,10 @@ function searchKeywords(prefs: JobSearchPrefs): string {
   const roles = resolveRoles(
     prefs.roles.length > 0 ? prefs.roles : prefs.roleQuery ? [prefs.roleQuery] : [],
   );
-  return rolesToQuery(roles.map((role) => role.id)) || prefs.roleQuery.trim();
+  const fromRoles = rolesToQuery(roles.map((role) => role.id)) || prefs.roleQuery.trim();
+  const extra = prefs.keyword?.trim() ?? "";
+  if (fromRoles && extra) return `${fromRoles} ${extra}`.trim();
+  return fromRoles || extra;
 }
 
 function firstPlace(prefs: JobSearchPrefs) {

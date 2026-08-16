@@ -1,3 +1,8 @@
+import {
+  EMPTY_JOB_SEARCH_FILTERS,
+  type JobSearchFilters,
+} from "@/modules/job-board/filters";
+
 export type JobEmploymentCategory = "salaried" | "freelance";
 
 export type FreelanceSubtype = "part_time" | "full_time";
@@ -34,7 +39,7 @@ export type JobSearchPrefs = {
   workModes: JobWorkMode[];
   /** First selected mode, kept for older rows / collectors. */
   workMode: JobWorkMode;
-};
+} & JobSearchFilters;
 
 export type JobListingFilter =
   | "all"
@@ -85,5 +90,10 @@ export const EMPTY_JOB_SEARCH_PREFS: JobSearchPrefs = {
   locations: [],
   workModes: ["hybrid"],
   workMode: "hybrid",
+  ...EMPTY_JOB_SEARCH_FILTERS,
 };
+
+export function withJobSearchPrefs(partial: Partial<JobSearchPrefs> = {}): JobSearchPrefs {
+  return { ...EMPTY_JOB_SEARCH_PREFS, ...partial };
+}
 

@@ -1,4 +1,5 @@
 import { createClient } from "@/core/auth/supabase/server";
+import { filtersToJson, hasActiveJobFilters, parseJobSearchFilters } from "@/modules/job-board/filters";
 import { resolveLocations } from "@/modules/job-board/locations";
 import { resolveRoles, rolesToQuery } from "@/modules/job-board/roles";
 import { normalizeWorkModes } from "@/modules/job-board/work-modes";
@@ -70,6 +71,7 @@ function rowToPrefs(data: {
   locations?: string[] | null;
   roles?: string[] | null;
   work_modes?: string[] | null;
+  filters?: unknown;
 }): JobSearchPrefs {
   const fromLocations = Array.isArray(data.locations) ? data.locations : [];
   const fallbackLocations = data.city
@@ -98,12 +100,14 @@ function rowToPrefs(data: {
     locations,
     workModes,
     workMode: workModes[0] ?? "hybrid",
+    ...parseJobSearchFilters(data.filters),
   };
 }
 
 export async function getJobSearchPrefs(userId: string): Promise<JobSearchPrefs> {
   const supabase = await createClient();
   const selects = [
+    "role_query, city, work_mode, locations, roles, work_modes, filters",
     "role_query, city, work_mode, locations, roles, work_modes",
     "role_query, city, work_mode, locations, roles",
     "role_query, city, work_mode",
@@ -129,13 +133,15 @@ export async function saveJobSearchPrefs(
 ): Promise<JobSearchPrefs> {
   const supabase = await createClient();
   const locations = resolveLocations(prefs.locations).map((entry) => entry.id);
-  const roles = resolveRoles(prefs.roles.length ? prefs.roles : [prefs.roleQuery]).map(
-    (entry) => entry.id,
-  );
+  const roles = resolveRoles(
+    prefs.roles.length ? prefs.roles : prefs.roleQuery.trim() ? [prefs.roleQuery] : [],
+  ).map((entry) => entry.id);
   const roleQuery = (rolesToQuery(roles) || prefs.roleQuery.trim()).slice(0, 240);
   const workModes = normalizeWorkModes(prefs);
   const workMode = workModes[0] ?? "hybrid";
   const city = locations.join(",").slice(0, 400);
+
+  const filters = filtersToJson(prefs);
 
   const fullRow = {
     user_id: userId,
@@ -145,11 +151,24 @@ export async function saveJobSearchPrefs(
     roles,
     work_mode: workMode,
     work_modes: workModes,
+    filters,
   };
 
   const attempts: Array<{ row: Record<string, unknown>; columns: string }> = [
     {
       row: fullRow,
+      columns: "role_query, city, work_mode, locations, roles, work_modes, filters",
+    },
+    {
+      row: {
+        user_id: userId,
+        role_query: roleQuery,
+        city,
+        locations,
+        roles,
+        work_mode: workMode,
+        work_modes: workModes,
+      },
       columns: "role_query, city, work_mode, locations, roles, work_modes",
     },
     {
@@ -242,13 +261,11 @@ export async function listJobListingsForPrefs(
   prefs: JobSearchPrefs,
   cv: CvFitInput | string[] = [],
 ): Promise<RankedJobListing[]> {
+  const cvSignal = Array.isArray(cv)
+    ? cv.length > 0
+    : cv.skills.length > 0 || cv.roles.length > 0 || cv.years > 0;
+  if (!hasActiveJobFilters(prefs) && !cvSignal) return [];
   const listings = await listJobListings("all");
-  const hasSearch =
-    prefs.roles.length > 0 ||
-    prefs.roleQuery.trim().length >= 2 ||
-    (!Array.isArray(cv) && (cv.roles.length > 0 || cv.skills.length > 0)) ||
-    (Array.isArray(cv) && cv.length > 0);
-  if (!hasSearch) return [];
   return rankListingsForPrefs(listings, prefs, cv);
 }
 
