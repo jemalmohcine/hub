@@ -27,7 +27,7 @@ async function collectRemotiveForPrefs(prefs: JobSearchPrefs): Promise<RawJobHit
   return hits.filter((hit) => {
     const blob = `${hit.title} ${hit.description} ${hit.location ?? ""}`;
     if (!isCredibleRegion(hit.location, blob, selected)) return false;
-    return roleMatchesAny(prefs, blob);
+    return roleMatchesAny(prefs, `${hit.title} ${(hit.tags ?? []).join(" ")}`);
   });
 }
 

@@ -4,6 +4,7 @@ import {
   resolveLocations,
 } from "@/modules/job-board/locations";
 import { isCredibleRegion, roleMatchesAny } from "@/modules/job-board/match";
+import { resolveRoles } from "@/modules/job-board/roles";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 import { wantsRemote } from "@/modules/job-board/work-modes";
 
@@ -24,6 +25,14 @@ type JobicyResponse = {
   jobs?: JobicyJob[];
 };
 
+function jobicyTag(prefs: JobSearchPrefs): string {
+  const role = resolveRoles(
+    prefs.roles.length > 0 ? prefs.roles : prefs.roleQuery ? [prefs.roleQuery] : [],
+  )[0];
+  if (!role) return "";
+  return (role.aliases[0] || role.id).replace(/-/g, " ");
+}
+
 function jobicyGeos(prefs: JobSearchPrefs): string[] {
   const selected = expandWithParentCountries(resolveLocations(prefs.locations));
   const geos = selected
@@ -34,7 +43,7 @@ function jobicyGeos(prefs: JobSearchPrefs): string[] {
 }
 
 async function collectJobicyGeo(geo: string, prefs: JobSearchPrefs): Promise<RawJobHit[]> {
-  const tag = prefs.roleQuery.trim().split(/\s+/)[0] ?? "";
+  const tag = jobicyTag(prefs);
   const params = new URLSearchParams({ count: "20", geo });
   if (tag.length >= 3) params.set("tag", tag.toLowerCase());
   const url = `https://jobicy.com/api/v2/remote-jobs?${params.toString()}`;
@@ -45,7 +54,7 @@ async function collectJobicyGeo(geo: string, prefs: JobSearchPrefs): Promise<Raw
     if (!job.jobTitle || !job.companyName || !job.url) return [];
     const blob = `${job.jobTitle} ${job.jobExcerpt ?? ""} ${job.jobDescription ?? ""} ${job.jobGeo ?? ""}`;
     if (!isCredibleRegion(job.jobGeo, blob, selected)) return [];
-    if (!roleMatchesAny(prefs, blob)) return [];
+    if (!roleMatchesAny(prefs, job.jobTitle)) return [];
     return [
       {
         source: "jobicy",

@@ -6,9 +6,10 @@ import { Briefcase, FileText, Search } from "lucide-react";
 import { Stack } from "@/design-system";
 import type { CvDocument, CvDocumentSummary } from "@/modules/cv-builder/types";
 import { CvBuilderWorkspace } from "@/modules/cv-builder/ui/cv-builder-workspace";
+import type { RankedJobListing } from "@/modules/job-board/fit";
 import { JobBoardWorkspace } from "@/modules/job-board/ui/job-board-workspace";
 import { prefsHintFromCv } from "@/modules/job-board/prefs-from-cv";
-import type { JobListing, JobSearchPrefs } from "@/modules/job-board/types";
+import type { JobSearchPrefs } from "@/modules/job-board/types";
 import type { JobApplication } from "@/modules/job-tracker/types";
 import { JobTrackerWorkspace } from "@/modules/job-tracker/ui/job-tracker-workspace";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,7 @@ export function CareerWorkspace({
   initialJobs,
   initialListings,
   initialPrefs,
+  cvSkills,
 }: {
   initialTab: CareerTab;
   cvEntitled: boolean;
@@ -43,8 +45,9 @@ export function CareerWorkspace({
   initialDoc: CvDocument;
   initialDocuments: CvDocumentSummary[];
   initialJobs: JobApplication[];
-  initialListings: JobListing[];
+  initialListings: RankedJobListing[];
   initialPrefs: JobSearchPrefs;
+  cvSkills: string[];
 }) {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<CareerTab>(() =>
@@ -112,6 +115,7 @@ export function CareerWorkspace({
             initialListings={initialListings}
             initialPrefs={initialPrefs}
             cvHint={prefsHintFromCv(initialDoc)}
+            cvSkills={cvSkills}
             cvDocuments={initialDocuments}
             trackedListingIds={trackedListingIds}
             onApplicationCreated={(application) => {

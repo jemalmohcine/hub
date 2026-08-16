@@ -50,6 +50,21 @@ describe("roleMatches", () => {
     expect(roleMatches("développeur React", "React engineer, Paris")).toBe(true);
     expect(roleMatches("développeur React", "Python backend, Lyon")).toBe(false);
   });
+
+  it("maps the frontend catalog id to a React title", () => {
+    expect(roleMatches("frontend", "Développeur React — Paris")).toBe(true);
+    expect(roleMatches("frontend", "Data engineer Python")).toBe(false);
+  });
+
+  it("does not treat fully remote as full stack", () => {
+    expect(roleMatches("fullstack", "Fully remote Python developer")).toBe(false);
+    expect(roleMatches("fullstack", "Développeur full stack")).toBe(true);
+  });
+
+  it("does not match react inside reactive or angular inside triangular", () => {
+    expect(roleMatches("frontend", "reactive programming job")).toBe(false);
+    expect(roleMatches("frontend", "triangular architecture")).toBe(false);
+  });
 });
 
 describe("matchesSearchPrefs", () => {
@@ -115,6 +130,21 @@ describe("matchesSearchPrefs", () => {
         prefs,
       ),
     ).toBe(true);
+  });
+
+  it("drops an offer that only buries the stack in the description", () => {
+    expect(
+      matchesSearchPrefs(
+        {
+          title: "Software engineer",
+          description: "On touche un peu à React dans un outil interne",
+          location: "Paris",
+          tags: [],
+          workMode: "hybrid",
+        },
+        { roleQuery: "react", roles: ["frontend"], locations: ["paris"], workModes: ["hybrid"], workMode: "hybrid" },
+      ),
+    ).toBe(false);
   });
 
   it("keeps Belgium when selected", () => {
