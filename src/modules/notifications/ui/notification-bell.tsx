@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   Bell,
+  Briefcase,
   CheckCheck,
   ChevronRight,
   CreditCard,
@@ -42,6 +43,7 @@ function notificationHref(n: HubNotification): string | null {
 
 const CATEGORIES: Array<NotificationCategory | "all"> = [
   "all",
+  "jobs",
   "ai",
   "billing",
   "account",
@@ -57,6 +59,7 @@ function CategoryIcon({
 }) {
   const cls = cn("h-4 w-4", className);
   if (category === "ai") return <Sparkles className={cls} />;
+  if (category === "jobs") return <Briefcase className={cls} />;
   if (category === "billing") return <CreditCard className={cls} />;
   if (category === "account") return <UserRound className={cls} />;
   return <Shield className={cls} />;
@@ -65,6 +68,8 @@ function CategoryIcon({
 function categoryAccent(category: NotificationCategory) {
   if (category === "ai")
     return "bg-[var(--dh-brand-soft)] text-[var(--dh-brand)]";
+  if (category === "jobs")
+    return "bg-[var(--dh-info-soft)] text-[var(--dh-info)]";
   if (category === "billing")
     return "bg-[var(--dh-warning-soft)] text-[var(--dh-warning)]";
   if (category === "account")

@@ -31,13 +31,13 @@ export function parseWwrTitle(raw: string): { company: string; title: string } {
   };
 }
 
-/** We Work Remotely programming RSS — no key, remote-only. */
-export async function collectWwr(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
-  if (!wantsRemote(prefs)) return [];
-  const xml = await fetchText(
-    "https://weworkremotely.com/categories/remote-programming-jobs.rss",
-    { timeoutMs: HTTP_TIMEOUTS.slow },
-  );
+const WWR_FEEDS = [
+  "https://weworkremotely.com/categories/remote-programming-jobs.rss",
+  "https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss",
+];
+
+async function collectWwrFeed(url: string, prefs: JobSearchPrefs): Promise<RawJobHit[]> {
+  const xml = await fetchText(url, { timeoutMs: HTTP_TIMEOUTS.slow });
   const selected = expandWithParentCountries(resolveLocations(prefs.locations));
   const items = xml.match(/<item[\s\S]*?<\/item>/gi) ?? [];
 
@@ -74,4 +74,11 @@ export async function collectWwr(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
       },
     ];
   });
+}
+
+/** We Work Remotely RSS — no key, remote-only. Pool uses programming + devops. */
+export async function collectWwr(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
+  if (!wantsRemote(prefs)) return [];
+  const batches = await Promise.allSettled(WWR_FEEDS.map((url) => collectWwrFeed(url, prefs)));
+  return batches.flatMap((batch) => (batch.status === "fulfilled" ? batch.value : []));
 }

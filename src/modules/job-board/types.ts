@@ -88,7 +88,7 @@ export const EMPTY_JOB_SEARCH_PREFS: JobSearchPrefs = {
   roles: [],
   roleQuery: "",
   locations: [],
-  workModes: ["hybrid"],
+  workModes: ["remote", "hybrid", "onsite"],
   workMode: "hybrid",
   ...EMPTY_JOB_SEARCH_FILTERS,
 };

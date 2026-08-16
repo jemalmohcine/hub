@@ -17,7 +17,7 @@ const CAREER_MODULES = ["cv", "jobs"] as const;
 
 const CAREER_COPY = {
   title: "Carrière",
-  description: "CV Builder, offres filtrées selon ton CV et suivi des candidatures.",
+  description: "CV, offres (remote, freelance, tendance) et rappels de suivi.",
   upsell: "Crée tes CV, adapte-les aux offres et suis tes candidatures.",
 };
 

@@ -1,4 +1,4 @@
-export type NotificationCategory = "ai" | "billing" | "account" | "system";
+export type NotificationCategory = "ai" | "billing" | "account" | "system" | "jobs";
 export type NotificationSeverity = "info" | "success" | "warning" | "urgent";
 
 export type HubNotification = {
@@ -20,4 +20,5 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<NotificationCategory, string> 
   billing: "Paiement",
   account: "Compte",
   system: "Platform",
+  jobs: "Offres",
 };

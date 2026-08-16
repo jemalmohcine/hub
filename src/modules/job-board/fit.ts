@@ -12,6 +12,7 @@ import {
   roleMatches,
 } from "@/modules/job-board/match";
 import { resolveRoles } from "@/modules/job-board/roles";
+import { listingHeatScore, isTrendingListing } from "@/modules/job-board/trending";
 import type { JobListing, JobSearchPrefs } from "@/modules/job-board/types";
 import { acceptsWorkMode, wantsRemote } from "@/modules/job-board/work-modes";
 
@@ -20,6 +21,7 @@ export type JobFitLabel = "excellent" | "good" | "ok";
 export type RankedJobListing = JobListing & {
   fitScore: number;
   fitLabel: JobFitLabel;
+  trending: boolean;
 };
 
 export type CvFitInput = Pick<CvJobProfile, "skills" | "years" | "roles">;
@@ -237,6 +239,9 @@ export function scoreListingFit(
     location: string | null;
     tags: string[];
     workMode: JobListing["workMode"];
+    source?: string;
+    publishedAt?: string | null;
+    scrapedAt?: string;
   },
   prefs: JobSearchPrefs,
   cvInput: string[] | CvFitInput = [],
@@ -289,6 +294,14 @@ export function scoreListingFit(
     score = Math.min(score, 45);
   }
 
+  if (listing.source && (listing.publishedAt || listing.scrapedAt)) {
+    score += listingHeatScore({
+      source: listing.source,
+      publishedAt: listing.publishedAt ?? null,
+      scrapedAt: listing.scrapedAt ?? listing.publishedAt ?? "",
+    });
+  }
+
   return Math.max(0, Math.min(100, score));
 }
 
@@ -307,7 +320,12 @@ export function rankListingsForPrefs(
     .filter((listing) => listingWorthShowing(listing, prefs, cvInput))
     .map((listing) => {
       const score = scoreListingFit(listing, prefs, cvInput);
-      return { ...listing, fitScore: score, fitLabel: fitLabel(score) };
+      return {
+        ...listing,
+        fitScore: score,
+        fitLabel: fitLabel(score),
+        trending: isTrendingListing(listing),
+      };
     })
     .sort((a, b) => b.fitScore - a.fitScore || (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""))
     .slice(0, 40);

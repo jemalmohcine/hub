@@ -180,8 +180,10 @@ export function JobTrackerWorkspace({
     <Stack gap={4} className="pb-8">
       <Cluster gap={2} className="justify-between">
         <Text size="sm" tone="muted">
-          {jobs.length} candidature{jobs.length !== 1 ? "s" : ""} suivie
-          {jobs.length !== 1 ? "s" : ""}
+          {jobs.length} suivie{jobs.length !== 1 ? "s" : ""}
+          {toNudge.length > 0
+            ? ` · ${toNudge.length} à traiter aujourd’hui`
+            : ""}
         </Text>
         <Button type="button" size="sm" onClick={() => setShowForm((v) => !v)}>
           <Plus className="h-4 w-4" />
@@ -194,11 +196,12 @@ export function JobTrackerWorkspace({
           <Stack gap={2}>
             <Cluster gap={2}>
               <Clock className="h-4 w-4 text-[var(--dh-brand)]" />
-              <Text weight="medium">À relancer</Text>
+              <Text weight="medium">Aujourd’hui</Text>
             </Cluster>
             <Text size="sm" tone="muted">
-              {toNudge.length} candidature{toNudge.length > 1 ? "s" : ""} à traiter
-              aujourd’hui.
+              {toNudge.length === 1
+                ? "Une offre attend une action. Postule ou relance, puis c’est noté."
+                : `${toNudge.length} offres attendent une action.`}
             </Text>
             {toNudge.map((job) => (
               <Cluster key={job.id} gap={2} className="flex-wrap justify-between">
@@ -465,8 +468,8 @@ function JobCard({
         ) : null}
 
         {followLabel ? (
-          <Text size="sm" tone={overdue ? "muted" : "muted"}>
-            Relance {overdue ? "aujourd’hui" : `le ${followLabel}`}
+          <Text size="sm" tone={overdue ? "muted" : "muted"} className={overdue ? "font-medium" : undefined}>
+            {overdue ? "À faire aujourd’hui" : `Relance le ${followLabel}`}
           </Text>
         ) : null}
 

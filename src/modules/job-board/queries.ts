@@ -1,5 +1,5 @@
 import { createClient } from "@/core/auth/supabase/server";
-import { filtersToJson, hasActiveJobFilters, parseJobSearchFilters } from "@/modules/job-board/filters";
+import { filtersToJson, parseJobSearchFilters } from "@/modules/job-board/filters";
 import { resolveLocations } from "@/modules/job-board/locations";
 import { resolveRoles, rolesToQuery } from "@/modules/job-board/roles";
 import { normalizeWorkModes } from "@/modules/job-board/work-modes";
@@ -34,7 +34,7 @@ type ListingRow = {
   scraped_at: string;
 };
 
-function rowToListing(row: ListingRow): JobListing {
+export function listingFromRow(row: ListingRow): JobListing {
   return {
     id: row.id,
     canonicalKey: row.canonical_key,
@@ -64,7 +64,7 @@ function missingColumn(error: { message?: string } | null): boolean {
   );
 }
 
-function rowToPrefs(data: {
+export function prefsFromDbRow(data: {
   role_query: string;
   city: string;
   work_mode: string;
@@ -119,7 +119,7 @@ export async function getJobSearchPrefs(userId: string): Promise<JobSearchPrefs>
       .eq("user_id", userId)
       .maybeSingle();
     if (!result.error && result.data) {
-      return rowToPrefs(result.data as unknown as Parameters<typeof rowToPrefs>[0]);
+      return prefsFromDbRow(result.data as unknown as Parameters<typeof prefsFromDbRow>[0]);
     }
     if (result.error && !missingColumn(result.error)) break;
   }
@@ -211,7 +211,7 @@ export async function saveJobSearchPrefs(
       .select(attempt.columns)
       .single();
     if (!result.error && result.data) {
-      return rowToPrefs(result.data as unknown as Parameters<typeof rowToPrefs>[0]);
+      return prefsFromDbRow(result.data as unknown as Parameters<typeof prefsFromDbRow>[0]);
     }
     lastError = result.error;
     if (!missingColumn(result.error)) break;
@@ -254,17 +254,13 @@ export async function listJobListings(
 
   const { data, error } = await dbQuery;
   if (error || !data) return [];
-  return (data as ListingRow[]).map(rowToListing);
+  return (data as ListingRow[]).map(listingFromRow);
 }
 
 export async function listJobListingsForPrefs(
   prefs: JobSearchPrefs,
   cv: CvFitInput | string[] = [],
 ): Promise<RankedJobListing[]> {
-  const cvSignal = Array.isArray(cv)
-    ? cv.length > 0
-    : cv.skills.length > 0 || cv.roles.length > 0 || cv.years > 0;
-  if (!hasActiveJobFilters(prefs) && !cvSignal) return [];
   const listings = await listJobListings("all");
   return rankListingsForPrefs(listings, prefs, cv);
 }
@@ -278,7 +274,7 @@ export async function getJobListingById(id: string): Promise<JobListing | null> 
     .maybeSingle();
 
   if (error || !data) return null;
-  return rowToListing(data as ListingRow);
+  return listingFromRow(data as ListingRow);
 }
 
 export async function getJobListingByUrl(url: string): Promise<JobListing | null> {
@@ -293,5 +289,5 @@ export async function getJobListingByUrl(url: string): Promise<JobListing | null
     .maybeSingle();
 
   if (error || !data) return null;
-  return rowToListing(data as ListingRow);
+  return listingFromRow(data as ListingRow);
 }

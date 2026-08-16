@@ -43,6 +43,7 @@ import {
 } from "@/modules/cv-builder/ui/cv-form";
 import { CvPreview } from "@/modules/cv-builder/ui/cv-preview";
 import { JobTailorCard } from "@/modules/cv-builder/ui/job-tailor-card";
+import { CvReadinessCard } from "@/modules/cv-builder/ui/cv-readiness-card";
 import { TailorRecommendationsPanel } from "@/modules/cv-builder/ui/tailor-recommendations";
 import { ThemePicker } from "@/modules/cv-builder/ui/theme-picker";
 import { cn } from "@/lib/utils";
@@ -229,6 +230,7 @@ export function CvBuilderWorkspace({
             onDelete={handleDelete}
             disabled={pending}
           />
+          <CvReadinessCard doc={doc} onJump={setFormSection} />
           <JobTailorCard sourceDoc={doc} onTailored={handleTailored} />
         </Stack>
         <Stack gap={3}>
@@ -272,6 +274,7 @@ export function CvBuilderWorkspace({
               onDelete={handleDelete}
               disabled={pending}
             />
+            <CvReadinessCard doc={doc} onJump={setFormSection} />
             <JobTailorCard sourceDoc={doc} onTailored={handleTailored} />
             <CvFormTabs active={formSection} onChange={setFormSection} />
             <CvForm doc={doc} onChange={update} section={formSection} />
