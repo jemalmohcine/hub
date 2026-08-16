@@ -4,15 +4,14 @@ import type { ReactNode } from "react";
 import { Check, ChevronRight } from "lucide-react";
 import { Text } from "@/design-system";
 import { resolveBrief } from "@/modules/ai-intel/brief";
-import { contentKindTone } from "@/modules/ai-intel/content-kind";
 import type { HubLocale } from "@/core/i18n";
 import { formatDate } from "@/lib/dates";
+import { isNearDuplicate, truncateAtWord } from "@/lib/text";
 import { t } from "@/modules/ai-intel/i18n/locale";
 import {
   isHotAlert,
   isTrending,
   itemKind,
-  itemTags,
   pricingKind,
 } from "@/modules/ai-intel/ui/rank";
 import { readMetaString } from "@/modules/ai-intel/ui/verdict";
@@ -31,7 +30,7 @@ function Chip({
   tone = "muted",
 }: {
   children: ReactNode;
-  tone?: "muted" | "urgent" | "ok" | "warn";
+  tone?: "muted" | "urgent" | "ok";
 }) {
   return (
     <span
@@ -40,8 +39,6 @@ function Chip({
         tone === "urgent" &&
           "bg-[var(--dh-danger-soft)] text-[var(--dh-danger)]",
         tone === "ok" && "bg-[var(--dh-brand-soft)] text-[var(--dh-brand)]",
-        tone === "warn" &&
-          "bg-[var(--dh-warning-soft)] text-[var(--dh-warning)]",
         tone === "muted" && "bg-background/80 text-muted-foreground",
       )}
     >
@@ -64,16 +61,18 @@ export function FeedItemRow({
   const copy = t(locale);
   const meta = (item.metadata ?? {}) as Record<string, unknown>;
   const brief = resolveBrief(item, locale);
-  const tags = itemTags(item);
   const stars = prettyCount(readMetaString(meta, "stars"));
   const starsToday = prettyCount(readMetaString(meta, "starsToday"));
-  const score = readMetaString(meta, "score");
   const kind = itemKind(item);
   const pricing = pricingKind(item);
   const hot = isHotAlert(item);
   const trending = isTrending(item);
   const isRead = Boolean(item.read);
   const publishedLabel = formatDate(item.published_at, locale, "dayMonth");
+  const teaser =
+    brief.tldr && !isNearDuplicate(brief.tldr, brief.title)
+      ? truncateAtWord(brief.tldr, compact ? 110 : 160)
+      : null;
 
   const metricParts: string[] = [];
   if (kind === "repo") {
@@ -104,21 +103,14 @@ export function FeedItemRow({
       )}
     >
       <span className="min-w-0 flex-1">
-        <span className="mb-2 flex flex-wrap items-center gap-1">
-          {hot ? <Chip tone="urgent">{copy.urgent}</Chip> : null}
-          <Chip tone={hot ? "urgent" : contentKindTone(brief.kind)}>
-            {brief.typeLabel}
-          </Chip>
-          {brief.product ? <Chip>{brief.product}</Chip> : null}
-          {trending ? <Chip tone="ok">{copy.trending}</Chip> : null}
-          {tags.map((tag) => (
-            <Chip key={tag}>{tag}</Chip>
-          ))}
-          {score ? (
-            <Chip tone="ok">
-              {copy.score} {score}
-            </Chip>
-          ) : null}
+        <span className="mb-1.5 flex flex-wrap items-center gap-1">
+          {hot ? (
+            <Chip tone="urgent">{copy.urgent}</Chip>
+          ) : trending ? (
+            <Chip tone="ok">{copy.trending}</Chip>
+          ) : (
+            <Chip>{brief.typeLabel}</Chip>
+          )}
         </span>
 
         <Text
@@ -127,11 +119,21 @@ export function FeedItemRow({
             "text-balance leading-snug",
             compact
               ? "line-clamp-2 text-[length:var(--dh-text-sm)]"
-              : "line-clamp-3 text-[length:var(--dh-text-sm)]",
+              : "line-clamp-2 text-[length:var(--dh-text-sm)]",
           )}
         >
           {brief.title}
         </Text>
+
+        {teaser ? (
+          <Text
+            size="sm"
+            tone="muted"
+            className="mt-1 line-clamp-2 leading-snug"
+          >
+            {teaser}
+          </Text>
+        ) : null}
 
         <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[length:var(--dh-text-2xs)] text-muted-foreground">
           <span>{item.primary_source}</span>

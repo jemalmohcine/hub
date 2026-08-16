@@ -39,7 +39,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     label: "AI",
     description: "Veille modèles, prix, repos et changements",
     pageDescription:
-      "Le filtre de période et la date affichée correspondent au jour où l’info a été scrapée.",
+      "Urgent = agir. GitHub = repos en tendance. Le reste se lit quand tu as le temps.",
     upsell: "Accède au fil d’actualités, aux favoris et aux alertes urgentes.",
     href: "/app/ai",
     order: 10,

@@ -34,63 +34,8 @@ export function isBeneficial(item: AiIntelItem): boolean {
 export function isNoise(item: AiIntelItem): boolean {
   return (
     itemVerdict(item) === "skip" ||
-    (itemScore(item) > 0 && itemScore(item) < 42)
+    (itemScore(item) > 0 && itemScore(item) < 46)
   );
-}
-
-/** Action required now: pricing, breaking, security, exploding repos. */
-export function isHotAlert(item: AiIntelItem): boolean {
-  const meta = (item.metadata ?? {}) as Record<string, unknown>;
-
-  // Signals produced by the analysis pass win over any headline heuristic.
-  if (meta.hardSignal) return true;
-  if (meta.exploding === true) return true;
-  if (meta.actionRequired === true && item.urgency === "urgent") return true;
-
-  if (itemVerdict(item) === "skip") return false;
-
-  const kind = detectContentKind(item);
-
-  if (kind === "repo") {
-    return isRepoExploding(item);
-  }
-
-  if (kind === "pricing" || kind === "breaking" || kind === "security") {
-    return true;
-  }
-
-  const category = String(item.category || "");
-  const score = itemScore(item);
-
-  if (kind === "model") {
-    return (
-      category === "new_model" ||
-      category === "upgrade" ||
-      category === "capacity" ||
-      item.urgency === "urgent"
-    );
-  }
-
-  if (category === "upgrade" && item.urgency === "urgent" && score >= 70) {
-    return true;
-  }
-
-  return (
-    item.urgency === "urgent" &&
-    (category === "capacity" || score >= 75)
-  );
-}
-
-/** Trending = accelerating repo with measurable daily growth. */
-export function isTrending(item: AiIntelItem): boolean {
-  if (itemKind(item) !== "repo") return false;
-  const { starsToday, starsWeek, stars, rank } = readRepoMomentum(item);
-
-  if (starsToday >= 200) return true;
-  if (starsWeek >= 1000 && starsToday >= 80) return true;
-  if (rank > 0 && rank <= 5 && starsToday >= 150) return true;
-  if (stars > 0 && starsToday >= 100 && starsToday >= stars * 0.12) return true;
-  return false;
 }
 
 type AlertItem = Pick<
@@ -106,9 +51,8 @@ function asIntelItem(item: AlertItem): AiIntelItem {
 }
 
 /**
- * Phone + bell alerts only when something demands attention today:
- * a security issue, a pricing or deprecation change, or a repo really taking off.
- * A plain new-model announcement is interesting, not interrupting.
+ * Phone alerts and the Urgent tab share this rule: only act-now signals.
+ * A new model, a changelog, or a merely trending repo is interesting, not urgent.
  */
 export function isCriticalPushAlert(item: AlertItem): boolean {
   const meta = (item.metadata ?? {}) as Record<string, unknown>;
@@ -125,6 +69,23 @@ export function isCriticalPushAlert(item: AlertItem): boolean {
 
   if (kind === "repo") return isRepoExploding(intel);
   return kind === "pricing" || kind === "breaking" || kind === "security";
+}
+
+/** Same rule as push: CVE / prix / breaking / panne / repo qui explose. */
+export function isHotAlert(item: AiIntelItem): boolean {
+  return isCriticalPushAlert(item);
+}
+
+/** Trending = accelerating repo with measurable daily growth. */
+export function isTrending(item: AiIntelItem): boolean {
+  if (itemKind(item) !== "repo") return false;
+  const { starsToday, starsWeek, stars, rank } = readRepoMomentum(item);
+
+  if (starsToday >= 200) return true;
+  if (starsWeek >= 1000 && starsToday >= 80) return true;
+  if (rank > 0 && rank <= 5 && starsToday >= 150) return true;
+  if (stars > 0 && starsToday >= 100 && starsToday >= stars * 0.12) return true;
+  return false;
 }
 
 export type PricingKind = "free" | "freemium" | "paid" | null;
