@@ -52,8 +52,7 @@ async function collectJobicyGeo(geo: string, prefs: JobSearchPrefs): Promise<Raw
 
   return (data.jobs ?? []).flatMap((job) => {
     if (!job.jobTitle || !job.companyName || !job.url) return [];
-    const blob = `${job.jobTitle} ${job.jobExcerpt ?? ""} ${job.jobDescription ?? ""} ${job.jobGeo ?? ""}`;
-    if (!isCredibleRegion(job.jobGeo, blob, selected)) return [];
+    if (!isCredibleRegion(job.jobGeo, job.jobTitle, selected)) return [];
     if (!roleMatchesAny(prefs, job.jobTitle)) return [];
     return [
       {

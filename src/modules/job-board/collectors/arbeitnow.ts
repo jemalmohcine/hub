@@ -23,8 +23,47 @@ type ArbeitnowResponse = {
   data?: ArbeitnowJob[];
 };
 
-/** European job board (no key). Filtered to the selected cities / countries. */
+const ARBEITNOW_COUNTRIES = new Set([
+  "europe",
+  "monde",
+  "france",
+  "belgique",
+  "suisse",
+  "luxembourg",
+  "allemagne",
+  "pays-bas",
+  "espagne",
+  "portugal",
+  "italie",
+  "royaume-uni",
+  "irlande",
+  "autriche",
+  "pologne",
+  "roumanie",
+  "republique-tcheque",
+  "suede",
+  "norvege",
+  "danemark",
+  "finlande",
+  "grece",
+  "hongrie",
+  "bulgarie",
+  "croatie",
+  "serbie",
+]);
+
+function wantsArbeitnow(prefs: JobSearchPrefs): boolean {
+  const selected = resolveLocations(prefs.locations);
+  if (selected.length === 0) return true;
+  return selected.some(
+    (entry) =>
+      ARBEITNOW_COUNTRIES.has(entry.id) || ARBEITNOW_COUNTRIES.has(entry.countryId),
+  );
+}
+
+/** European job board (no key). Skip when the search is outside Europe. */
 export async function collectArbeitnow(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
+  if (!wantsArbeitnow(prefs)) return [];
   const data = await fetchJson<ArbeitnowResponse>(
     "https://www.arbeitnow.com/api/job-board-api",
     { timeoutMs: HTTP_TIMEOUTS.slow },
@@ -35,9 +74,8 @@ export async function collectArbeitnow(prefs: JobSearchPrefs): Promise<RawJobHit
 
   for (const job of data.data ?? []) {
     if (!job.title || !job.company_name || !job.url) continue;
-    const blob = `${job.title} ${job.description ?? ""} ${job.location ?? ""} ${(job.tags ?? []).join(" ")}`;
-    if (!isCredibleRegion(job.location, blob, selected)) continue;
-    if (!roleMatchesAny(prefs, `${job.title} ${(job.tags ?? []).join(" ")}`)) continue;
+    if (!isCredibleRegion(job.location, job.title, selected)) continue;
+    if (!roleMatchesAny(prefs, job.title)) continue;
 
     hits.push({
       source: "arbeitnow",

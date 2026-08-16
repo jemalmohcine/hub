@@ -139,21 +139,22 @@ export function JobBoardWorkspace({
     persist(prefs, "Offres ciblées mises à jour");
   }
 
-  function handleFollow(listing: RankedJobListing, openOffer: boolean) {
+  function handleFollow(listing: RankedJobListing) {
     setFollowingId(listing.id);
     void followAction
       .run(() => applyToJobListing(listing.id, cvId || null), {
-        success: openOffer ? "Suivi — ouverture de l’offre" : "Ajouté au suivi",
+        success: "Ajouté au suivi",
         error: "Impossible de suivre cette offre",
         onSuccess: (application) => {
           setTracked((prev) => new Set(prev).add(listing.id));
           onApplicationCreated?.(application);
-          if (openOffer) {
-            window.open(listing.url, "_blank", "noopener,noreferrer");
-          }
         },
       })
       .finally(() => setFollowingId(null));
+  }
+
+  function openSource(url: string) {
+    window.open(url, "_blank", "noopener,noreferrer");
   }
 
   function handleImportUrl() {
@@ -220,9 +221,15 @@ export function JobBoardWorkspace({
               <Stack gap={2}>
                 <Cluster gap={2} className="flex-wrap items-start justify-between">
                   <div className="min-w-0">
-                    <Text weight="medium" className="leading-snug">
-                      {listing.title}
-                    </Text>
+                    <button
+                      type="button"
+                      className="text-left"
+                      onClick={() => openSource(listing.url)}
+                    >
+                      <Text as="span" weight="medium" className="leading-snug underline-offset-2 hover:underline">
+                        {listing.title}
+                      </Text>
+                    </button>
                     <Cluster gap={1} className="mt-0.5 flex-wrap">
                       <Briefcase className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                       <Text size="sm" tone="muted">
@@ -251,23 +258,21 @@ export function JobBoardWorkspace({
                   <Button
                     type="button"
                     size="sm"
-                    disabled={followingThis}
-                    onClick={() => handleFollow(listing, true)}
+                    variant="outline"
+                    onClick={() => openSource(listing.url)}
                   >
-                    {followingThis ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <ExternalLink className="h-4 w-4" />
-                    )}
-                    {isTracked ? "Ouvrir" : "Postuler"}
+                    <ExternalLink className="h-4 w-4" />
+                    Voir
                   </Button>
                   <Button
                     type="button"
                     size="sm"
-                    variant="outline"
                     disabled={followingThis || isTracked}
-                    onClick={() => handleFollow(listing, false)}
+                    onClick={() => handleFollow(listing)}
                   >
+                    {followingThis ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : null}
                     {isTracked ? "Déjà suivi" : "Suivre"}
                   </Button>
                 </Cluster>
@@ -282,7 +287,7 @@ export function JobBoardWorkspace({
             title={hasSearch ? "Rien d’assez proche pour l’instant" : "Dis-nous ce que tu cherches"}
             hint={
               hasSearch
-                ? "On ne garde que les offres du bon poste, dans tes villes, classées par chance de match. LinkedIn ouvre la même recherche."
+                ? "On ne garde que le bon poste dans tes villes. Clique le titre pour voir la source, puis Suivre."
                 : "Un poste, une ville, un mode. Enregistrer scrape tout de suite."
             }
             action={

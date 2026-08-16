@@ -83,8 +83,12 @@ export function classifyWorkMode(hit: {
   return "onsite";
 }
 
-function haystack(location: string | null | undefined, blob = ""): string {
-  return foldCase(`${location ?? ""} ${blob}`);
+/** City / country only — never the job description (ISO aliases like "ma" leak there). */
+export function listingPlaceHay(
+  location: string | null | undefined,
+  title = "",
+): string {
+  return foldCase(`${location ?? ""} ${title}`);
 }
 
 function locationVariants(entry: JobLocation): string[] {
@@ -98,22 +102,25 @@ function locationVariants(entry: JobLocation): string[] {
   ].filter(Boolean);
 }
 
+function variantHits(hay: string, variant: string): boolean {
+  const needle = foldCase(variant).trim();
+  if (needle.length < 2) return false;
+  return hayHasNeedle(hay, needle);
+}
+
 export function locationMatches(
   entry: JobLocation,
   location: string | null | undefined,
   extra = "",
 ): boolean {
-  const hay = haystack(location, extra);
+  const hay = listingPlaceHay(location, extra);
   if (!hay) return false;
   if (entry.id === "monde") return true;
   if (entry.id === "europe") return EUROPE_HINT.test(hay) || FRANCE_HINT.test(hay);
   if (entry.id === "afrique") {
     return /\b(africa|afrique|maroc|morocco|alger|tunis|dakar|senegal|egypt|nigeria|kenya)\b/i.test(hay);
   }
-  if (entry.kind === "country" || entry.kind === "region") {
-    return locationVariants(entry).some((variant) => hay.includes(variant));
-  }
-  return locationVariants(entry).some((variant) => hay.includes(variant));
+  return locationVariants(entry).some((variant) => variantHits(hay, variant));
 }
 
 export function anyLocationMatches(
@@ -158,7 +165,7 @@ export function cityMatches(
 ): boolean {
   if (!city.trim()) return true;
   return locationMatches(resolveLocation(city), location, extra) ||
-    cityVariants(city).some((variant) => haystack(location, extra).includes(variant));
+    cityVariants(city).some((variant) => variantHits(listingPlaceHay(location, extra), variant));
 }
 
 function roleTokens(roleQuery: string): { specific: string[]; generic: string[] } {
@@ -196,13 +203,17 @@ function escapeRe(value: string): string {
 
 function hayHasNeedle(hay: string, needle: string): boolean {
   const token = needle.replace(/-/g, " ").trim();
+  const spacedHay = hay.replace(/-/g, " ");
   if (!token) return false;
   if (token.includes(" ")) {
     const compact = token.replace(/\s+/g, "");
-    return hay.includes(token) || (compact.length >= 5 && hayHasNeedle(hay, compact));
+    return (
+      spacedHay.includes(token) ||
+      (compact.length >= 5 && hayHasNeedle(hay.replace(/[\s-]/g, ""), compact))
+    );
   }
   if (token.length < 2) return false;
-  return new RegExp(`(?:^|[^a-z0-9+])${escapeRe(token)}(?:$|[^a-z0-9+])`).test(hay);
+  return new RegExp(`(?:^|[^a-z0-9+])${escapeRe(token)}(?:$|[^a-z0-9+])`).test(spacedHay);
 }
 
 export function roleMatches(roleQuery: string, blob: string): boolean {
@@ -236,8 +247,8 @@ export function matchesSearchPrefs(
 ): boolean {
   const selected = resolveLocations(prefs.locations);
   const region = wantsRemote(prefs) ? expandWithParentCountries(selected) : selected;
-  const blob = `${listing.title} ${listing.description ?? ""} ${listing.tags.join(" ")}`;
-  if (!isCredibleRegion(listing.location, blob, region)) return false;
+  const place = listing.title;
+  if (!isCredibleRegion(listing.location, place, region)) return false;
 
   const mode = listing.workMode ?? classifyWorkMode({
     title: listing.title,
@@ -248,13 +259,12 @@ export function matchesSearchPrefs(
 
   if (!acceptsWorkMode(prefs, mode)) return false;
 
-  if (mode !== "remote" && selected.length > 0) {
-    if (!anyLocationMatches(selected, listing.location, blob)) return false;
+  if (selected.length > 0 && !anyLocationMatches(selected, listing.location, place)) {
+    return false;
   }
 
   const roleNeedles =
     prefs.roles.length > 0 ? prefs.roles : prefs.roleQuery.trim() ? [prefs.roleQuery] : [];
   if (roleNeedles.length === 0) return true;
-  // Title + tags only — a buried "react" in the description is not a dedicated offer.
-  return roleMatchesAny(prefs, `${listing.title} ${listing.tags.join(" ")}`);
+  return roleMatchesAny(prefs, listing.title);
 }

@@ -3,9 +3,11 @@ import {
   cityMatches,
   classifyWorkMode,
   isCredibleRegion,
+  locationMatches,
   matchesSearchPrefs,
   roleMatches,
 } from "@/modules/job-board/match";
+import { resolveLocation } from "@/modules/job-board/locations";
 import type { JobSearchPrefs } from "@/modules/job-board/types";
 
 describe("classifyWorkMode", () => {
@@ -35,6 +37,15 @@ describe("isCredibleRegion", () => {
     expect(isCredibleRegion("Paris, France")).toBe(true);
     expect(isCredibleRegion("Worldwide", "United States only")).toBe(false);
     expect(isCredibleRegion("Remote", "Anywhere in the world")).toBe(false);
+  });
+});
+
+describe("locationMatches", () => {
+  it("does not treat ISO ma as a substring of germany / management", () => {
+    const maroc = resolveLocation("maroc");
+    expect(locationMatches(maroc, "München", "German management team")).toBe(false);
+    expect(locationMatches(maroc, "Casablanca, Maroc")).toBe(true);
+    expect(locationMatches(maroc, "Rabat, MA")).toBe(true);
   });
 });
 
@@ -163,6 +174,69 @@ describe("matchesSearchPrefs", () => {
           locations: ["belgique"],
           workModes: ["hybrid"],
           workMode: "hybrid",
+        },
+      ),
+    ).toBe(true);
+  });
+
+  it("drops a München Head of Engineering when searching frontend in Morocco", () => {
+    expect(
+      matchesSearchPrefs(
+        {
+          title: "Head of Engineering",
+          description: "German management role, React in the stack, offices in Morocco sometimes",
+          location: "München",
+          tags: ["react", "javascript"],
+          workMode: "onsite",
+        },
+        {
+          roleQuery: "frontend",
+          roles: ["frontend"],
+          locations: ["maroc"],
+          workModes: ["onsite"],
+          workMode: "onsite",
+        },
+      ),
+    ).toBe(false);
+  });
+
+  it("drops a New York non-dev offer when searching Morocco", () => {
+    expect(
+      matchesSearchPrefs(
+        {
+          title: "Procurement Specialist",
+          description: "Management role in the United States",
+          location: "New York, New York, United States",
+          tags: [],
+          workMode: "onsite",
+        },
+        {
+          roleQuery: "frontend",
+          roles: ["frontend"],
+          locations: ["maroc"],
+          workModes: ["onsite"],
+          workMode: "onsite",
+        },
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps a Casablanca frontend offer for Morocco", () => {
+    expect(
+      matchesSearchPrefs(
+        {
+          title: "Développeur React",
+          description: "",
+          location: "Casablanca, Maroc",
+          tags: [],
+          workMode: "onsite",
+        },
+        {
+          roleQuery: "frontend",
+          roles: ["frontend"],
+          locations: ["maroc"],
+          workModes: ["onsite"],
+          workMode: "onsite",
         },
       ),
     ).toBe(true);
