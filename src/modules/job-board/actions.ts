@@ -5,7 +5,8 @@ import { createClient } from "@/core/auth/supabase/server";
 import { assertEntitled } from "@/core/entitlements/assert-entitled";
 import { ENTITLEMENTS } from "@/core/entitlements/keys";
 import { addDaysIso } from "@/lib/dates";
-import { ingestJobsForPrefs } from "@/modules/job-board/ingest";
+import { getCvDocumentById } from "@/modules/cv-builder/queries";
+import { profileFromCv } from "@/modules/job-board/cv-skills";
 import { MAX_JOB_LOCATIONS, resolveLocations } from "@/modules/job-board/locations";
 import { MAX_JOB_ROLES, resolveRoles, rolesToQuery } from "@/modules/job-board/roles";
 import { normalizeWorkModes, onsiteOnly } from "@/modules/job-board/work-modes";
@@ -65,7 +66,7 @@ function mapApplication(row: {
 
 export async function saveJobSearchConfig(
   prefs: JobSearchPrefs,
-  skills: string[] = [],
+  cvDocumentId?: string | null,
 ): Promise<{
   prefs: JobSearchPrefs;
   listings: RankedJobListing[];
@@ -73,9 +74,6 @@ export async function saveJobSearchConfig(
   const user = await requireUser();
   const roleQuery = prefs.roleQuery.trim();
   const roles = resolveRoles(prefs.roles.length ? prefs.roles : roleQuery ? [roleQuery] : []);
-  if (roles.length === 0) {
-    throw new Error("Indique au moins un type de poste.");
-  }
   if (roles.length > MAX_JOB_ROLES) {
     throw new Error(`Choisis au plus ${MAX_JOB_ROLES} postes.`);
   }
@@ -88,19 +86,19 @@ export async function saveJobSearchConfig(
     throw new Error(`Choisis au plus ${MAX_JOB_LOCATIONS} lieux.`);
   }
 
+  const cvId = cvDocumentId !== undefined ? cvDocumentId : prefs.cvDocumentId;
   const saved = await saveJobSearchPrefs(user.id, {
+    ...prefs,
     roles: roles.map((role) => role.id),
     roleQuery: rolesToQuery(roles.map((role) => role.id)),
     locations,
     workModes,
     workMode: workModes[0] ?? "hybrid",
+    cvDocumentId: cvId || null,
+    keyword: (prefs.keyword ?? "").trim().slice(0, 80),
   });
-  try {
-    await ingestJobsForPrefs(saved);
-  } catch (err) {
-    console.error("[jobs] scrape after save failed", err);
-  }
-  const listings = await listJobListingsForPrefs(saved, skills);
+  const cv = saved.cvDocumentId ? await getCvDocumentById(user.id, saved.cvDocumentId) : null;
+  const listings = await listJobListingsForPrefs(saved, profileFromCv(cv) ?? []);
   revalidatePath("/app/career");
   return { prefs: saved, listings };
 }

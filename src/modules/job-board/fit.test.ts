@@ -1,18 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
   fitLabel,
+  listingWorthShowing,
   rankListingsForPrefs,
   scoreListingFit,
 } from "@/modules/job-board/fit";
 import type { JobListing, JobSearchPrefs } from "@/modules/job-board/types";
+import { withJobSearchPrefs } from "@/modules/job-board/types";
 
-const PREFS: JobSearchPrefs = {
+const PREFS: JobSearchPrefs = withJobSearchPrefs({
   roles: ["frontend"],
   roleQuery: "Développeur frontend",
   locations: ["paris"],
   workModes: ["hybrid"],
   workMode: "hybrid",
-};
+});
 
 function listing(
   over: Partial<JobListing> & Pick<JobListing, "title">,
@@ -26,7 +28,7 @@ function listing(
     title: over.title,
     description: over.description ?? "",
     url: "https://example.com",
-    employmentCategory: "salaried",
+    employmentCategory: over.employmentCategory ?? "salaried",
     freelanceSubtype: null,
     workMode: over.workMode ?? "hybrid",
     location: over.location ?? "Paris",
@@ -98,6 +100,26 @@ describe("scoreListingFit", () => {
     );
     expect(withSkills).toBeGreaterThan(without);
   });
+
+  it("demotes an 8-year ask when the CV only has two years", () => {
+    const cv = { skills: ["React"], years: 2, roles: ["frontend"] };
+    const mid = scoreListingFit(
+      listing({ title: "Développeur React", location: "Paris" }),
+      PREFS,
+      cv,
+    );
+    const senior = scoreListingFit(
+      listing({
+        title: "Développeur React",
+        description: "8+ years of experience",
+        tags: ["exp-min-8"],
+        location: "Paris",
+      }),
+      PREFS,
+      cv,
+    );
+    expect(senior).toBeLessThan(mid);
+  });
 });
 
 describe("rankListingsForPrefs", () => {
@@ -113,5 +135,116 @@ describe("rankListingsForPrefs", () => {
     );
     expect(ranked[0]?.id).toBe("react");
     expect(ranked[0]?.fitLabel).toBe("excellent");
+  });
+});
+
+describe("listingWorthShowing", () => {
+  it("keeps a city-only filter without a title", () => {
+    expect(
+      listingWorthShowing(
+        listing({ title: "Développeur Python", location: "Paris" }),
+        withJobSearchPrefs({ locations: ["paris"], workModes: ["hybrid"], workMode: "hybrid" }),
+      ),
+    ).toBe(true);
+  });
+
+  it("drops a backend title even if the CV stack appears in the description", () => {
+    expect(
+      listingWorthShowing(
+        listing({
+          title: "Développeur Python",
+          description: "React, TypeScript, Next.js",
+          location: "Paris",
+        }),
+        PREFS,
+        ["React", "TypeScript"],
+      ),
+    ).toBe(false);
+  });
+
+  it("drops an 8-year ask when yearsMin is 2", () => {
+    expect(
+      listingWorthShowing(
+        listing({
+          title: "Développeur frontend",
+          tags: ["exp-min-8"],
+          location: "Paris",
+        }),
+        withJobSearchPrefs({ ...PREFS, yearsMin: 2 }),
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps a junior title when yearsMin is 2", () => {
+    expect(
+      listingWorthShowing(
+        listing({ title: "Développeur frontend junior", location: "Paris" }),
+        withJobSearchPrefs({ ...PREFS, yearsMin: 2 }),
+      ),
+    ).toBe(true);
+  });
+
+  it("requires keyword tokens in the title", () => {
+    const prefs = withJobSearchPrefs({ ...PREFS, keyword: "React Native" });
+    expect(
+      listingWorthShowing(listing({ title: "Développeur React Native", location: "Paris" }), prefs),
+    ).toBe(true);
+    expect(
+      listingWorthShowing(listing({ title: "Développeur React", location: "Paris" }), prefs),
+    ).toBe(false);
+  });
+
+  it("filters seniority and contract independently of the CV", () => {
+    const prefs = withJobSearchPrefs({
+      ...PREFS,
+      seniority: "junior",
+      employment: "salaried",
+    });
+    expect(
+      listingWorthShowing(
+        listing({ title: "Staff Frontend Engineer", location: "Paris" }),
+        prefs,
+      ),
+    ).toBe(false);
+    expect(
+      listingWorthShowing(
+        listing({
+          title: "Développeur frontend junior",
+          location: "Paris",
+          employmentCategory: "freelance",
+        }),
+        prefs,
+      ),
+    ).toBe(false);
+    expect(
+      listingWorthShowing(
+        listing({ title: "Développeur frontend junior", location: "Paris" }),
+        prefs,
+      ),
+    ).toBe(true);
+  });
+
+  it("drops offers older than postedWithinDays", () => {
+    const prefs = withJobSearchPrefs({ ...PREFS, postedWithinDays: 7 });
+    expect(
+      listingWorthShowing(
+        listing({
+          title: "Développeur frontend",
+          location: "Paris",
+          publishedAt: "2026-07-01T00:00:00.000Z",
+        }),
+        prefs,
+      ),
+    ).toBe(false);
+    expect(
+      listingWorthShowing(
+        listing({
+          title: "Développeur frontend",
+          location: "Paris",
+          publishedAt: new Date().toISOString(),
+        }),
+        prefs,
+      ),
+    ).toBe(true);
   });
 });

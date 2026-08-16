@@ -50,7 +50,7 @@ async function aiSignals(userId: string): Promise<{
 async function jobSignals(userId: string): Promise<TodaySignal[]> {
   const prefs = await getJobSearchPrefs(userId).catch(() => null);
   const [listings, applications] = await Promise.all([
-    prefs?.roleQuery
+    prefs
       ? listJobListingsForPrefs(prefs).catch(() => [])
       : Promise.resolve([]),
     listJobApplications(userId).catch(() => []),

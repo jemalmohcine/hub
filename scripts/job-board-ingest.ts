@@ -1,6 +1,6 @@
 /**
- * Scrape France-first job sources into Supabase (job_listings),
- * using saved user search prefs when they exist. Also triggered on save.
+ * Scrape a shared pool of developer jobs into job_listings.
+ * User searches only filter that pool (by CV / city). Cron every 3 hours.
  *
  * Usage:
  *   npm run job-board:ingest

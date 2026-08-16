@@ -68,6 +68,7 @@ export type WttjHit = {
   salary_minimum?: number | null;
   salary_maximum?: number | null;
   salary_currency?: string | null;
+  experience_level_minimum?: number | null;
   offices?: WttjOffice[];
   organization?: WttjOrganization;
 };
@@ -123,6 +124,10 @@ export function wttjHitToRaw(hit: WttjHit): RawJobHit | null {
   if (!title || !company || !orgSlug || !slug) return null;
   const location = officeLabel(hit.offices);
   const description = [hit.summary, hit.profile].filter(Boolean).join("\n\n");
+  const tags: string[] = [];
+  if (typeof hit.experience_level_minimum === "number" && hit.experience_level_minimum > 0) {
+    tags.push(`exp-min-${Math.round(hit.experience_level_minimum)}`);
+  }
   return {
     source: "wttj",
     externalId: hit.objectID || slug,
@@ -132,6 +137,7 @@ export function wttjHitToRaw(hit: WttjHit): RawJobHit | null {
     url: `https://www.welcometothejungle.com/fr/companies/${orgSlug}/jobs/${slug}`,
     location: location || undefined,
     salaryHint: salaryHint(hit),
+    tags,
     publishedAt: hit.published_at || null,
     workMode: wttjWorkMode(hit.remote),
   };
@@ -147,10 +153,10 @@ function searchQueries(prefs: JobSearchPrefs): string[] {
   return fallback ? [fallback] : [];
 }
 
-async function searchWttj(query: string, filters: string): Promise<WttjHit[]> {
+async function searchWttj(query: string, filters: string, hitsPerPage = 40): Promise<WttjHit[]> {
   const data = await postJson<WttjResponse>(
     ALGOLIA_URL,
-    { query, hitsPerPage: 40, filters },
+    { query, hitsPerPage, filters },
     {
       timeoutMs: HTTP_TIMEOUTS.slow,
       headers: {
@@ -185,6 +191,39 @@ export async function collectWttj(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
         continue;
       }
       if (!roleMatchesAny(prefs, hit.title)) continue;
+      seen.add(hit.url);
+      hits.push(hit);
+    }
+  }
+  return hits;
+}
+
+const POOL_QUERIES = [
+  "développeur",
+  "frontend",
+  "backend",
+  "fullstack",
+  "devops",
+  "data engineer",
+  "mobile",
+  "react",
+];
+
+const POOL_COUNTRY_FILTER =
+  "offices.country_code:FR OR offices.country_code:MA OR offices.country_code:BE";
+
+/** Broad tech pool for the shared scrape — filtered later by CV. */
+export async function collectWttjPool(): Promise<RawJobHit[]> {
+  const batches = await Promise.allSettled(
+    POOL_QUERIES.map((query) => searchWttj(query, POOL_COUNTRY_FILTER, 50)),
+  );
+  const hits: RawJobHit[] = [];
+  const seen = new Set<string>();
+  for (const batch of batches) {
+    if (batch.status !== "fulfilled") continue;
+    for (const raw of batch.value) {
+      const hit = wttjHitToRaw(raw);
+      if (!hit || seen.has(hit.url)) continue;
       seen.add(hit.url);
       hits.push(hit);
     }

@@ -1,51 +1,18 @@
 import { createAdminClient } from "@/core/auth/supabase/admin";
 import { buildCanonicalKey, classifyEmployment } from "@/modules/job-board/classify";
 import {
+  collectDevJobPool,
   collectJobsForPrefs,
-  DEFAULT_FRANCE_SEARCH,
 } from "@/modules/job-board/collectors";
-import { resolveLocations } from "@/modules/job-board/locations";
+import { listingTtlCutoffIso } from "@/modules/job-board/listing-ttl";
 import { classifyWorkMode, matchesSearchPrefs } from "@/modules/job-board/match";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
-import { normalizeWorkModes } from "@/modules/job-board/work-modes";
 
 function devRelevant(hit: RawJobHit): boolean {
   const blob = `${hit.title} ${hit.description} ${(hit.tags ?? []).join(" ")}`.toLowerCase();
   return /\b(dev|developer|développeur|developpeur|engineer|ingénieur|software|frontend|backend|full[- ]?stack|data|ml|ai|react|node|typescript|python|mobile|ios|android|devops|sre|cloud)\b/.test(
     blob,
   );
-}
-
-function prefsFromRow(row: {
-  role_query: string;
-  city: string;
-  work_mode: string;
-  locations?: string[] | null;
-  roles?: string[] | null;
-  work_modes?: string[] | null;
-}): JobSearchPrefs {
-  const fromColumn = Array.isArray(row.locations) ? row.locations : [];
-  const fallback = row.city
-    ? row.city.split(",").map((part) => part.trim()).filter(Boolean)
-    : [];
-  const fromRoles = Array.isArray(row.roles) ? row.roles : [];
-  const fallbackRoles = row.role_query
-    ? row.role_query.split(/[·,/|]/g).map((part) => part.trim()).filter(Boolean)
-    : [];
-  const roles = fromRoles.length > 0 ? fromRoles : fallbackRoles;
-  const workModes = normalizeWorkModes({
-    workModes: Array.isArray(row.work_modes) ? (row.work_modes as JobSearchPrefs["workModes"]) : [],
-    workMode: row.work_mode as JobSearchPrefs["workMode"],
-  });
-  return {
-    roles,
-    roleQuery: row.role_query,
-    locations: resolveLocations(fromColumn.length > 0 ? fromColumn : fallback).map(
-      (entry) => entry.id,
-    ),
-    workModes,
-    workMode: workModes[0] ?? "hybrid",
-  };
 }
 
 async function upsertHits(hits: RawJobHit[], prefs: JobSearchPrefs | null) {
@@ -113,6 +80,20 @@ async function upsertHits(hits: RawJobHit[], prefs: JobSearchPrefs | null) {
   return { upserted, skipped, sourceStats };
 }
 
+async function purgeStaleListings() {
+  const admin = createAdminClient();
+  const cutoff = listingTtlCutoffIso();
+  const { error, count } = await admin
+    .from("job_listings")
+    .delete({ count: "exact" })
+    .lt("scraped_at", cutoff);
+  if (error) {
+    console.warn("[jobs] purge stale", error.message);
+    return 0;
+  }
+  return count ?? 0;
+}
+
 export async function ingestJobsForPrefs(prefs: JobSearchPrefs) {
   const hits = await collectJobsForPrefs(prefs);
   const result = await upsertHits(hits, prefs);
@@ -125,52 +106,14 @@ export async function ingestJobsForPrefs(prefs: JobSearchPrefs) {
   return { raw: hits.length, ...result };
 }
 
+export async function ingestDevJobPool() {
+  const hits = await collectDevJobPool();
+  const result = await upsertHits(hits, null);
+  const purged = await purgeStaleListings();
+  console.info("[jobs] pool ingest", { raw: hits.length, purged, ...result });
+  return { raw: hits.length, purged, ...result };
+}
+
 export async function runJobBoardIngest() {
-  const admin = createAdminClient();
-  const full = await admin
-    .from("job_search_prefs")
-    .select("role_query, city, work_mode, locations, roles, work_modes");
-  const prefRows =
-    full.data ??
-    (
-      await admin
-        .from("job_search_prefs")
-        .select("role_query, city, work_mode, locations, roles")
-    ).data ??
-    (
-      await admin
-        .from("job_search_prefs")
-        .select("role_query, city, work_mode, locations")
-    ).data ??
-    (
-      await admin.from("job_search_prefs").select("role_query, city, work_mode")
-    ).data;
-
-  const unique = new Map<string, JobSearchPrefs>();
-  for (const row of prefRows ?? []) {
-    const prefs = prefsFromRow(row);
-    if (!prefs.roleQuery.trim() && prefs.roles.length === 0) continue;
-    unique.set(
-      `${prefs.roles.slice().sort().join(",")}|${prefs.locations.slice().sort().join(",")}|${prefs.workModes.slice().sort().join(",")}|${prefs.workMode}`.toLowerCase(),
-      prefs,
-    );
-  }
-  if (unique.size === 0) unique.set("default", DEFAULT_FRANCE_SEARCH);
-
-  let raw = 0;
-  let upserted = 0;
-  let skipped = 0;
-  const sourceStats: Record<string, number> = {};
-
-  for (const prefs of unique.values()) {
-    const batch = await ingestJobsForPrefs(prefs);
-    raw += batch.raw;
-    upserted += batch.upserted;
-    skipped += batch.skipped;
-    for (const [source, count] of Object.entries(batch.sourceStats)) {
-      sourceStats[source] = (sourceStats[source] ?? 0) + count;
-    }
-  }
-
-  return { raw, relevant: upserted, upserted, skipped, sourceStats };
+  return ingestDevJobPool();
 }

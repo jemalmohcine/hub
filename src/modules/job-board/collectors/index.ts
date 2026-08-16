@@ -2,7 +2,7 @@ import { collectArbeitnow } from "@/modules/job-board/collectors/arbeitnow";
 import { collectIndeedFr } from "@/modules/job-board/collectors/indeed-fr";
 import { collectJobicy } from "@/modules/job-board/collectors/jobicy";
 import { collectRemotive } from "@/modules/job-board/collectors/remotive";
-import { collectWttj } from "@/modules/job-board/collectors/wttj";
+import { collectWttj, collectWttjPool } from "@/modules/job-board/collectors/wttj";
 import { collectWwr } from "@/modules/job-board/collectors/wwr";
 import {
   expandWithParentCountries,
@@ -13,12 +13,12 @@ import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
 import { wantsRemote } from "@/modules/job-board/work-modes";
 
-export const DEFAULT_FRANCE_SEARCH: JobSearchPrefs = {
+export const DEV_POOL_PREFS: JobSearchPrefs = {
   ...EMPTY_JOB_SEARCH_PREFS,
-  roles: ["fullstack"],
-  roleQuery: "Développeur full stack",
-  locations: ["france"],
-  workModes: ["hybrid"],
+  roles: [],
+  roleQuery: "",
+  locations: ["france", "maroc", "europe"],
+  workModes: ["remote", "hybrid", "onsite"],
   workMode: "hybrid",
 };
 
@@ -56,7 +56,24 @@ export async function collectJobsForPrefs(prefs: JobSearchPrefs): Promise<RawJob
     settled("arbeitnow", collectArbeitnow(prefs)),
     settled("indeed", collectIndeedFr(prefs)),
   ]);
+  return dedupeHits(batches);
+}
 
+/** Cron scrape: every software job we can get, not one user's search. */
+export async function collectDevJobPool(): Promise<RawJobHit[]> {
+  const prefs = DEV_POOL_PREFS;
+  const batches = await Promise.all([
+    settled("wttj", collectWttjPool()),
+    settled("jobicy", collectJobicy(prefs)),
+    settled("remotive", collectRemotive()),
+    settled("wwr", collectWwr(prefs)),
+    settled("arbeitnow", collectArbeitnow(prefs)),
+    settled("indeed", collectIndeedFr({ ...prefs, roleQuery: "développeur" })),
+  ]);
+  return dedupeHits(batches);
+}
+
+function dedupeHits(batches: RawJobHit[][]): RawJobHit[] {
   const hits: RawJobHit[] = [];
   const seen = new Set<string>();
   for (const batch of batches) {
@@ -72,5 +89,5 @@ export async function collectJobsForPrefs(prefs: JobSearchPrefs): Promise<RawJob
 }
 
 export async function collectAllJobSources(): Promise<RawJobHit[]> {
-  return collectJobsForPrefs(DEFAULT_FRANCE_SEARCH);
+  return collectDevJobPool();
 }

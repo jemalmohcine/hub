@@ -1,6 +1,6 @@
 import { createClient } from "@/core/auth/supabase/server";
+import { filtersToJson, hasActiveJobFilters, parseJobSearchFilters } from "@/modules/job-board/filters";
 import { resolveLocations } from "@/modules/job-board/locations";
-import { matchesSearchPrefs } from "@/modules/job-board/match";
 import { resolveRoles, rolesToQuery } from "@/modules/job-board/roles";
 import { normalizeWorkModes } from "@/modules/job-board/work-modes";
 import type {
@@ -9,7 +9,11 @@ import type {
   JobSearchPrefs,
 } from "@/modules/job-board/types";
 import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
-import { rankListingsForPrefs, type RankedJobListing } from "@/modules/job-board/fit";
+import {
+  rankListingsForPrefs,
+  type CvFitInput,
+  type RankedJobListing,
+} from "@/modules/job-board/fit";
 
 type ListingRow = {
   id: string;
@@ -67,6 +71,7 @@ function rowToPrefs(data: {
   locations?: string[] | null;
   roles?: string[] | null;
   work_modes?: string[] | null;
+  filters?: unknown;
 }): JobSearchPrefs {
   const fromLocations = Array.isArray(data.locations) ? data.locations : [];
   const fallbackLocations = data.city
@@ -95,12 +100,14 @@ function rowToPrefs(data: {
     locations,
     workModes,
     workMode: workModes[0] ?? "hybrid",
+    ...parseJobSearchFilters(data.filters),
   };
 }
 
 export async function getJobSearchPrefs(userId: string): Promise<JobSearchPrefs> {
   const supabase = await createClient();
   const selects = [
+    "role_query, city, work_mode, locations, roles, work_modes, filters",
     "role_query, city, work_mode, locations, roles, work_modes",
     "role_query, city, work_mode, locations, roles",
     "role_query, city, work_mode",
@@ -126,13 +133,15 @@ export async function saveJobSearchPrefs(
 ): Promise<JobSearchPrefs> {
   const supabase = await createClient();
   const locations = resolveLocations(prefs.locations).map((entry) => entry.id);
-  const roles = resolveRoles(prefs.roles.length ? prefs.roles : [prefs.roleQuery]).map(
-    (entry) => entry.id,
-  );
+  const roles = resolveRoles(
+    prefs.roles.length ? prefs.roles : prefs.roleQuery.trim() ? [prefs.roleQuery] : [],
+  ).map((entry) => entry.id);
   const roleQuery = (rolesToQuery(roles) || prefs.roleQuery.trim()).slice(0, 240);
   const workModes = normalizeWorkModes(prefs);
   const workMode = workModes[0] ?? "hybrid";
   const city = locations.join(",").slice(0, 400);
+
+  const filters = filtersToJson(prefs);
 
   const fullRow = {
     user_id: userId,
@@ -142,11 +151,24 @@ export async function saveJobSearchPrefs(
     roles,
     work_mode: workMode,
     work_modes: workModes,
+    filters,
   };
 
   const attempts: Array<{ row: Record<string, unknown>; columns: string }> = [
     {
       row: fullRow,
+      columns: "role_query, city, work_mode, locations, roles, work_modes, filters",
+    },
+    {
+      row: {
+        user_id: userId,
+        role_query: roleQuery,
+        city,
+        locations,
+        roles,
+        work_mode: workMode,
+        work_modes: workModes,
+      },
       columns: "role_query, city, work_mode, locations, roles, work_modes",
     },
     {
@@ -208,7 +230,7 @@ export async function listJobListings(
     .from("job_listings")
     .select("*")
     .order("scraped_at", { ascending: false })
-    .limit(400);
+    .limit(500);
 
   if (filter === "salaried") {
     dbQuery = dbQuery.eq("employment_category", "salaried");
@@ -237,12 +259,14 @@ export async function listJobListings(
 
 export async function listJobListingsForPrefs(
   prefs: JobSearchPrefs,
-  skills: string[] = [],
+  cv: CvFitInput | string[] = [],
 ): Promise<RankedJobListing[]> {
+  const cvSignal = Array.isArray(cv)
+    ? cv.length > 0
+    : cv.skills.length > 0 || cv.roles.length > 0 || cv.years > 0;
+  if (!hasActiveJobFilters(prefs) && !cvSignal) return [];
   const listings = await listJobListings("all");
-  if (!prefs.roleQuery.trim() && prefs.roles.length === 0) return [];
-  const matched = listings.filter((listing) => matchesSearchPrefs(listing, prefs));
-  return rankListingsForPrefs(matched, prefs, skills);
+  return rankListingsForPrefs(listings, prefs, cv);
 }
 
 export async function getJobListingById(id: string): Promise<JobListing | null> {
