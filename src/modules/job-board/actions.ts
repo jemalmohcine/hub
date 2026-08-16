@@ -148,6 +148,22 @@ export async function applyToJobListing(
 
   if (error) throw new Error(error.message);
 
+  try {
+    const { createNotification } = await import("@/modules/notifications/create");
+    await createNotification({
+      userId: user.id,
+      category: "jobs",
+      title: `Suivi · ${listing.company}`,
+      body: "On te rappelle de relancer dans 7 jours.",
+      href: "/app/career?tab=jobs",
+      severity: "info",
+      dedupeKey: `jobs:tracked:${user.id}:${listingId}`,
+      skipPush: true,
+    });
+  } catch {
+    // jobs category may not be migrated yet
+  }
+
   revalidatePath("/app/career");
   return mapApplication(data);
 }

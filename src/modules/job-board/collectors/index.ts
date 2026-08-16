@@ -1,4 +1,5 @@
 import { collectArbeitnow } from "@/modules/job-board/collectors/arbeitnow";
+import { collectHimalayas } from "@/modules/job-board/collectors/himalayas";
 import { collectIndeedFr } from "@/modules/job-board/collectors/indeed-fr";
 import { collectJobicy } from "@/modules/job-board/collectors/jobicy";
 import { collectRemotive } from "@/modules/job-board/collectors/remotive";
@@ -53,6 +54,7 @@ export async function collectJobsForPrefs(prefs: JobSearchPrefs): Promise<RawJob
     settled("jobicy", collectJobicy(prefs)),
     settled("remotive", collectRemotiveForPrefs(prefs)),
     settled("wwr", collectWwr(prefs)),
+    settled("himalayas", collectHimalayas(prefs)),
     settled("arbeitnow", collectArbeitnow(prefs)),
     settled("indeed", collectIndeedFr(prefs)),
   ]);
@@ -67,6 +69,7 @@ export async function collectDevJobPool(): Promise<RawJobHit[]> {
     settled("jobicy", collectJobicy(prefs)),
     settled("remotive", collectRemotive()),
     settled("wwr", collectWwr(prefs)),
+    settled("himalayas", collectHimalayas(prefs)),
     settled("arbeitnow", collectArbeitnow(prefs)),
     settled("indeed", collectIndeedFr({ ...prefs, roleQuery: "développeur" })),
   ]);

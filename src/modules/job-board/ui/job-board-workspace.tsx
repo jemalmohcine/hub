@@ -69,6 +69,7 @@ const SOURCE_LABEL: Record<string, string> = {
   jobicy: "Jobicy",
   arbeitnow: "Arbeitnow",
   wwr: "WWR",
+  himalayas: "Himalayas",
   "indeed-fr": "Indeed",
 };
 
@@ -220,6 +221,16 @@ export function JobBoardWorkspace({
     });
   }
 
+  const modes = normalizeWorkModes(prefs);
+  const remoteOnly = modes.length === 1 && modes[0] === "remote";
+  const freelanceOnly = prefs.employment === "freelance";
+  const trendingOnly = prefs.postedWithinDays === 7;
+
+  function applyQuick(next: JobSearchPrefs, success: string) {
+    setPrefs(next);
+    persist(next, success);
+  }
+
   return (
     <Stack gap={4} className="pb-8">
       <Cluster gap={2} className="flex-wrap items-center justify-between">
@@ -264,6 +275,77 @@ export function JobBoardWorkspace({
             Modifier
           </Button>
         </Cluster>
+      </Cluster>
+
+      <Cluster gap={1} className="flex-wrap">
+        <Button
+          type="button"
+          size="sm"
+          variant={!remoteOnly && !freelanceOnly && !trendingOnly ? "primary" : "outline"}
+          onClick={() =>
+            applyQuick(
+              {
+                ...prefs,
+                workModes: [...JOB_WORK_MODES],
+                workMode: "hybrid",
+                employment: "all",
+                postedWithinDays: null,
+              },
+              "Tous les types d’offres",
+            )
+          }
+        >
+          Tous
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={remoteOnly ? "primary" : "outline"}
+          onClick={() =>
+            applyQuick(
+              {
+                ...prefs,
+                workModes: remoteOnly ? [...JOB_WORK_MODES] : ["remote"],
+                workMode: remoteOnly ? "hybrid" : "remote",
+              },
+              remoteOnly ? "Tous les modes" : "Télétravail seulement",
+            )
+          }
+        >
+          Télétravail
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={freelanceOnly ? "primary" : "outline"}
+          onClick={() =>
+            applyQuick(
+              {
+                ...prefs,
+                employment: freelanceOnly ? "all" : "freelance",
+              },
+              freelanceOnly ? "Tous les contrats" : "Freelance seulement",
+            )
+          }
+        >
+          Freelance
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={trendingOnly ? "primary" : "outline"}
+          onClick={() =>
+            applyQuick(
+              {
+                ...prefs,
+                postedWithinDays: trendingOnly ? null : 7,
+              },
+              trendingOnly ? "Toutes dates" : "Tendance · 7 jours",
+            )
+          }
+        >
+          Tendance
+        </Button>
       </Cluster>
 
       {activeCv && (activeCv.years > 0 || activeCv.skills.length > 0) ? (
@@ -323,6 +405,7 @@ export function JobBoardWorkspace({
                     </Cluster>
                   </div>
                   <Cluster gap={1} className="flex-wrap">
+                    {listing.trending ? <Badge tone="warning">Tendance</Badge> : null}
                     {fit ? <Badge tone={fit.tone}>{fit.label}</Badge> : null}
                     {SOURCE_LABEL[listing.source] ? (
                       <Badge tone="neutral">{SOURCE_LABEL[listing.source]}</Badge>

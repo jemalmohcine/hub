@@ -5,6 +5,7 @@ import {
   collectJobsForPrefs,
 } from "@/modules/job-board/collectors";
 import { listingTtlCutoffIso } from "@/modules/job-board/listing-ttl";
+import { notifyJobBoardUsers } from "@/modules/job-board/notify";
 import { classifyWorkMode, matchesSearchPrefs } from "@/modules/job-board/match";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 
@@ -110,8 +111,14 @@ export async function ingestDevJobPool() {
   const hits = await collectDevJobPool();
   const result = await upsertHits(hits, null);
   const purged = await purgeStaleListings();
-  console.info("[jobs] pool ingest", { raw: hits.length, purged, ...result });
-  return { raw: hits.length, purged, ...result };
+  let notified = { matches: 0, followUps: 0 };
+  try {
+    notified = await notifyJobBoardUsers();
+  } catch (err) {
+    console.warn("[jobs] notify failed", err instanceof Error ? err.message : err);
+  }
+  console.info("[jobs] pool ingest", { raw: hits.length, purged, notified, ...result });
+  return { raw: hits.length, purged, notified, ...result };
 }
 
 export async function runJobBoardIngest() {
