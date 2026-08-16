@@ -1,10 +1,7 @@
 import * as cheerio from "cheerio";
 import { formatCompactNumber } from "@/lib/numbers";
-import {
-  fetchJson,
-  fetchText } from "@/lib/http/fetch-text";
-import { DEV_SIGNAL_RE,
-} from "@/modules/ai-intel/score";
+import { fetchJson, fetchText } from "@/lib/http/fetch-text";
+import { DEV_SIGNAL_RE } from "@/modules/ai-intel/score";
 import type { RawHit } from "@/modules/ai-intel/types";
 
 type GhRepo = {
