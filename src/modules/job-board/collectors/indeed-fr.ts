@@ -60,8 +60,13 @@ function indeedQueries(prefs: JobSearchPrefs): string[] {
   const roles = resolveRoles(
     prefs.roles.length > 0 ? prefs.roles : prefs.roleQuery ? [prefs.roleQuery] : [],
   );
-  const queries = roles.map((role) => role.label);
-  return (queries.length > 0 ? queries : ["développeur"]).slice(0, 3);
+  const queries: string[] = [];
+  for (const role of roles) {
+    queries.push(role.label);
+    const alias = role.aliases.find((value) => value.length >= 3 && !value.includes(" "));
+    if (alias && alias.toLowerCase() !== role.label.toLowerCase()) queries.push(alias);
+  }
+  return (queries.length > 0 ? [...new Set(queries)] : ["développeur"]).slice(0, 3);
 }
 
 function indeedTargets(prefs: JobSearchPrefs): { query: string; location: string; host: string }[] {

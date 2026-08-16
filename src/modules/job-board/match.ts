@@ -1,6 +1,8 @@
 import { foldCase } from "@/lib/text";
 import {
+  citiesInCountry,
   expandWithParentCountries,
+  isEuropeanPlace,
   resolveLocation,
   resolveLocations,
   type JobLocation,
@@ -120,7 +122,14 @@ export function locationMatches(
   if (entry.id === "afrique") {
     return /\b(africa|afrique|maroc|morocco|alger|tunis|dakar|senegal|egypt|nigeria|kenya)\b/i.test(hay);
   }
-  return locationVariants(entry).some((variant) => variantHits(hay, variant));
+  if (locationVariants(entry).some((variant) => variantHits(hay, variant))) return true;
+  if (entry.kind === "country" && entry.id === "france" && FRANCE_HINT.test(hay)) return true;
+  if (entry.kind === "country") {
+    return citiesInCountry(entry.id).some((city) =>
+      locationVariants(city).some((variant) => variantHits(hay, variant)),
+    );
+  }
+  return false;
 }
 
 export function anyLocationMatches(
@@ -130,6 +139,45 @@ export function anyLocationMatches(
 ): boolean {
   if (selected.length === 0) return true;
   return selected.some((entry) => locationMatches(entry, location, extra));
+}
+
+const WORLDWIDE_REMOTE =
+  /\b(worldwide|anywhere|anywhere in the world|global remote|united states|\busa\b|\bus only\b)\b/i;
+
+const EMEA_HINT = /\b(emea|mena|maghreb)\b/i;
+
+function wantsMaghreb(selected: JobLocation[]): boolean {
+  return selected.some((entry) =>
+    ["maroc", "algerie", "tunisie", "egypte", "afrique"].includes(entry.id) ||
+    ["maroc", "algerie", "tunisie", "egypte"].includes(entry.countryId),
+  );
+}
+
+/** Remote/hybrid: "Europe" counts for France, "EMEA" for Maroc — not "Anywhere". */
+export function remoteRegionMatches(
+  selected: JobLocation[],
+  location: string | null | undefined,
+  extra = "",
+): boolean {
+  const hay = listingPlaceHay(location, extra);
+  if (!hay || WORLDWIDE_REMOTE.test(hay)) return false;
+  const wantsEu = selected.some((entry) => isEuropeanPlace(entry));
+  if (wantsEu && (EUROPE_HINT.test(hay) || FRANCE_HINT.test(hay))) return true;
+  if (wantsMaghreb(selected) && (EMEA_HINT.test(hay) || /\b(africa|afrique|morocco|maroc)\b/i.test(hay))) {
+    return true;
+  }
+  return false;
+}
+
+export function placeFitsPrefs(
+  selected: JobLocation[],
+  location: string | null | undefined,
+  title: string,
+  remoteEligible: boolean,
+): boolean {
+  if (selected.length === 0) return true;
+  if (anyLocationMatches(selected, location, title)) return true;
+  return remoteEligible && remoteRegionMatches(selected, location, title);
 }
 
 /** Keep offers in the selected countries; drop US-only / worldwide dumps. */
@@ -247,8 +295,6 @@ export function matchesSearchPrefs(
 ): boolean {
   const selected = resolveLocations(prefs.locations);
   const region = wantsRemote(prefs) ? expandWithParentCountries(selected) : selected;
-  const place = listing.title;
-  if (!isCredibleRegion(listing.location, place, region)) return false;
 
   const mode = listing.workMode ?? classifyWorkMode({
     title: listing.title,
@@ -259,7 +305,8 @@ export function matchesSearchPrefs(
 
   if (!acceptsWorkMode(prefs, mode)) return false;
 
-  if (selected.length > 0 && !anyLocationMatches(selected, listing.location, place)) {
+  const remoteEligible = mode !== "onsite";
+  if (!placeFitsPrefs(region, listing.location, listing.title, remoteEligible)) {
     return false;
   }
 

@@ -1,9 +1,10 @@
 import { fetchJson, HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
 import {
   expandWithParentCountries,
+  isEuropeanPlace,
   resolveLocations,
 } from "@/modules/job-board/locations";
-import { isCredibleRegion, roleMatchesAny } from "@/modules/job-board/match";
+import { placeFitsPrefs, roleMatchesAny } from "@/modules/job-board/match";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 
 type ArbeitnowJob = {
@@ -23,42 +24,10 @@ type ArbeitnowResponse = {
   data?: ArbeitnowJob[];
 };
 
-const ARBEITNOW_COUNTRIES = new Set([
-  "europe",
-  "monde",
-  "france",
-  "belgique",
-  "suisse",
-  "luxembourg",
-  "allemagne",
-  "pays-bas",
-  "espagne",
-  "portugal",
-  "italie",
-  "royaume-uni",
-  "irlande",
-  "autriche",
-  "pologne",
-  "roumanie",
-  "republique-tcheque",
-  "suede",
-  "norvege",
-  "danemark",
-  "finlande",
-  "grece",
-  "hongrie",
-  "bulgarie",
-  "croatie",
-  "serbie",
-]);
-
 function wantsArbeitnow(prefs: JobSearchPrefs): boolean {
   const selected = resolveLocations(prefs.locations);
   if (selected.length === 0) return true;
-  return selected.some(
-    (entry) =>
-      ARBEITNOW_COUNTRIES.has(entry.id) || ARBEITNOW_COUNTRIES.has(entry.countryId),
-  );
+  return selected.some((entry) => isEuropeanPlace(entry));
 }
 
 /** European job board (no key). Skip when the search is outside Europe. */
@@ -74,7 +43,7 @@ export async function collectArbeitnow(prefs: JobSearchPrefs): Promise<RawJobHit
 
   for (const job of data.data ?? []) {
     if (!job.title || !job.company_name || !job.url) continue;
-    if (!isCredibleRegion(job.location, job.title, selected)) continue;
+    if (!placeFitsPrefs(selected, job.location, job.title, Boolean(job.remote))) continue;
     if (!roleMatchesAny(prefs, job.title)) continue;
 
     hits.push({

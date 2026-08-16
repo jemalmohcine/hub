@@ -47,6 +47,13 @@ describe("locationMatches", () => {
     expect(locationMatches(maroc, "Casablanca, Maroc")).toBe(true);
     expect(locationMatches(maroc, "Rabat, MA")).toBe(true);
   });
+
+  it("treats Paris as France, not München", () => {
+    const france = resolveLocation("france");
+    expect(locationMatches(france, "Paris (75)")).toBe(true);
+    expect(locationMatches(france, "Lyon")).toBe(true);
+    expect(locationMatches(france, "München")).toBe(false);
+  });
 });
 
 describe("cityMatches", () => {
@@ -240,5 +247,60 @@ describe("matchesSearchPrefs", () => {
         },
       ),
     ).toBe(true);
+  });
+
+  it("keeps a Europe remote React job when France is selected with télétravail", () => {
+    const prefs: JobSearchPrefs = {
+      roleQuery: "frontend",
+      roles: ["frontend"],
+      locations: ["france", "maroc"],
+      workModes: ["remote", "hybrid", "onsite"],
+      workMode: "remote",
+    };
+    expect(
+      matchesSearchPrefs(
+        {
+          title: "Senior React Native Developer",
+          description: "",
+          location: "Europe",
+          tags: [],
+          workMode: "remote",
+        },
+        prefs,
+      ),
+    ).toBe(true);
+    expect(
+      matchesSearchPrefs(
+        {
+          title: "Web Frontend Engineer",
+          description: "",
+          location: "Anywhere",
+          tags: [],
+          workMode: "remote",
+        },
+        prefs,
+      ),
+    ).toBe(false);
+  });
+
+  it("does not treat a Europe-only remote job as présentiel in France", () => {
+    expect(
+      matchesSearchPrefs(
+        {
+          title: "React engineer",
+          description: "",
+          location: "Europe",
+          tags: [],
+          workMode: "onsite",
+        },
+        {
+          roleQuery: "frontend",
+          roles: ["frontend"],
+          locations: ["france"],
+          workModes: ["onsite"],
+          workMode: "onsite",
+        },
+      ),
+    ).toBe(false);
   });
 });
