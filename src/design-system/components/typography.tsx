@@ -100,14 +100,17 @@ export function Heading({
   level = 2,
   className,
   children,
+  id,
 }: {
   level?: HeadingLevel;
   className?: string;
   children: ReactNode;
+  id?: string;
 }) {
   const Comp = headingTag[level];
   return (
     <Comp
+      id={id}
       className={cn(
         "font-semibold text-[var(--dh-fg)]",
         headingSize[level],

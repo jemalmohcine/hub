@@ -9,6 +9,7 @@ import {
   ThemeProvider,
   ToastProvider,
 } from "@/design-system";
+import { SITE_DESCRIPTION, SITE_NAME, siteOrigin } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
@@ -25,22 +26,50 @@ const ibmPlexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
-const APP_NAME = "DevHub";
-const APP_DESCRIPTION =
-  "Le hub développeur pour gérer auth, modules et outils en un seul endroit.";
-
 export const metadata: Metadata = {
-  applicationName: APP_NAME,
+  metadataBase: new URL(siteOrigin()),
+  applicationName: SITE_NAME,
   title: {
-    default: APP_NAME,
-    template: `%s · ${APP_NAME}`,
+    default: `${SITE_NAME} · veille IA, CV, candidatures et snippets`,
+    template: `%s · ${SITE_NAME}`,
   },
-  description: APP_DESCRIPTION,
+  description: SITE_DESCRIPTION,
+  keywords: [
+    "DevHub",
+    "hub développeur",
+    "veille IA",
+    "CV développeur",
+    "offres d’emploi dev",
+    "snippets",
+    "budget outils",
+  ],
+  authors: [{ name: SITE_NAME }],
+  creator: SITE_NAME,
+  openGraph: {
+    type: "website",
+    locale: "fr_FR",
+    url: "/",
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    images: [{ url: "/icons/icon-512x512.png", width: 512, height: 512, alt: SITE_NAME }],
+  },
+  twitter: {
+    card: "summary",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    images: ["/icons/icon-512x512.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: APP_NAME,
+    title: SITE_NAME,
   },
   formatDetection: { telephone: false },
   icons: {

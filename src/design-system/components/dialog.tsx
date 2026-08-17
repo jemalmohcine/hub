@@ -15,6 +15,7 @@ import {
 import { cn } from "@/design-system/lib/cn";
 
 export type DialogSize = "sm" | "md" | "lg";
+export type DialogChrome = "form" | "alert";
 
 const sizeClass: Record<DialogSize, string> = {
   sm: "sm:max-w-md",
@@ -32,6 +33,11 @@ export type DialogProps = {
   description?: ReactNode;
   srOnlyDescription?: boolean;
   size?: DialogSize;
+  /**
+   * `form` is the default sheet-like chrome (header/footer rules).
+   * `alert` is a compact confirm: title, copy and actions with no empty gap.
+   */
+  chrome?: DialogChrome;
   footer?: ReactNode;
   className?: string;
   children?: ReactNode;
@@ -49,15 +55,19 @@ export function Dialog({
   description,
   srOnlyDescription,
   size = "md",
+  chrome = "form",
   footer,
   className,
   children,
 }: DialogProps) {
+  const compact = chrome === "alert";
+
   return (
     <ShadcnDialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
           "max-h-[90dvh] w-[calc(100%-1.5rem)] overflow-hidden p-0",
+          compact ? "gap-0" : "gap-4",
           children != null
             ? "grid-rows-[auto_minmax(0,1fr)_auto]"
             : "grid-rows-[auto_auto]",
@@ -65,7 +75,12 @@ export function Dialog({
           className,
         )}
       >
-        <DialogHeader className="border-b border-border px-5 py-4">
+        <DialogHeader
+          className={cn(
+            "px-5",
+            compact ? "pt-5 pb-2" : "border-b border-border py-4",
+          )}
+        >
           {headerAbove}
           <DialogTitle>{title}</DialogTitle>
           {description ? (
@@ -82,7 +97,12 @@ export function Dialog({
         ) : null}
 
         {footer ? (
-          <DialogFooter className="border-t border-border px-5 py-3 pb-[calc(var(--dh-safe-bottom)+0.75rem)] sm:pb-3">
+          <DialogFooter
+            className={cn(
+              "px-5 pb-[calc(var(--dh-safe-bottom)+0.75rem)] sm:pb-3",
+              compact ? "pt-2" : "border-t border-border py-3",
+            )}
+          >
             {footer}
           </DialogFooter>
         ) : null}

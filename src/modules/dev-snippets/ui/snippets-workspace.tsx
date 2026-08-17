@@ -297,6 +297,7 @@ export function SnippetsWorkspace({
         : "Tes snippets restent, sans catégorie.",
       confirmLabel: "Supprimer",
       tone: "danger",
+      action: () => deleteDevSnippetCategory(id),
     });
     if (!ok) return;
 
@@ -309,10 +310,7 @@ export function SnippetsWorkspace({
       ),
     );
     if (categoryFilter === id) setCategoryFilter(null);
-    void run(() => deleteDevSnippetCategory(id), {
-      success: "Catégorie supprimée",
-      error: "Impossible de supprimer la catégorie",
-    });
+    toast.success("Catégorie supprimée");
   }
 
   async function handleDelete(id: string) {
@@ -324,6 +322,7 @@ export function SnippetsWorkspace({
         : "Cette action est définitive.",
       confirmLabel: "Supprimer",
       tone: "danger",
+      action: () => deleteDevSnippet(id),
     });
     if (!ok) return;
 
@@ -332,10 +331,7 @@ export function SnippetsWorkspace({
       const next = snippets.find((item) => item.id !== id);
       setSelectedId(next?.id ?? null);
     }
-    void run(() => deleteDevSnippet(id), {
-      success: "Snippet supprimé",
-      error: "Impossible de supprimer",
-    });
+    toast.success("Snippet supprimé");
   }
 
   function handleTogglePin(item: DevSnippet) {
