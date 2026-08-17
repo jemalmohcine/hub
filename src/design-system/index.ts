@@ -99,6 +99,11 @@ export { AuthShell, PageSection } from "@/design-system/components/shells";
 export { FormSubmit } from "@/design-system/components/form-submit";
 export { ToastProvider, useToast } from "@/design-system/components/toast";
 export type { ToastTone } from "@/design-system/components/toast";
+export { ConfirmProvider, useConfirm } from "@/design-system/components/confirm";
+export type {
+  ConfirmOptions,
+  ConfirmTone,
+} from "@/design-system/components/confirm";
 export { useAsyncAction } from "@/design-system/hooks/use-async-action";
 export { useActionToast } from "@/design-system/hooks/use-action-toast";
 export {
@@ -108,6 +113,7 @@ export {
   validateSignUp,
   validateForgotPassword,
   validateResetPassword,
+  validateSetPassword,
   validateChangePassword,
 } from "@/design-system/lib/validation";
 export type { FieldErrors, ValidationResult } from "@/design-system/lib/validation";

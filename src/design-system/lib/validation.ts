@@ -113,6 +113,9 @@ export function validateResetPassword(formData: FormData): ValidationResult {
   return { ok: true, data: { password, confirm_password: confirm } };
 }
 
+/** Same rules as a reset: password + confirm, no current password. */
+export const validateSetPassword = validateResetPassword;
+
 export function validateChangePassword(formData: FormData): ValidationResult {
   const current = String(formData.get("current_password") ?? "");
   const password = String(formData.get("password") ?? "");

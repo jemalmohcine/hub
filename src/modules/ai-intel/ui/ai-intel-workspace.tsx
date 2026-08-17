@@ -57,7 +57,7 @@ function toLocalIsoDay(raw: string | null | undefined): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Date used by the period filter: the scrape day (refreshed if the item is still trending). */
+/** Date used by the period filter: source date, or first scrape that saw it. */
 function itemDay(item: AiIntelItem): string {
   return toLocalIsoDay(item.published_at);
 }

@@ -34,7 +34,7 @@ export type DialogProps = {
   size?: DialogSize;
   footer?: ReactNode;
   className?: string;
-  children: ReactNode;
+  children?: ReactNode;
 };
 
 /**
@@ -57,7 +57,10 @@ export function Dialog({
     <ShadcnDialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "max-h-[90dvh] w-[calc(100%-1.5rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden p-0",
+          "max-h-[90dvh] w-[calc(100%-1.5rem)] overflow-hidden p-0",
+          children != null
+            ? "grid-rows-[auto_minmax(0,1fr)_auto]"
+            : "grid-rows-[auto_auto]",
           sizeClass[size],
           className,
         )}
@@ -72,9 +75,11 @@ export function Dialog({
           ) : null}
         </DialogHeader>
 
-        <div className="overflow-y-auto overscroll-contain px-5 py-4">
-          {children}
-        </div>
+        {children != null ? (
+          <div className="overflow-y-auto overscroll-contain px-5 py-4">
+            {children}
+          </div>
+        ) : null}
 
         {footer ? (
           <DialogFooter className="border-t border-border px-5 py-3 pb-[calc(var(--dh-safe-bottom)+0.75rem)] sm:pb-3">

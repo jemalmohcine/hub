@@ -5,6 +5,7 @@ import {
   changePassword,
   requestPasswordReset,
   resetPassword,
+  setPassword,
   signInWithPassword,
   signUpWithPassword,
   type ActionResult,
@@ -28,6 +29,7 @@ import {
   validateChangePassword,
   validateForgotPassword,
   validateResetPassword,
+  validateSetPassword,
   validateSignIn,
   validateSignUp,
   type FieldErrors,
@@ -349,6 +351,75 @@ export function ResetPasswordForm() {
         </Stack>
       </Form>
     </Stack>
+  );
+}
+
+export function SetPasswordForm() {
+  const [state, action, pending] = useActionState(setPassword, null);
+  useActionToast(state, {
+    success: "Mot de passe ajouté",
+    error: "Impossible d’ajouter le mot de passe",
+  });
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [isPending, startTransition] = useTransition();
+  const busy = pending || isPending;
+
+  return (
+    <Form
+      action={(formData) => {
+        const result = validateSetPassword(formData);
+        if (!result.ok) {
+          setErrors(result.fields);
+          return;
+        }
+        setErrors({});
+        startTransition(() => action(formData));
+      }}
+    >
+      <Stack gap={4}>
+        {state?.ok ? (
+          <Alert tone="success">
+            Mot de passe ajouté. Tu peux maintenant te connecter avec Google
+            ou avec email + mot de passe.
+          </Alert>
+        ) : null}
+        <AuthAlert state={state} />
+        {state?.ok ? null : (
+          <>
+            <Field
+              label="Mot de passe"
+              htmlFor="password"
+              error={errors.password}
+              hint="Au moins 8 caractères"
+            >
+              <PasswordInput
+                id="password"
+                name="password"
+                autoComplete="new-password"
+                onChange={() => clearField(setErrors, "password")}
+              />
+            </Field>
+            <Field
+              label="Confirmer"
+              htmlFor="confirm_password"
+              error={errors.confirm_password}
+            >
+              <PasswordInput
+                id="confirm_password"
+                name="confirm_password"
+                autoComplete="new-password"
+                onChange={() => clearField(setErrors, "confirm_password")}
+              />
+            </Field>
+            <div className="pt-1">
+              <Button type="submit" disabled={busy}>
+                {busy ? "Enregistrement…" : "Ajouter un mot de passe"}
+              </Button>
+            </div>
+          </>
+        )}
+      </Stack>
+    </Form>
   );
 }
 

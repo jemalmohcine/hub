@@ -10,6 +10,10 @@ import { aiIntelItemHref } from "@/modules/ai-intel/item-link";
 import { mergeHits } from "@/modules/ai-intel/merge/merge-hits";
 import { isWorthKeeping, preEnrichPriority } from "@/modules/ai-intel/score";
 import { scrapeDayIso } from "@/modules/ai-intel/scrape-date";
+import {
+  timestampsForInsert,
+  timestampsForUpdate,
+} from "@/modules/ai-intel/item-timestamps";
 import { discoverNewSources } from "@/modules/ai-intel/sources/discover";
 import type { AiIntelSource, ClassifiedItem, RawHit } from "@/modules/ai-intel/types";
 import { isCriticalPushAlert } from "@/modules/ai-intel/ui/rank";
@@ -192,8 +196,7 @@ export async function runAiIntelIngest() {
         primary_source: item.primarySource,
         source_refs: item.sourceRefs,
         metadata: item.metadata,
-        published_at: scrapeDay,
-        ingested_at: scrapeDay,
+        ...timestampsForInsert(item.publishedAt, scrapeDay),
       };
 
       if (existingKeys.has(item.canonicalKey)) {
@@ -209,8 +212,7 @@ export async function runAiIntelIngest() {
             primary_source: row.primary_source,
             source_refs: row.source_refs,
             metadata: row.metadata,
-            published_at: scrapeDay,
-            ingested_at: scrapeDay,
+            ...timestampsForUpdate(scrapeDay, item.publishedAt),
           })
           .eq("canonical_key", item.canonicalKey);
         if (!error) refreshed += 1;
