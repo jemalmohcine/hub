@@ -30,6 +30,7 @@ import {
   Text,
   Textarea,
   useAsyncAction,
+  useConfirm,
   useToast,
 } from "@/design-system";
 import {
@@ -94,6 +95,7 @@ export function SnippetsWorkspace({
   const [form, setForm] = useState(EMPTY_FORM);
   const { run, pending } = useAsyncAction();
   const toast = useToast();
+  const confirm = useConfirm();
 
   const selected = snippets.find((item) => item.id === selectedId) ?? null;
 
@@ -286,7 +288,18 @@ export function SnippetsWorkspace({
     });
   }
 
-  function handleDeleteCategory(id: string) {
+  async function handleDeleteCategory(id: string) {
+    const category = categories.find((item) => item.id === id);
+    const ok = await confirm({
+      title: "Supprimer cette catégorie ?",
+      description: category
+        ? `« ${category.name} » sera retirée. Tes snippets restent, sans catégorie.`
+        : "Tes snippets restent, sans catégorie.",
+      confirmLabel: "Supprimer",
+      tone: "danger",
+    });
+    if (!ok) return;
+
     setCategories((prev) => prev.filter((category) => category.id !== id));
     setSnippets((prev) =>
       prev.map((item) =>
@@ -302,7 +315,18 @@ export function SnippetsWorkspace({
     });
   }
 
-  function handleDelete(id: string) {
+  async function handleDelete(id: string) {
+    const snippet = snippets.find((item) => item.id === id);
+    const ok = await confirm({
+      title: "Supprimer ce snippet ?",
+      description: snippet
+        ? `« ${snippet.title} » sera définitivement supprimé.`
+        : "Cette action est définitive.",
+      confirmLabel: "Supprimer",
+      tone: "danger",
+    });
+    if (!ok) return;
+
     setSnippets((prev) => prev.filter((item) => item.id !== id));
     if (selectedId === id) {
       const next = snippets.find((item) => item.id !== id);

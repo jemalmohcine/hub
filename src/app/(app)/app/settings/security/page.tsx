@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
-import { getHubUser } from "@/core/auth/get-user";
+import { getHubUser, getSessionUser } from "@/core/auth/get-user";
+import { hasPasswordLogin } from "@/core/auth/identities";
 import { signOut } from "@/core/auth/actions";
-import { ChangePasswordForm } from "@/shared/ui/auth-forms";
+import { ChangePasswordForm, SetPasswordForm } from "@/shared/ui/auth-forms";
 import {
   Alert,
   Button,
@@ -26,6 +27,8 @@ export default async function SecuritySettingsPage({
   const user = await getHubUser();
   if (!user) redirect("/sign-in");
 
+  const sessionUser = await getSessionUser();
+  const canSignInWithPassword = hasPasswordLogin(sessionUser);
   const params = await searchParams;
 
   return (
@@ -58,14 +61,28 @@ export default async function SecuritySettingsPage({
 
       <Card>
         <Stack gap={4}>
-          <div>
-            <Text weight="medium">Changer le mot de passe</Text>
-            <Text size="sm" tone="muted" className="mt-1">
-              Pour les comptes email/mot de passe. Les comptes OAuth se gèrent
-              chez le fournisseur.
-            </Text>
-          </div>
-          <ChangePasswordForm />
+          {canSignInWithPassword ? (
+            <>
+              <div>
+                <Text weight="medium">Changer le mot de passe</Text>
+                <Text size="sm" tone="muted" className="mt-1">
+                  Tu peux aussi continuer à te connecter avec Google ou GitHub.
+                </Text>
+              </div>
+              <ChangePasswordForm />
+            </>
+          ) : (
+            <>
+              <div>
+                <Text weight="medium">Ajouter un mot de passe</Text>
+                <Text size="sm" tone="muted" className="mt-1">
+                  Ton compte a été créé avec Google ou GitHub. Ajoute un mot de
+                  passe pour te connecter aussi avec le même email.
+                </Text>
+              </div>
+              <SetPasswordForm />
+            </>
+          )}
         </Stack>
       </Card>
 

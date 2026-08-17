@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/core/auth/supabase/server";
-import { getHubUser } from "@/core/auth/get-user";
+import { getHubUser, getSessionUser } from "@/core/auth/get-user";
+import { hasPasswordLogin } from "@/core/auth/identities";
 import { getPaymentProvider } from "@/core/billing";
 import type { PlanId, ThemePreference } from "@/core/auth/types";
 
@@ -142,6 +143,45 @@ export async function resetPassword(
   }
 
   redirect("/app/settings/security?password=updated");
+}
+
+export async function setPassword(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await getHubUser();
+  if (!user) return { ok: false, error: "Non authentifié." };
+
+  const sessionUser = await getSessionUser();
+  if (hasPasswordLogin(sessionUser)) {
+    return {
+      ok: false,
+      error: "Un mot de passe existe déjà. Utilise le formulaire de changement.",
+    };
+  }
+
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm_password") ?? "");
+
+  if (password.length < 8) {
+    return {
+      ok: false,
+      error: "Le mot de passe doit faire au moins 8 caractères.",
+    };
+  }
+  if (password !== confirm) {
+    return { ok: false, error: "Les mots de passe ne correspondent pas." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  await supabase.auth.refreshSession();
+  revalidatePath("/app/settings/security");
+  return { ok: true };
 }
 
 export async function changePassword(
