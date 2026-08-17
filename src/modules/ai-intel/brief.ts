@@ -9,7 +9,8 @@ import type { HubLocale } from "@/core/i18n";
 import { translateOnce } from "@/modules/ai-intel/i18n/translate";
 import { sanitizePlainText } from "@/modules/ai-intel/html-to-text";
 import { formatCompactNumber } from "@/lib/numbers";
-import { truncateAtWord } from "@/lib/text";
+import { truncateAtWord, plainDash } from "@/lib/text";
+import { sourceDisplayName } from "@/modules/ai-intel/source-label";
 import type { AiIntelItem, ClassifiedItem } from "@/modules/ai-intel/types";
 
 export type LocalizedBrief = {
@@ -252,8 +253,8 @@ export function explainTitle(
       return {
         title: product
           ? locale === "fr"
-            ? `${product} — changement de prix`
-            : `${product} — pricing change`
+            ? `${product} : changement de prix`
+            : `${product} : pricing change`
           : name,
         name,
         typeLabel,
@@ -265,8 +266,8 @@ export function explainTitle(
       return {
         title: product
           ? locale === "fr"
-            ? `${product} — nouveau modèle`
-            : `${product} — new model`
+            ? `${product} : nouveau modèle`
+            : `${product} : new model`
           : name,
         name,
         typeLabel,
@@ -278,8 +279,8 @@ export function explainTitle(
       return {
         title: product
           ? locale === "fr"
-            ? `${product} — changement majeur`
-            : `${product} — breaking change`
+            ? `${product} : changement majeur`
+            : `${product} : breaking change`
           : name,
         name,
         typeLabel,
@@ -291,8 +292,8 @@ export function explainTitle(
       return {
         title: product
           ? locale === "fr"
-            ? `${product} — sécurité`
-            : `${product} — security`
+            ? `${product} : sécurité`
+            : `${product} : security`
           : name,
         name,
         typeLabel,
@@ -533,12 +534,12 @@ export function resolveBrief(
   if (item.primary_source) {
     facts.push({
       label: locale === "fr" ? "Source" : "Source",
-      value: item.primary_source,
+      value: sourceDisplayName(item.primary_source),
     });
   }
 
   return {
-    title: explained.title,
+    title: plainDash(explained.title),
     name: explained.name,
     typeLabel: explained.typeLabel,
     kind: explained.kind,

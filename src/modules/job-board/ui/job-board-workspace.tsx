@@ -243,7 +243,7 @@ export function JobBoardWorkspace({
             ))
           ) : (
             <Text size="sm" tone="muted">
-              Choisis un poste, une ville, des années — le CV est optionnel
+              Choisis un poste, une ville, des années. Le CV est optionnel.
             </Text>
           )}
         </Cluster>
@@ -350,7 +350,7 @@ export function JobBoardWorkspace({
 
       {activeCv && (activeCv.years > 0 || activeCv.skills.length > 0) ? (
         <Text size="sm" tone="muted">
-          Matché sur ce CV
+          Selon ce CV
           {activeCv.years > 0 ? ` · ${Math.round(activeCv.years)} ans` : ""}
           {activeCv.skills.length > 0
             ? ` · ${truncateAtWord(activeCv.skills.join(", "), 120)}`
@@ -372,7 +372,7 @@ export function JobBoardWorkspace({
 
       {listings.length > 0 ? (
         <Text size="sm" tone="muted">
-          {listings.length} offre{listings.length !== 1 ? "s" : ""} du pool
+          {listings.length} offre{listings.length !== 1 ? "s" : ""}
           {activeCv ? ", les plus adaptées à ton CV" : ", selon tes filtres"}
         </Text>
       ) : null}
@@ -455,8 +455,8 @@ export function JobBoardWorkspace({
             title={hasFilters ? "Rien d’assez proche pour l’instant" : "Dis-nous ce que tu cherches"}
             hint={
               hasFilters
-                ? "Le pool d’offres se remplit toutes les 3 h. Les annonces de plus de 30 jours sortent. Affine le titre, la ville ou les années."
-                : "Poste, ville, années d’expérience : tes filtres se sauvegardent. Le CV est optionnel — tu peux le retirer sans perdre le reste."
+                ? "De nouvelles offres arrivent régulièrement. Les annonces trop anciennes sortent. Affine le titre, la ville ou les années."
+                : "Poste, ville, années d’expérience : tes filtres se sauvegardent. Le CV est optionnel, tu peux le retirer sans perdre le reste."
             }
             action={
               <Stack gap={3} className="items-center">
@@ -475,7 +475,7 @@ export function JobBoardWorkspace({
         onOpenChange={setSheetOpen}
         desktop="full"
         title="Ta recherche"
-        description="Le scrape tourne toutes les 3 h. Tes filtres (poste, ville, années) restent. Le CV est un filtre en plus, tu peux le retirer."
+        description="Les offres se mettent à jour régulièrement. Tes filtres (poste, ville, années) restent. Le CV est un filtre en plus, tu peux le retirer."
         headerActions={
           <IconButton label="Fermer" size="sm" onClick={() => setSheetOpen(false)}>
             <X className="h-4 w-4" />
@@ -642,7 +642,7 @@ export function JobBoardWorkspace({
             <Field
               label="CV pour matcher les offres"
               htmlFor="board-cv"
-              hint="Optionnel. « Aucun CV » retire le matching stack, sans effacer ville / années / titre."
+              hint="Optionnel. « Aucun CV » retire le filtre sur tes compétences, sans effacer ville, années ni titre."
             >
               <Select
                 id="board-cv"

@@ -1,9 +1,11 @@
 import type { HubUser } from "@/core/auth/types";
 import { hasEntitlement, ENTITLEMENTS } from "@/core/entitlements";
 import { daysBetween } from "@/lib/dates";
+import { plainDash } from "@/lib/text";
 import { aiIntelItemHref } from "@/modules/ai-intel/item-link";
 import { getAiIntelFeed, getLatestAiIntelRun } from "@/modules/ai-intel/queries";
 import { isHotAlert } from "@/modules/ai-intel/ui/rank";
+import { sourceDisplayName } from "@/modules/ai-intel/source-label";
 import { computeMonthlyTotals, listDevExpenseServices } from "@/modules/dev-expenses/queries";
 import { listJobListingsForPrefs, getJobSearchPrefs } from "@/modules/job-board/queries";
 import { listJobApplications } from "@/modules/job-tracker/queries";
@@ -35,13 +37,13 @@ async function aiSignals(userId: string): Promise<{
       module: "ai",
       tone: "urgent",
       label: `${alerts.length} ${plural(alerts.length, "alerte urgente", "alertes urgentes")}`,
-      detail: "Sécurité, prix, dépréciation ou repo qui explose.",
+      detail: "Sécurité, prix, fin de support ou projet qui décolle.",
       href: "/app/ai",
     },
     highlights: alerts.slice(0, MAX_HIGHLIGHTS).map((item) => ({
       id: item.id,
-      title: item.title,
-      source: item.primary_source,
+      title: plainDash(item.title),
+      source: sourceDisplayName(item.primary_source),
       href: aiIntelItemHref(item.id),
     })),
   };
@@ -67,7 +69,7 @@ async function jobSignals(userId: string): Promise<TodaySignal[]> {
       module: "jobs",
       tone: "neutral",
       label: `${fresh.length} ${plural(fresh.length, "nouvelle offre", "nouvelles offres")}`,
-      detail: `Collectées ces ${NEW_LISTING_DAYS} derniers jours.`,
+      detail: `Parues ces ${NEW_LISTING_DAYS} derniers jours.`,
       href: "/app/career?tab=offers",
     });
   }
@@ -103,7 +105,7 @@ async function expenseSignal(userId: string): Promise<TodaySignal | null> {
     module: "expenses",
     tone: "neutral",
     label: `${formatCurrencyCents(totals.plannedMonthlyCents)} / mois`,
-    detail: `${services.length} ${plural(services.length, "service actif", "services actifs")} dans ta stack.`,
+    detail: `${services.length} ${plural(services.length, "service actif", "services actifs")} dans tes outils.`,
     href: "/app/expenses",
   };
 }

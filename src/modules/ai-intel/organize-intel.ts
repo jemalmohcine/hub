@@ -108,13 +108,13 @@ function buildTitle(name: string, purpose: string, locale: HubLocale): string {
   const short = shortName(name);
   const purposeClause = firstCleanClause(purpose, 72);
   if (!purposeClause) {
-    return locale === "fr" ? `${short} — outil dev` : `${short} — dev tool`;
+    return locale === "fr" ? `${short} : outil dev` : `${short} : dev tool`;
   }
   const lowerPurpose = purposeClause.toLowerCase();
   if (lowerPurpose.startsWith(short.toLowerCase())) {
     return purposeClause.length <= 90 ? purposeClause : firstCleanClause(purposeClause, 88);
   }
-  return `${short} — ${purposeClause}`;
+  return `${short} : ${purposeClause}`;
 }
 
 /** Turn scraped content into a human title + essential points (no star-count titles). */

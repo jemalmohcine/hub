@@ -136,7 +136,7 @@ export function ToolsDirectory({
             title="Aucun outil ne correspond"
             hint={
               tools.length === 0
-                ? "Le catalogue se remplit à la prochaine exécution du scrape quotidien."
+                ? "Les outils apparaîtront dès la prochaine mise à jour."
                 : "Élargis la recherche ou change de filtre."
             }
           />

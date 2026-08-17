@@ -107,7 +107,7 @@ export function PushEnableCard() {
   function enable() {
     void run(
       async () => {
-        if (!vapidKey) throw new Error("Clé VAPID manquante");
+        if (!vapidKey) throw new Error("Les alertes téléphone ne sont pas disponibles.");
         const result = await ensureSubscription(vapidKey);
         if (result.status === "granted") setStatus("on");
         else setStatus(result.status === "denied" ? "denied" : "off");
@@ -147,8 +147,8 @@ export function PushEnableCard() {
       <div className="rounded-2xl border border-border bg-muted/30 px-4 py-3">
         <Text size="sm" tone="muted">
           {!vapidKey
-            ? "Clés VAPID manquantes sur le serveur (NEXT_PUBLIC_VAPID_PUBLIC_KEY). Les alertes téléphone ne peuvent pas être activées."
-            : "Ce navigateur ne peut pas afficher les notifications système."}
+            ? "Les alertes téléphone ne sont pas disponibles pour le moment."
+            : "Ce navigateur ne peut pas afficher les notifications."}
         </Text>
       </div>
     );
@@ -172,10 +172,10 @@ export function PushEnableCard() {
           </Text>
           <Text size="sm" tone="muted" className="mt-1">
             {status === "on"
-              ? "OK. Tu recevras une alerte uniquement pour l’urgent (prix, modèle, repo qui explose). Plan Pro requis."
+              ? "OK. Tu recevras une alerte uniquement pour l’urgent (prix, modèle, projet qui décolle). Plan Pro requis."
               : status === "denied"
                 ? "Permission refusée. Réactive-la dans Réglages → Notifications de ton téléphone."
-                : "Alertes urgentes seulement : prix, nouveau modèle, repo GitHub qui explose. Plan Pro requis."}
+                : "Alertes urgentes seulement : prix, nouveau modèle, projet GitHub qui décolle. Plan Pro requis."}
           </Text>
           {!isStandalonePwa() && status === "off" ? (
             <Text size="sm" tone="muted" className="mt-1">
@@ -246,7 +246,7 @@ export function PushEnableBanner({ className }: { className?: string }) {
         onClick={() => {
           void run(
             async () => {
-              if (!vapidKey) throw new Error("Clé VAPID manquante");
+              if (!vapidKey) throw new Error("Les alertes téléphone ne sont pas disponibles.");
               const result = await ensureSubscription(vapidKey);
               if (result.status === "granted") setStatus("on");
               else setStatus(result.status === "denied" ? "denied" : "off");

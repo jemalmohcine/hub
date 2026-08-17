@@ -24,6 +24,7 @@ import { buildItemDetail, type DetailSection } from "@/modules/ai-intel/item-det
 import type { HubLocale } from "@/core/i18n";
 import { formatDate } from "@/lib/dates";
 import { t } from "@/modules/ai-intel/i18n/locale";
+import { sourceDisplayName } from "@/modules/ai-intel/source-label";
 import { isHotAlert, itemTags } from "@/modules/ai-intel/ui/rank";
 import { readMetaString, verdictTone } from "@/modules/ai-intel/ui/verdict";
 import { type AiIntelItem } from "@/modules/ai-intel/types";
@@ -253,7 +254,6 @@ function ItemDetailModalBody({
   const tags = itemTags(localItem);
   const website = readMetaString(meta, "website");
   const image = readMetaString(meta, "image");
-  const score = readMetaString(meta, "score");
   const verdictLabel =
     (locale === "fr" ? i18n?.verdictLabel?.fr : i18n?.verdictLabel?.en) ||
     readMetaString(meta, "verdictLabel");
@@ -291,11 +291,6 @@ function ItemDetailModalBody({
           ))}
           {verdictLabel ? (
             <Badge tone={verdictTone(meta.verdict)}>{verdictLabel}</Badge>
-          ) : null}
-          {score ? (
-            <Badge tone="brand">
-              {copy.score} {score}
-            </Badge>
           ) : null}
           {translated ? (
             <Badge tone="neutral">
@@ -362,7 +357,7 @@ function ItemDetailModalBody({
             {formatDate(localItem.published_at, locale, "dayMonthYear") ||
               copy.unknownDate}
             {" · "}
-            {localItem.primary_source}
+            {sourceDisplayName(localItem.primary_source)}
           </Text>
         </Section>
       </Stack>

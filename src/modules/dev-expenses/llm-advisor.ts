@@ -310,7 +310,7 @@ export async function llmDiagnoseBudget(input: {
     "",
     "Analyse l'intégralité du budget outils d'un développeur et sors les décisions qui rapportent.",
     "Cherche en priorité, dans cet ordre :",
-    "1. les doublons — deux services qui font le même travail,",
+    "1. les doublons : deux services qui font le même travail,",
     "2. les services payés alors qu'un plan gratuit officiel couvrirait cet usage,",
     "3. les alternatives gratuites ou nettement moins chères pour les gros postes,",
     "4. les outils regroupables sous un seul abonnement,",

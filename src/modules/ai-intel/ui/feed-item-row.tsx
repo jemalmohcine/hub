@@ -8,6 +8,7 @@ import type { HubLocale } from "@/core/i18n";
 import { formatDate } from "@/lib/dates";
 import { isNearDuplicate, truncateAtWord } from "@/lib/text";
 import { t } from "@/modules/ai-intel/i18n/locale";
+import { sourceDisplayName } from "@/modules/ai-intel/source-label";
 import {
   isHotAlert,
   isTrending,
@@ -136,7 +137,7 @@ export function FeedItemRow({
         ) : null}
 
         <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[length:var(--dh-text-2xs)] text-muted-foreground">
-          <span>{item.primary_source}</span>
+          <span>{sourceDisplayName(item.primary_source)}</span>
           {publishedLabel ? <span>· {publishedLabel}</span> : null}
           {metricParts.length > 0 ? (
             <span>· {metricParts.join(" · ")}</span>

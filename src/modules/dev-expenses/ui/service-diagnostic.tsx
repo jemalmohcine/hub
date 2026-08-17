@@ -48,7 +48,7 @@ export function ServiceDiagnostic({
       <Stack gap={3}>
         <Cluster gap={2} className="items-start justify-between">
           <div className="min-w-0">
-            <Heading level={4}>Diagnostic — {serviceName}</Heading>
+            <Heading level={4}>Analyse : {serviceName}</Heading>
             <Text size="sm" tone="muted">
               {formatCurrencyCents(data.monthlySpendEur * 100)}/mois · {data.shareOfBudgetPct}% du
               budget
@@ -67,9 +67,7 @@ export function ServiceDiagnostic({
                 <Sparkles className="mr-1 inline h-3 w-3" />
                 IA
               </Badge>
-            ) : (
-              <Badge tone="neutral">Catalogue local</Badge>
-            )}
+            ) : null}
           </Cluster>
           <Text size="sm" className="mt-2 leading-relaxed break-words">
             {data.summary}
