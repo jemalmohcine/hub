@@ -1,0 +1,85 @@
+import { describe, expect, it } from "vitest";
+import {
+  canonicalLinkedInJobUrl,
+  linkedinGuestSearchUrl,
+  linkedinPlaceLabel,
+  linkedinSearchPlaces,
+  parseLinkedInGuestHtml,
+} from "@/modules/job-board/collectors/linkedin";
+import { resolveLocation } from "@/modules/job-board/locations";
+import { withJobSearchPrefs } from "@/modules/job-board/types";
+
+const GUEST_HTML = `
+<ul>
+  <li>
+    <div class="base-card">
+      <a class="base-card__full-link" href="https://www.linkedin.com/jobs/view/4299001001/?trk=public_jobs"></a>
+      <h3 class="base-search-card__title">Développeur Frontend React</h3>
+      <h4 class="base-search-card__subtitle">Capgemini</h4>
+      <span class="job-search-card__location">Casablanca, Casablanca-Settat, Morocco</span>
+      <time class="job-search-card__listdate" datetime="2026-08-12">Il y a 5 jours</time>
+    </div>
+  </li>
+</ul>
+`;
+
+describe("canonicalLinkedInJobUrl", () => {
+  it("keeps the numeric job id and drops tracking params", () => {
+    expect(
+      canonicalLinkedInJobUrl(
+        "https://www.linkedin.com/jobs/view/4299001001/?trk=public_jobs_jserp-result",
+      ),
+    ).toBe("https://www.linkedin.com/jobs/view/4299001001");
+  });
+});
+
+describe("parseLinkedInGuestHtml", () => {
+  it("reads the public job card", () => {
+    expect(parseLinkedInGuestHtml(GUEST_HTML)).toEqual([
+      {
+        title: "Développeur Frontend React",
+        company: "Capgemini",
+        url: "https://www.linkedin.com/jobs/view/4299001001",
+        location: "Casablanca, Casablanca-Settat, Morocco",
+        publishedAt: "2026-08-12",
+      },
+    ]);
+  });
+});
+
+describe("linkedinSearchPlaces", () => {
+  it("searches Casablanca when that city is selected", () => {
+    const places = linkedinSearchPlaces(
+      withJobSearchPrefs({ locations: ["casablanca"] }),
+    );
+    expect(places.map((place) => place.id)).toEqual(["casablanca"]);
+  });
+
+  it("expands a Morocco-only country search to Casablanca and Rabat", () => {
+    const places = linkedinSearchPlaces(withJobSearchPrefs({ locations: ["maroc"] }));
+    expect(places.map((place) => place.id)).toEqual(["casablanca", "rabat", "maroc"]);
+  });
+});
+
+describe("linkedinGuestSearchUrl", () => {
+  it("targets the guest endpoint for Casablanca", () => {
+    const url = linkedinGuestSearchUrl(
+      withJobSearchPrefs({
+        roles: ["frontend"],
+        locations: ["casablanca"],
+        workModes: ["onsite"],
+        workMode: "onsite",
+      }),
+      resolveLocation("casablanca"),
+    );
+    expect(url).toContain("jobs-guest/jobs/api/seeMoreJobPostings/search");
+    expect(url).toContain("Casablanca");
+    expect(url).toContain("f_WT=1");
+  });
+});
+
+describe("linkedinPlaceLabel", () => {
+  it("adds the country next to the city", () => {
+    expect(linkedinPlaceLabel(resolveLocation("casablanca"))).toBe("Casablanca, Maroc");
+  });
+});
