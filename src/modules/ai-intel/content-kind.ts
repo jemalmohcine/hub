@@ -163,12 +163,12 @@ export function detectContentKind(item: ItemLike): ContentKind {
 }
 
 const KIND_LABELS: Record<ContentKind, { fr: string; en: string }> = {
-  repo: { fr: "Repo", en: "Repo" },
+  repo: { fr: "GitHub", en: "GitHub" },
   tool: { fr: "Outil", en: "Tool" },
   feature: { fr: "Fonctionnalité", en: "Feature" },
-  model: { fr: "Modèle LLM", en: "LLM model" },
+  model: { fr: "Modèle", en: "Model" },
   pricing: { fr: "Prix", en: "Pricing" },
-  breaking: { fr: "Breaking", en: "Breaking" },
+  breaking: { fr: "Changement majeur", en: "Major change" },
   security: { fr: "Sécurité", en: "Security" },
   policy: { fr: "Régulation", en: "Policy" },
   news: { fr: "Actu", en: "News" },

@@ -75,7 +75,7 @@ export function BudgetAnalysis({ serviceCount }: { serviceCount: number }) {
               <Heading level={4}>Analyse du budget</Heading>
             </Cluster>
             <Text size="sm" tone="muted">
-              Doublons, plans gratuits que tu paies, postes qui dérapent — sur tes{" "}
+              Doublons, plans gratuits que tu paies, postes qui dérapent, sur tes{" "}
               {serviceCount} service{serviceCount > 1 ? "s" : ""}.
             </Text>
           </div>
@@ -100,7 +100,7 @@ function BudgetReport({ report }: { report: BudgetDiagnostic }) {
             {report.headline}
           </Badge>
           <Badge tone={report.source === "ai" ? "brand" : "neutral"}>
-            {report.source === "ai" ? "IA" : "Catalogue local"}
+            {report.source === "ai" ? "IA" : "Analyse"}
           </Badge>
         </Cluster>
 

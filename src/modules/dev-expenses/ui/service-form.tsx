@@ -64,7 +64,6 @@ export function ServiceForm({
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [suggestion, setSuggestion] = useState<ProviderSuggestion | null>(null);
   const [detecting, setDetecting] = useState(false);
-  const [manual, setManual] = useState(false);
   const { run, pending } = useAsyncAction();
 
   /** Fields the user edited by hand — detection never overwrites those. */
@@ -136,7 +135,7 @@ export function ServiceForm({
         <Field
           label="Nom du service"
           htmlFor="exp-name"
-          hint="Écris ce que tu paies, l’IA reconnaît le provider et remplit le reste."
+          hint="Écris ce que tu paies, l’IA reconnaît le service et remplit le reste."
         >
           <Input
             id="exp-name"
@@ -161,7 +160,6 @@ export function ServiceForm({
             suggestion={suggestion}
             onDismiss={() => {
               setSuggestion(null);
-              setManual(true);
             }}
           />
         ) : null}
@@ -209,22 +207,6 @@ export function ServiceForm({
             />
           </Field>
         </div>
-
-        {manual || suggestion ? (
-          <Field
-            label="Identifiant provider"
-            htmlFor="exp-provider"
-            hint="Sert à retrouver les alternatives. Laisse tel quel si tu n’es pas sûr."
-          >
-            <Input
-              id="exp-provider"
-              value={form.providerSlug}
-              onChange={(e) => patch("providerSlug", e.target.value)}
-              placeholder="openai, vercel, supabase…"
-              autoComplete="off"
-            />
-          </Field>
-        ) : null}
 
         <Field label="URL" htmlFor="exp-url">
           <Input
@@ -313,7 +295,7 @@ function DetectionCard({
         <button
           type="button"
           onClick={onDismiss}
-          aria-label="Ignorer la détection"
+          aria-label="Ignorer"
           className="shrink-0 rounded-lg p-1 text-muted-foreground hover:bg-muted"
         >
           <X className="h-4 w-4" />
@@ -326,7 +308,6 @@ function DetectionCard({
         {suggestion.typicalMonthlyEur != null ? (
           <Badge tone="info">~{suggestion.typicalMonthlyEur} €/mois</Badge>
         ) : null}
-        {suggestion.source === "catalog" ? <Badge tone="neutral">Catalogue local</Badge> : null}
       </Cluster>
 
       {suggestion.freeTier ? (

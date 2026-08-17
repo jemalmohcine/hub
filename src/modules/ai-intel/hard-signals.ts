@@ -45,7 +45,7 @@ export function hardSignalLabel(
   const labels: Record<HardSignal, { fr: string; en: string }> = {
     security: { fr: "Sécurité", en: "Security" },
     pricing: { fr: "Prix", en: "Pricing" },
-    breaking: { fr: "Breaking", en: "Breaking" },
+    breaking: { fr: "Changement majeur", en: "Major change" },
     outage: { fr: "Panne", en: "Outage" },
   };
   return labels[signal][locale];

@@ -149,7 +149,7 @@ export function ChipMultiSelect({
           {suggestions.length === 0 && !canAddCustom ? (
             <li className="px-3 py-2">
               <Text size="sm" tone="muted">
-                Aucun choix proche — tape pour ajouter
+                Aucun choix proche. Tape pour ajouter.
               </Text>
             </li>
           ) : null}

@@ -65,7 +65,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     label: "Candidatures",
     description: "Offres près de chez toi et suivi des candidatures",
     pageDescription:
-      "Pool d’offres dev scrapé en continu, filtré selon le CV choisi (stack, expérience, poste).",
+      "Offres dev mises à jour en continu, filtrées selon le CV choisi (compétences, expérience, poste).",
     upsell:
       "Télétravail et présentiel en même temps : les offres arrivent dès que tu enregistres, puis toutes les 3 heures.",
     href: "/app/career?tab=jobs",
@@ -90,7 +90,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
   {
     id: "expenses",
     label: "Dépenses dev",
-    description: "Budget stack, suivi mensuel et alternatives",
+    description: "Budget outils, suivi mensuel et alternatives",
     pageDescription:
       "Services payants, budget mensuel et diagnostic d’alternatives moins chères.",
     upsell:

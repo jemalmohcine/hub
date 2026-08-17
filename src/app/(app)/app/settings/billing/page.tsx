@@ -1,6 +1,5 @@
 import { requirePageUser } from "@/core/auth/get-user";
 import { formatDate } from "@/lib/dates";
-import { getPaymentProvider } from "@/core/billing";
 import { PLAN_META } from "@/core/entitlements";
 import { BillingForm } from "@/shared/ui/settings-forms";
 import {
@@ -19,7 +18,6 @@ export const metadata = { title: "Abonnement" };
 export default async function BillingSettingsPage() {
   const user = await requirePageUser();
 
-  const provider = getPaymentProvider();
   const sub = user.subscription;
   const plan = sub?.plan ?? "free";
 
@@ -29,7 +27,6 @@ export default async function BillingSettingsPage() {
       <PageHeader
         title="Abonnement"
         description="Ton plan actuel et les options disponibles."
-        action={<Badge tone="neutral">Provider · {provider.id}</Badge>}
       />
 
       <Card>
@@ -66,15 +63,15 @@ export default async function BillingSettingsPage() {
       <Card>
         <SettingsSection
           title="Changer de plan"
-          description="Mock billing. Aucun paiement réel pour l’instant."
+          description="Aucun paiement réel pour l’instant."
         >
           <BillingForm user={user} />
         </SettingsSection>
       </Card>
 
       <Text size="xs" tone="muted" className="mt-4">
-        Branche Stripe, Lemon Squeezy ou Paddle plus tard via{" "}
-        <code className="font-mono text-[0.7rem]">PaymentProvider</code>.
+        Le paiement se branchera plus tard. Pour l’instant, tu peux tester les
+        plans sans débiter ta carte.
       </Text>
     </>
   );

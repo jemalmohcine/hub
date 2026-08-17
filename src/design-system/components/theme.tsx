@@ -87,7 +87,7 @@ export function ThemeToggle({
         className,
       )}
       onClick={cycle}
-      aria-label={`${label} — cliquer pour changer`}
+      aria-label={`${label} : cliquer pour changer`}
       title={label}
     >
       <Icon className="size-4" />

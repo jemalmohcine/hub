@@ -460,9 +460,9 @@ export function SnippetsWorkspace({
             {filtered.length}{" "}
             {filtered.length === 1 ? "résultat" : "résultats"}
             {aiPending
-              ? " — l’IA affine…"
+              ? " · l’IA affine…"
               : aiSource === "ai"
-                ? " — rangés par l’IA"
+                ? " · rangés par l’IA"
                 : ""}
           </Text>
           <Button type="button" size="sm" variant="ghost" onClick={clearSearch}>
@@ -542,64 +542,92 @@ export function SnippetsWorkspace({
             />
           ) : (
             filtered.map((item) => (
-              <button
+              <div
                 key={item.id}
-                type="button"
-                onClick={() => {
-                  setSelectedId(item.id);
-                  setEditing(false);
-                  setDetailOpen(true);
-                }}
                 className={cn(
-                  "rounded-2xl border p-3 text-left transition-colors",
+                  "rounded-2xl border p-3 transition-colors",
                   selectedId === item.id
                     ? "border-foreground bg-muted/60"
                     : "border-border hover:bg-muted/40",
                 )}
               >
                 <Cluster gap={2} className="justify-between">
-                  <Cluster gap={2} className="min-w-0">
-                    {item.kind === "snippet" ? (
-                      <Code2 className="h-4 w-4 shrink-0 text-primary" />
-                    ) : (
-                      <StickyNote className="h-4 w-4 shrink-0 text-primary" />
-                    )}
-                    <Text size="sm" weight="medium" className="truncate">
-                      {item.title}
-                    </Text>
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 text-left"
+                    onClick={() => {
+                      setSelectedId(item.id);
+                      setEditing(false);
+                      setDetailOpen(true);
+                    }}
+                  >
+                    <Cluster gap={2} className="min-w-0">
+                      {item.kind === "snippet" ? (
+                        <Code2 className="h-4 w-4 shrink-0 text-primary" />
+                      ) : (
+                        <StickyNote className="h-4 w-4 shrink-0 text-primary" />
+                      )}
+                      <Text size="sm" weight="medium" className="truncate">
+                        {item.title}
+                      </Text>
+                    </Cluster>
+                  </button>
+                  <Cluster gap={1} className="shrink-0">
+                    {item.isPinned ? (
+                      <Pin className="h-3.5 w-3.5 text-primary" />
+                    ) : null}
+                    <IconButton
+                      type="button"
+                      label="Supprimer"
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive"
+                      onClick={() => void handleDelete(item.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </IconButton>
                   </Cluster>
-                  {item.isPinned ? <Pin className="h-3.5 w-3.5 text-primary" /> : null}
                 </Cluster>
-                {item.content.trim() ? (
-                  <Text size="sm" tone="muted" className="mt-1 line-clamp-2">
-                    {item.content}
-                  </Text>
-                ) : null}
-                {item.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- data URLs and arbitrary user URLs
-                  <img
-                    src={item.imageUrl}
-                    alt=""
-                    className="mt-2 h-10 w-10 rounded-lg object-cover"
-                  />
-                ) : null}
-                <Cluster gap={2} className="mt-2 flex-wrap">
-                  {item.categoryName ? (
-                    <Badge tone="info">{item.categoryName}</Badge>
-                  ) : pendingCategoryIds.has(item.id) ? (
-                    <Badge tone="neutral" className="inline-flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" />
-                      Classement…
-                    </Badge>
+                <button
+                  type="button"
+                  className="mt-1 w-full text-left"
+                  onClick={() => {
+                    setSelectedId(item.id);
+                    setEditing(false);
+                    setDetailOpen(true);
+                  }}
+                >
+                  {item.content.trim() ? (
+                    <Text size="sm" tone="muted" className="line-clamp-2">
+                      {item.content}
+                    </Text>
                   ) : null}
-                  {item.language ? <Badge tone="neutral">{item.language}</Badge> : null}
-                  {item.tags.slice(0, 3).map((tag) => (
-                    <Badge key={tag} tone="neutral">
-                      #{tag}
-                    </Badge>
-                  ))}
-                </Cluster>
-              </button>
+                  {item.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- data URLs and arbitrary user URLs
+                    <img
+                      src={item.imageUrl}
+                      alt=""
+                      className="mt-2 h-10 w-10 rounded-lg object-cover"
+                    />
+                  ) : null}
+                  <Cluster gap={2} className="mt-2 flex-wrap">
+                    {item.categoryName ? (
+                      <Badge tone="info">{item.categoryName}</Badge>
+                    ) : pendingCategoryIds.has(item.id) ? (
+                      <Badge tone="neutral" className="inline-flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" />
+                        Classement…
+                      </Badge>
+                    ) : null}
+                    {item.language ? <Badge tone="neutral">{item.language}</Badge> : null}
+                    {item.tags.slice(0, 3).map((tag) => (
+                      <Badge key={tag} tone="neutral">
+                        #{tag}
+                      </Badge>
+                    ))}
+                  </Cluster>
+                </button>
+              </div>
             ))
           )}
         </Stack>
@@ -839,7 +867,7 @@ export function SnippetsWorkspace({
                   })}
                 </Cluster>
                 <Text size="sm" tone="muted" className="mt-2 text-xs">
-                  Requête : {smartQuery}
+                  Recherche : {smartQuery}
                 </Text>
               </div>
             </Stack>

@@ -35,6 +35,11 @@ export function collapseWhitespace(text: string): string {
   return text.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
 }
 
+/** Replace em/en dashes so UI copy never shows the AI-style " — ". */
+export function plainDash(text: string): string {
+  return collapseWhitespace(text.replace(/\s*[—–]\s*/g, " : "));
+}
+
 /**
  * Cut at `max` characters but never mid-word, appending an ellipsis.
  * Prefer this over `truncateWithEllipsis` for anything a human reads.

@@ -11,6 +11,7 @@ import type { HubLocale } from "@/core/i18n";
 import { sanitizePlainText } from "@/modules/ai-intel/html-to-text";
 import { readRepoMomentum } from "@/modules/ai-intel/repo-momentum";
 import { formatCompactNumber } from "@/lib/numbers";
+import { plainDash } from "@/lib/text";
 import type { AiIntelItem } from "@/modules/ai-intel/types";
 
 export type EssentialPoint = {
@@ -71,7 +72,7 @@ export function buildEssentialRecap(
           repoMomentum: "GitHub momentum",
           priceChange: "Pricing change",
           modelRelease: "New model",
-          breakingChange: "Breaking change",
+          breakingChange: "Major change",
           securityIssue: "Security",
           source: "Source",
         };
@@ -150,8 +151,8 @@ export function buildEssentialRecap(
   if (impactLines.length === 0 && kind === "repo" && starsToday >= 200) {
     impactLines.push(
       locale === "fr"
-        ? "Forte accélération — à tester sur un cas réel avant adoption en prod."
-        : "Sharp acceleration — worth a quick spike on a real use case before prod.",
+        ? "Forte accélération : à tester sur un cas réel avant de l’adopter."
+        : "Sharp acceleration: worth a quick try on a real use case first.",
     );
   }
   if (impactLines.length === 0 && kind === "pricing") {
@@ -237,36 +238,36 @@ export function pushAlertTitle(
   const product = productOf(normalized);
 
   const organized = readMeta(meta, "organizedTitle") || readMeta(meta, "displayTitle");
-  if (organized) return organized;
+  if (organized) return plainDash(organized);
 
   if (kind === "pricing") {
     return product
       ? locale === "fr"
-        ? `${product} — changement de prix`
-        : `${product} — pricing change`
-      : explained.title;
+        ? `${product} : changement de prix`
+        : `${product} : pricing change`
+      : plainDash(explained.title);
   }
   if (kind === "model") {
     return product
       ? locale === "fr"
-        ? `${product} — nouveau modèle`
-        : `${product} — new model`
-      : explained.title;
+        ? `${product} : nouveau modèle`
+        : `${product} : new model`
+      : plainDash(explained.title);
   }
   if (kind === "breaking") {
     return product
       ? locale === "fr"
-        ? `${product} — changement majeur`
-        : `${product} — breaking change`
-      : explained.title;
+        ? `${product} : changement majeur`
+        : `${product} : breaking change`
+      : plainDash(explained.title);
   }
   if (kind === "security") {
     return product
       ? locale === "fr"
-        ? `${product} — alerte sécurité`
-        : `${product} — security alert`
-      : explained.title;
+        ? `${product} : alerte sécurité`
+        : `${product} : security alert`
+      : plainDash(explained.title);
   }
 
-  return explained.title;
+  return plainDash(explained.title);
 }

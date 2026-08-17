@@ -6,6 +6,7 @@ import {
   FIELD_LIMITS,
   foldCase,
   isNearDuplicate,
+  plainDash,
   truncateAtWord,
   truncateWithEllipsis,
 } from "@/lib/text";
@@ -36,6 +37,16 @@ describe("clampField", () => {
   it("handles null and undefined", () => {
     expect(clampField(null, "title")).toBe("");
     expect(clampField(undefined, "body")).toBe("");
+  });
+});
+
+describe("plainDash", () => {
+  it("turns an em dash title into a simple colon", () => {
+    expect(plainDash("Claude — nouveau modèle")).toBe("Claude : nouveau modèle");
+  });
+
+  it("leaves text without dashes alone", () => {
+    expect(plainDash("OpenAI Blog")).toBe("OpenAI Blog");
   });
 });
 

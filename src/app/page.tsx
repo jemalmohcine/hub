@@ -30,13 +30,13 @@ const PILLARS = [
     icon: KeyRound,
     title: "Auth & accès prêts",
     description:
-      "Connexion email, OAuth, rôles user/admin et entitlements par plan. Tu ouvres un module seulement si ton compte y a droit.",
+      "Connexion email, Google ou GitHub, rôles user/admin et accès selon ton plan. Tu ouvres un module seulement si ton compte y a droit.",
   },
   {
     icon: WalletCards,
     title: "Billing abstrait",
     description:
-      "Free / Pro côté produit, sans coller Stripe dans le code. Branche le PSP que tu veux plus tard. Le hub reste le même.",
+      "Free / Pro côté produit, sans coller Stripe dans le code. Le paiement se branche plus tard. Le hub reste le même.",
   },
 ] as const;
 
@@ -243,7 +243,7 @@ export default function LandingPage() {
                   </span>
                 </Cluster>
                 <Text size="sm" tone="muted">
-                  Tableau de bord du hub : plan, rôle, entitlements et accès
+                  Tableau de bord du hub : plan, rôle, et accès
                   rapide aux modules.
                 </Text>
               </div>
@@ -267,8 +267,8 @@ export default function LandingPage() {
             <Cluster gap={2} className="mt-8 text-muted-foreground">
               <ShieldCheck className="size-4 shrink-0" aria-hidden />
               <Text size="sm" tone="muted">
-                Accès contrôlé par rôles et entitlements. L’admin pilote les
-                flags modules.
+                Accès contrôlé par rôles et par plan. L’admin active les
+                modules.
               </Text>
             </Cluster>
           </Container>

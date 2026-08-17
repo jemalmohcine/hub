@@ -96,7 +96,6 @@ export function buildItemDetail(
   );
 
   const impact = sanitizePlainText(readMeta(meta, "impact") || "", 600);
-  const scoreReason = sanitizePlainText(readMeta(meta, "scoreReason") || "", 400);
 
   // `about` is built by concatenating purpose + points + impact for LLM-analysed
   // items, so most of it is already on screen. Keep only the new paragraphs.
@@ -156,17 +155,6 @@ export function buildItemDetail(
       id: "facts",
       label: copy.facts,
       facts: brief.facts,
-    });
-  }
-
-  if (scoreReason && !isNearDuplicate(scoreReason, impact)) {
-    sections.push({
-      kind: "prose",
-      id: "score",
-      label: copy.scoreWhy,
-      text: scoreReason,
-      collapsible: false,
-      muted: true,
     });
   }
 

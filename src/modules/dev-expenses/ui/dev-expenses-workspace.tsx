@@ -170,7 +170,7 @@ export function DevExpensesWorkspace({
           <EmptyState
             icon={PiggyBank}
             title="Aucun service suivi"
-            hint="Ajoute tout ce que tu paies — l’IA reconnaît le provider, chiffre le poste et cherche les alternatives gratuites."
+            hint="Ajoute tout ce que tu paies. L’IA reconnaît le service, chiffre le poste et cherche les alternatives gratuites."
           />
         ) : null}
       </Stack>

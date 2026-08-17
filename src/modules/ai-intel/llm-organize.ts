@@ -31,7 +31,7 @@ const intelSchema = z.object({
   title: z
     .string()
     .max(110)
-    .describe("Titre court et explicite au format « Nom — ce que c'est »"),
+    .describe("Titre court et explicite au format « Nom : ce que c'est »"),
   purpose: z
     .string()
     .max(220)
@@ -145,14 +145,14 @@ function buildPrompt(input: {
 
   return [
     "Tu es l'analyste d'une veille technique destinée à un développeur qui construit des apps IA.",
-    "Tu lis le contenu réellement scrapé et tu décides toi-même de quoi il s'agit et si ça mérite une alerte.",
+    "Tu lis le contenu de l'article ou du dépôt et tu décides toi-même de quoi il s'agit et si ça mérite une alerte.",
     lang,
     "",
     "Niveaux d'urgence:",
     URGENCY_RUBRIC,
     "",
     "Règles:",
-    "- title: « Nom — ce que c'est » en une ligne compréhensible sans ouvrir la source. Jamais une phrase du README, jamais un nombre de stars.",
+    "- title: « Nom : ce que c'est » en une ligne compréhensible. Jamais une phrase du README, jamais un nombre de stars. N'utilise pas de tiret long (—).",
     "- purpose: une phrase qui explique précisément le sujet.",
     "- essentialPoints: 3 à 5 points factuels tirés du contenu (ce que c'est, chiffres réels, ce qui change). Aucun remplissage.",
     "- impact: la conséquence concrète pour le dev. Si aucune, dis-le franchement.",
@@ -169,7 +169,7 @@ function buildPrompt(input: {
     input.description ? `Description courte: ${input.description}` : "",
     input.metrics ? `Métriques mesurées: ${input.metrics}` : "",
     "",
-    "Contenu scrapé:",
+    "Contenu :",
     input.sourceText,
   ]
     .filter(Boolean)
