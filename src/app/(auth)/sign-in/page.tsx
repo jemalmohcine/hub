@@ -1,7 +1,12 @@
 import { SignInForm } from "@/shared/ui/auth-forms";
 import { Alert, AuthShell, Card } from "@/design-system";
 
-export const metadata = { title: "Connexion" };
+export const metadata = {
+  title: "Connexion",
+  description: "Accède à ton hub développeur. Google, GitHub ou email.",
+  alternates: { canonical: "/sign-in" },
+  robots: { index: false, follow: true },
+};
 
 export default async function SignInPage({
   searchParams,

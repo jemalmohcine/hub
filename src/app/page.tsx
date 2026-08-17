@@ -1,11 +1,5 @@
-import {
-  Blocks,
-  KeyRound,
-  LayoutDashboard,
-  ShieldCheck,
-  Sparkles,
-  WalletCards,
-} from "lucide-react";
+import type { Metadata } from "next";
+import { KeyRound, ShieldCheck } from "lucide-react";
 import {
   Atmosphere,
   BrandMark,
@@ -18,49 +12,141 @@ import {
   Text,
   ThemeToggle,
 } from "@/design-system";
+import {
+  getSortedModules,
+  type ModuleId,
+} from "@/core/module-registry";
+import {
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  absoluteUrl,
+  siteOrigin,
+} from "@/lib/site";
 
-const PILLARS = [
-  {
-    icon: LayoutDashboard,
-    title: "Un shell, plusieurs modules",
-    description:
-      "DevHub est le cadre commun : navigation, compte, rôles et abonnement. Chaque outil (AI, etc.) s’y branche en onglet, sans réinventer l’auth ni les settings.",
-  },
-  {
-    icon: KeyRound,
-    title: "Auth & accès prêts",
-    description:
-      "Connexion email, Google ou GitHub, rôles user/admin et accès selon ton plan. Tu ouvres un module seulement si ton compte y a droit.",
-  },
-  {
-    icon: WalletCards,
-    title: "Billing abstrait",
-    description:
-      "Free / Pro côté produit, sans coller Stripe dans le code. Le paiement se branche plus tard. Le hub reste le même.",
-  },
-] as const;
+const LANDING_PITCH: Record<ModuleId, string> = {
+  overview:
+    "Un tableau de bord unique : ce qui a changé, tes modules, et un accès rapide à tout le hub.",
+  ai: "Un fil d’actualités IA lisible : modèles, prix, dépôts et alertes quand il faut agir.",
+  cv: "Crée, adapte et exporte ton CV développeur, y compris pour une offre précise.",
+  jobs: "Offres près de chez toi ou en télétravail, filtrées selon ton CV, et suivi des candidatures.",
+  snippets:
+    "Tes bouts de code et tes notes, retrouvés par langage, tag ou intention, sans quitter le hub.",
+  expenses:
+    "Tes abonnements dev, le budget du mois, et des alternatives moins chères à comparer.",
+};
 
 const STEPS = [
   {
     step: "01",
-    title: "Tu te connectes",
-    text: "Compte sécurisé, profil, thème et préférences dans Settings.",
+    title: "Tu crées un compte",
+    text: "Google, GitHub ou email. Tu peux ajouter un mot de passe plus tard si tu t’es inscrit avec Google.",
   },
   {
     step: "02",
-    title: "Tu ouvres le hub",
-    text: "Overview, modules actifs, et placeholders pour ce qui arrive.",
+    title: "Tu ouvres tes modules",
+    text: "AI, CV, candidatures, snippets et budget outils vivent dans le même espace, sur téléphone comme sur ordinateur.",
   },
   {
     step: "03",
-    title: "Tu actives des modules",
-    text: "Chaque module vit dans le même shell, PWA mobile-first incluse.",
+    title: "Tu travailles au même endroit",
+    text: "Plus besoin de dix onglets. Tes notes, tes offres et ta veille restent dans DevHub.",
   },
 ] as const;
 
+const FAQS = [
+  {
+    question: "C’est quoi DevHub ?",
+    answer:
+      "DevHub est un hub pour développeurs : veille IA, CV, candidatures, snippets et suivi du budget des outils, dans un seul espace.",
+  },
+  {
+    question: "Puis-je me connecter avec Google ?",
+    answer:
+      "Oui, avec Google, GitHub ou email. Si tu t’inscris avec Google, tu peux ensuite ajouter un mot de passe pour te connecter aussi avec ton email.",
+  },
+  {
+    question: "DevHub est-il gratuit ?",
+    answer:
+      "Oui, tu peux créer un compte gratuitement. Certains modules avancés sont réservés au plan Pro.",
+  },
+  {
+    question: "Est-ce que ça marche sur téléphone ?",
+    answer:
+      "Oui. DevHub est pensé mobile-first et s’installe comme une application (PWA).",
+  },
+] as const;
+
+export const metadata: Metadata = {
+  title: {
+    absolute: `${SITE_NAME} : veille IA, CV, candidatures, snippets et budget outils`,
+  },
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: `${SITE_NAME} · hub développeur`,
+    description: SITE_DESCRIPTION,
+    url: "/",
+  },
+};
+
+function landingJsonLd() {
+  const origin = siteOrigin();
+  const modules = getSortedModules();
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "@id": `${origin}/#app`,
+        name: SITE_NAME,
+        url: origin,
+        description: SITE_DESCRIPTION,
+        applicationCategory: "DeveloperApplication",
+        operatingSystem: "Web",
+        inLanguage: "fr-FR",
+        image: absoluteUrl("/icons/icon-512x512.png"),
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "EUR",
+        },
+        featureList: modules.map((mod) => `${mod.label} : ${LANDING_PITCH[mod.id]}`),
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${origin}/#website`,
+        name: SITE_NAME,
+        url: origin,
+        inLanguage: "fr-FR",
+        description: SITE_DESCRIPTION,
+        publisher: { "@id": `${origin}/#app` },
+      },
+      {
+        "@type": "FAQPage",
+        "@id": `${origin}/#faq`,
+        inLanguage: "fr-FR",
+        mainEntity: FAQS.map((item) => ({
+          "@type": "Question",
+          name: item.question,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: item.answer,
+          },
+        })),
+      },
+    ],
+  };
+}
+
 export default function LandingPage() {
+  const modules = getSortedModules();
+
   return (
     <div className="relative min-h-dvh overflow-hidden bg-background">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(landingJsonLd()) }}
+      />
       <Atmosphere variant="landing" />
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-[0.2]"
@@ -93,24 +179,22 @@ export default function LandingPage() {
       </header>
 
       <main className="relative z-10">
-        {/* Hero */}
         <section className="flex min-h-[calc(100dvh-5.5rem)] flex-col justify-center pb-16 pt-8 sm:pt-12">
           <Container size="content">
             <Stack gap={5} className="max-w-3xl animate-landing-rise">
-              <Eyebrow>Developer Hub</Eyebrow>
+              <Eyebrow>Hub développeur</Eyebrow>
               <Heading
                 level={1}
                 className="!text-[clamp(2.75rem,8vw,4.75rem)] !leading-[0.95] !tracking-[-0.04em]"
               >
-                DevHub
+                Tout ton métier de dev, au même endroit.
               </Heading>
               <Text
                 size="lg"
                 tone="muted"
                 className="max-w-xl !text-base sm:!text-lg"
               >
-                Le hub développeur qui regroupe auth, modules et settings en un
-                seul endroit. Prêt pour brancher tes outils, dont AI.
+                {SITE_DESCRIPTION}
               </Text>
               <Cluster gap={3} className="pt-1">
                 <LinkButton href="/sign-up" className="min-w-[10rem]">
@@ -128,58 +212,31 @@ export default function LandingPage() {
           </Container>
         </section>
 
-        {/* What it is */}
-        <section className="border-t border-border/80 py-20 sm:py-24">
-          <Container size="content">
-            <div className="grid gap-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16">
-              <Stack gap={3} className="animate-landing-rise [animation-delay:80ms]">
-                <Eyebrow>C’est quoi</Eyebrow>
-                <Heading level={2} className="!text-3xl sm:!text-4xl">
-                  Pas un outil de plus. Une base commune.
-                </Heading>
-              </Stack>
-              <Stack gap={4} className="animate-landing-rise [animation-delay:160ms]">
-                <Text size="lg" tone="muted" className="!text-base sm:!text-lg">
-                  DevHub est le socle d’une suite de modules développeur. Au lieu
-                  de reconstruire connexion, rôles, abonnements et navigation
-                  pour chaque produit, tu as un hub unique où chaque module
-                  s’installe comme un onglet.
-                </Text>
-                <Text tone="muted">
-                  Aujourd’hui : shell authentifié, Overview, Settings, plans Free
-                  / Pro et placeholder AI. Demain : des modules métier qui
-                  réutilisent exactement cette base.
-                </Text>
-              </Stack>
-            </div>
-          </Container>
-        </section>
-
-        {/* Pillars */}
-        <section className="border-t border-border/80 py-20 sm:py-24">
+        <section className="border-t border-border/80 py-20 sm:py-24" aria-labelledby="modules-title">
           <Container size="content">
             <Stack gap={3} className="mb-12 max-w-2xl">
-              <Eyebrow>Ce que tu obtiens</Eyebrow>
-              <Heading level={2} className="!text-3xl sm:!text-4xl">
-                Tout ce qu’un produit SaaS doit avoir avant le produit.
+              <Eyebrow>Modules</Eyebrow>
+              <Heading id="modules-title" level={2} className="!text-3xl sm:!text-4xl">
+                Tout ce que tu utilises déjà, dans un hub unique.
               </Heading>
+              <Text tone="muted">
+                Pas un outil de plus à apprendre : Overview, AI, CV, candidatures,
+                snippets et budget. Tu ouvres un compte, tu retrouves tout.
+              </Text>
             </Stack>
-            <div className="grid gap-10 sm:grid-cols-3">
-              {PILLARS.map((item, index) => (
+            <div className="grid gap-6 sm:grid-cols-2">
+              {modules.map((mod, index) => (
                 <article
-                  key={item.title}
-                  className="animate-landing-rise border-t border-border pt-6"
-                  style={{ animationDelay: `${120 + index * 80}ms` }}
+                  key={mod.id}
+                  className="rounded-2xl border border-border bg-card/40 p-6 backdrop-blur-sm animate-landing-rise"
+                  style={{ animationDelay: `${index * 70}ms` }}
                 >
-                  <item.icon
-                    className="mb-4 size-5 text-primary"
-                    aria-hidden
-                  />
-                  <Heading level={3} className="!text-lg">
-                    {item.title}
-                  </Heading>
-                  <Text size="sm" tone="muted" className="mt-2">
-                    {item.description}
+                  <Cluster gap={3} className="mb-3">
+                    <mod.icon className="size-5 text-primary" aria-hidden />
+                    <Text weight="medium">{mod.label}</Text>
+                  </Cluster>
+                  <Text size="sm" tone="muted">
+                    {LANDING_PITCH[mod.id]}
                   </Text>
                 </article>
               ))}
@@ -187,7 +244,6 @@ export default function LandingPage() {
           </Container>
         </section>
 
-        {/* How it works */}
         <section className="border-t border-border/80 py-20 sm:py-24">
           <Container size="content">
             <div className="grid gap-12 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-start lg:gap-20">
@@ -197,8 +253,8 @@ export default function LandingPage() {
                   Trois étapes. Un hub.
                 </Heading>
                 <Text tone="muted">
-                  Mobile-first, installable en PWA. Le même shell sur téléphone
-                  et desktop.
+                  Mobile-first, installable en PWA. Le même espace sur téléphone
+                  et sur ordinateur.
                 </Text>
               </Stack>
               <ol className="space-y-0">
@@ -224,57 +280,56 @@ export default function LandingPage() {
           </Container>
         </section>
 
-        {/* Modules strip */}
         <section className="border-t border-border/80 py-20 sm:py-24">
           <Container size="content">
-            <Stack gap={3} className="mb-10 max-w-2xl">
-              <Eyebrow>Modules</Eyebrow>
-              <Heading level={2} className="!text-3xl sm:!text-4xl">
-                Overview aujourd’hui. AI demain.
-              </Heading>
-            </Stack>
-            <div className="grid gap-6 sm:grid-cols-2">
-              <div className="rounded-2xl border border-border bg-card/40 p-6 backdrop-blur-sm animate-landing-rise">
-                <Cluster gap={3} className="mb-3">
-                  <Blocks className="size-5 text-primary" aria-hidden />
-                  <Text weight="medium">Overview</Text>
-                  <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                    Actif
-                  </span>
-                </Cluster>
-                <Text size="sm" tone="muted">
-                  Tableau de bord du hub : plan, rôle, et accès
-                  rapide aux modules.
+            <div className="grid gap-10 sm:grid-cols-2">
+              <article className="border-t border-border pt-6">
+                <KeyRound className="mb-4 size-5 text-primary" aria-hidden />
+                <Heading level={3} className="!text-lg">
+                  Connexion comme tu veux
+                </Heading>
+                <Text size="sm" tone="muted" className="mt-2">
+                  Google, GitHub ou email. Tu peux lier un mot de passe ensuite
+                  pour te connecter aussi sans Google.
                 </Text>
-              </div>
-              <div
-                className="rounded-2xl border border-dashed border-border bg-muted/20 p-6 animate-landing-rise"
-                style={{ animationDelay: "100ms" }}
-              >
-                <Cluster gap={3} className="mb-3">
-                  <Sparkles className="size-5 text-muted-foreground" aria-hidden />
-                  <Text weight="medium">AI</Text>
-                  <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                    Phase 2
-                  </span>
-                </Cluster>
-                <Text size="sm" tone="muted">
-                  Module AI branché sur le même shell, réservé au plan Pro.
-                  Placeholder prêt, produit à venir.
+              </article>
+              <article className="border-t border-border pt-6">
+                <ShieldCheck className="mb-4 size-5 text-primary" aria-hidden />
+                <Heading level={3} className="!text-lg">
+                  Tes données, ton compte
+                </Heading>
+                <Text size="sm" tone="muted" className="mt-2">
+                  Un compte, des accès clairs. Les modules Pro restent derrière
+                  un plan, le reste est prêt dès l’inscription.
                 </Text>
-              </div>
+              </article>
             </div>
-            <Cluster gap={2} className="mt-8 text-muted-foreground">
-              <ShieldCheck className="size-4 shrink-0" aria-hidden />
-              <Text size="sm" tone="muted">
-                Accès contrôlé par rôles et par plan. L’admin active les
-                modules.
-              </Text>
-            </Cluster>
           </Container>
         </section>
 
-        {/* Final CTA */}
+        <section className="border-t border-border/80 py-20 sm:py-24" aria-labelledby="faq-title">
+          <Container size="content">
+            <Stack gap={3} className="mb-10 max-w-2xl">
+              <Eyebrow>Questions</Eyebrow>
+              <Heading id="faq-title" level={2} className="!text-3xl sm:!text-4xl">
+                Avant de créer un compte
+              </Heading>
+            </Stack>
+            <div className="divide-y divide-border border-y border-border">
+              {FAQS.map((item) => (
+                <article key={item.question} className="py-6">
+                  <Heading level={3} className="!text-base">
+                    {item.question}
+                  </Heading>
+                  <Text size="sm" tone="muted" className="mt-2">
+                    {item.answer}
+                  </Text>
+                </article>
+              ))}
+            </div>
+          </Container>
+        </section>
+
         <section className="border-t border-border/80 py-20 sm:py-28">
           <Container size="content">
             <div className="relative overflow-hidden rounded-[1.75rem] border border-border bg-gradient-to-br from-primary/15 via-background to-background px-6 py-14 sm:px-12 sm:py-16">
@@ -284,11 +339,11 @@ export default function LandingPage() {
               />
               <Stack gap={4} className="relative max-w-xl animate-landing-rise">
                 <Heading level={2} className="!text-3xl sm:!text-4xl">
-                  Entre dans le hub.
+                  Rejoins DevHub.
                 </Heading>
                 <Text tone="muted">
-                  Crée un compte, explore Overview, et configure Settings. Les
-                  modules suivants se brancheront dessus.
+                  Crée un compte en quelques secondes. Tes modules t’attendent :
+                  AI, CV, candidatures, snippets et budget.
                 </Text>
                 <Cluster gap={3} className="pt-2">
                   <LinkButton href="/sign-up">Créer un compte</LinkButton>
@@ -306,7 +361,7 @@ export default function LandingPage() {
         <Container size="content">
           <Cluster className="justify-between text-sm text-muted-foreground">
             <Text size="sm" tone="muted">
-              © {new Date().getFullYear()} DevHub
+              © {new Date().getFullYear()} {SITE_NAME}
             </Text>
             <Cluster gap={4}>
               <LinkButton href="/sign-in" variant="ghost" size="sm">

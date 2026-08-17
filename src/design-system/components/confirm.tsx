@@ -9,9 +9,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/design-system/components/button";
 import { Dialog } from "@/design-system/components/dialog";
-import { Cluster } from "@/design-system/components/layout";
+import { Cluster, Stack } from "@/design-system/components/layout";
+import { Text } from "@/design-system/components/typography";
 
 export type ConfirmTone = "danger" | "default";
 
@@ -21,6 +23,8 @@ export type ConfirmOptions = {
   confirmLabel?: string;
   cancelLabel?: string;
   tone?: ConfirmTone;
+  /** Runs after the user confirms. The dialog stays open with a spinner until it settles. */
+  action?: () => Promise<void>;
 };
 
 type ConfirmApi = {
@@ -39,13 +43,25 @@ const DEFAULTS = {
   delete: "Supprimer",
 };
 
+function actionErrorMessage(err: unknown): string {
+  if (err instanceof Error && err.message.trim()) return err.message;
+  return "Une erreur est survenue";
+}
+
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<PendingConfirm | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const pendingRef = useRef<PendingConfirm | null>(null);
+  const busyRef = useRef(false);
 
   const settle = useCallback((value: boolean) => {
+    if (busyRef.current && !value) return;
     const current = pendingRef.current;
     pendingRef.current = null;
+    busyRef.current = false;
+    setBusy(false);
+    setError(null);
     setPending(null);
     current?.resolve(value);
   }, []);
@@ -53,19 +69,46 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const confirm = useCallback((options: ConfirmOptions) => {
     return new Promise<boolean>((resolve) => {
       pendingRef.current?.resolve(false);
+      busyRef.current = false;
+      setBusy(false);
+      setError(null);
       const next = { ...options, resolve };
       pendingRef.current = next;
       setPending(next);
     });
   }, []);
 
+  const handleConfirm = useCallback(async () => {
+    const current = pendingRef.current;
+    if (!current || busyRef.current) return;
+    if (!current.action) {
+      settle(true);
+      return;
+    }
+    busyRef.current = true;
+    setBusy(true);
+    setError(null);
+    try {
+      await current.action();
+      settle(true);
+    } catch (err) {
+      busyRef.current = false;
+      setBusy(false);
+      setError(actionErrorMessage(err));
+    }
+  }, [settle]);
+
   const api = useMemo<ConfirmApi>(() => ({ confirm }), [confirm]);
   const tone = pending?.tone ?? "default";
+  const confirmLabel =
+    pending?.confirmLabel ??
+    (tone === "danger" ? DEFAULTS.delete : DEFAULTS.confirm);
 
   return (
     <ConfirmContext.Provider value={api}>
       {children}
       <Dialog
+        chrome="alert"
         open={pending != null}
         onOpenChange={(open) => {
           if (!open) settle(false);
@@ -74,19 +117,35 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
         description={pending?.description}
         size="sm"
         footer={
-          <Cluster gap={2} className="w-full justify-end">
-            <Button type="button" variant="ghost" onClick={() => settle(false)}>
-              {pending?.cancelLabel ?? DEFAULTS.cancel}
-            </Button>
-            <Button
-              type="button"
-              variant={tone === "danger" ? "danger" : "primary"}
-              onClick={() => settle(true)}
-            >
-              {pending?.confirmLabel ??
-                (tone === "danger" ? DEFAULTS.delete : DEFAULTS.confirm)}
-            </Button>
-          </Cluster>
+          <Stack gap={2} className="w-full">
+            {error ? (
+              <Text size="sm" tone="danger">
+                {error}
+              </Text>
+            ) : null}
+            <Cluster gap={2} className="w-full justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={busy}
+                onClick={() => settle(false)}
+              >
+                {pending?.cancelLabel ?? DEFAULTS.cancel}
+              </Button>
+              <Button
+                type="button"
+                variant={tone === "danger" ? "danger" : "primary"}
+                disabled={busy}
+                aria-busy={busy}
+                onClick={() => void handleConfirm()}
+              >
+                {busy ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : null}
+                {confirmLabel}
+              </Button>
+            </Cluster>
+          </Stack>
         }
       />
     </ConfirmContext.Provider>

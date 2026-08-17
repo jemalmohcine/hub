@@ -7,11 +7,12 @@ import { getHubUser, getSessionUser } from "@/core/auth/get-user";
 import { hasPasswordLogin } from "@/core/auth/identities";
 import { getPaymentProvider } from "@/core/billing";
 import type { PlanId, ThemePreference } from "@/core/auth/types";
+import { siteOrigin } from "@/lib/site";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 function appUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  return siteOrigin();
 }
 
 function composeDisplayName(firstName: string, lastName: string) {

@@ -15,7 +15,11 @@ export {
   DialogTitle,
   DialogTrigger,
 } from "@/design-system/components/dialog";
-export type { DialogProps, DialogSize } from "@/design-system/components/dialog";
+export type {
+  DialogProps,
+  DialogSize,
+  DialogChrome,
+} from "@/design-system/components/dialog";
 
 export { Sheet } from "@/design-system/components/sheet";
 export type { SheetProps } from "@/design-system/components/sheet";
