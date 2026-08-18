@@ -33,3 +33,22 @@ export function timestampsForUpdate(
   }
   return next;
 }
+
+function utcDayKey(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+/**
+ * Phone alerts follow the Urgent tab: news whose source date is today,
+ * not a story from yesterday that this scrape only just inserted.
+ * UTC day matches scrapeDayIso (UTC noon) so Europe/Africa stay on that day.
+ */
+export function isFreshPushAlert(
+  publishedAt: string | null | undefined,
+  now = Date.now(),
+): boolean {
+  if (!publishedAt?.trim()) return true;
+  const t = Date.parse(publishedAt);
+  if (!Number.isFinite(t)) return false;
+  return utcDayKey(t) === utcDayKey(now);
+}
