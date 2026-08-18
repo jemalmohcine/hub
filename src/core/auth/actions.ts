@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/core/auth/supabase/server";
 import { getHubUser, getSessionUser } from "@/core/auth/get-user";
-import { hasPasswordLogin } from "@/core/auth/identities";
+import { hasOAuthLogin } from "@/core/auth/identities";
 import { isValidOtp, normalizeOtp, otpErrorMessage } from "@/lib/otp";
 import { getPaymentProvider } from "@/core/billing";
 import type { PlanId, ThemePreference } from "@/core/auth/types";
@@ -157,10 +157,10 @@ export async function requestPasswordOtp(
   if (!user) return { ok: false, error: "Non authentifié." };
 
   const sessionUser = await getSessionUser();
-  if (hasPasswordLogin(sessionUser)) {
+  if (!hasOAuthLogin(sessionUser)) {
     return {
       ok: false,
-      error: "Un mot de passe existe déjà. Utilise le formulaire de changement.",
+      error: "Le code email est pour un compte Google ou GitHub.",
     };
   }
   if (!user.email) {
@@ -189,10 +189,10 @@ export async function setPassword(
   if (!user) return { ok: false, error: "Non authentifié." };
 
   const sessionUser = await getSessionUser();
-  if (hasPasswordLogin(sessionUser)) {
+  if (!hasOAuthLogin(sessionUser)) {
     return {
       ok: false,
-      error: "Un mot de passe existe déjà. Utilise le formulaire de changement.",
+      error: "Le code email est pour un compte Google ou GitHub.",
     };
   }
 
