@@ -97,6 +97,10 @@ export const EUROPEAN_COUNTRY_IDS = new Set([
   "serbie",
 ]);
 
+export function isMoroccoPlace(entry: JobLocation): boolean {
+  return entry.id === "maroc" || entry.countryId === "maroc";
+}
+
 export function isEuropeanPlace(entry: JobLocation): boolean {
   return (
     entry.id === "europe" ||

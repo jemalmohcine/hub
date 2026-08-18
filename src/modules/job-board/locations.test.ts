@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { suggestLocations, resolveLocation } from "@/modules/job-board/locations";
+import { suggestLocations, resolveLocation, isMoroccoPlace } from "@/modules/job-board/locations";
 
 describe("suggestLocations", () => {
   it("returns closest cities and countries for a prefix", () => {
@@ -22,6 +22,8 @@ describe("resolveLocation", () => {
   it("finds Casablanca and Maroc", () => {
     expect(resolveLocation("casa").id).toBe("casablanca");
     expect(resolveLocation("Morocco").id).toBe("maroc");
+    expect(isMoroccoPlace(resolveLocation("casablanca"))).toBe(true);
+    expect(isMoroccoPlace(resolveLocation("paris"))).toBe(false);
     expect(suggestLocations("casa", []).some((entry) => entry.id === "casablanca")).toBe(true);
   });
 });

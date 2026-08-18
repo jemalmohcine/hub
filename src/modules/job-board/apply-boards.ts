@@ -79,8 +79,21 @@ export function wttjJobsSearchUrl(prefs: JobSearchPrefs): string {
   const keywords = searchKeywords(prefs);
   if (keywords) params.set("query", keywords);
   const place = firstPlace(prefs);
-  if (place && (place.id === "france" || place.countryId === "france" || place.id === "belgique" || place.countryId === "belgique")) {
-    params.set("aroundQuery", place.kind === "city" ? `${place.label}, ${place.countryId === "belgique" ? "Belgium" : "France"}` : place.label);
+  if (place) {
+    const country =
+      place.countryId === "belgique"
+        ? "Belgium"
+        : place.countryId === "maroc"
+          ? "Morocco"
+          : place.countryId === "france"
+            ? "France"
+            : null;
+    if (country) {
+      params.set(
+        "aroundQuery",
+        place.kind === "city" ? `${place.label}, ${country}` : place.label,
+      );
+    }
   }
   return `https://www.welcometothejungle.com/fr/jobs?${params.toString()}`;
 }
@@ -128,11 +141,12 @@ function wantsWttj(countries: Set<string>): boolean {
     countries.size === 0 ||
     countries.has("france") ||
     countries.has("belgique") ||
+    countries.has("maroc") ||
     countries.has("europe")
   );
 }
 
-/** Prefill search on the boards that actually have volume — never scrape them. */
+/** Prefill search on the same boards we scrape. */
 export function applyBoardsForPrefs(prefs: JobSearchPrefs): ApplyBoard[] {
   const keywords = searchKeywords(prefs);
   if (!keywords) return [];
@@ -182,7 +196,7 @@ export function applyBoardsForPrefs(prefs: JobSearchPrefs): ApplyBoard[] {
       id: "rekrute",
       label: "Rekrute",
       url: rekruteSearchUrl(prefs),
-      featured: false,
+      featured: true,
     });
   }
 

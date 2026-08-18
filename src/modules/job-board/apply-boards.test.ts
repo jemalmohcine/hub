@@ -36,11 +36,18 @@ describe("applyBoardsForPrefs", () => {
     expect(boards[1]?.url).toContain("Paris");
   });
 
-  it("switches Indeed to Morocco and adds Rekrute, without France Travail", () => {
+  it("switches Indeed to Morocco and adds Rekrute plus WTTJ, without France Travail", () => {
     const boards = applyBoardsForPrefs(prefs({ locations: ["casablanca"] }));
-    expect(boards.map((board) => board.id)).toEqual(["linkedin", "indeed", "rekrute"]);
+    expect(boards.map((board) => board.id)).toEqual([
+      "linkedin",
+      "indeed",
+      "wttj",
+      "rekrute",
+    ]);
     expect(boards.find((board) => board.id === "indeed")?.url).toContain("ma.indeed.com/jobs");
     expect(boards.find((board) => board.id === "rekrute")?.url).toContain("rekrute.com/offres.html");
+    expect(boards.find((board) => board.id === "rekrute")?.featured).toBe(true);
+    expect(boards.find((board) => board.id === "wttj")?.url).toContain("aroundQuery=");
   });
 
   it("keeps both country boards when France and Maroc are selected", () => {

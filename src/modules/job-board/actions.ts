@@ -10,6 +10,7 @@ import { profileFromCv } from "@/modules/job-board/cv-skills";
 import { MAX_JOB_LOCATIONS, resolveLocations } from "@/modules/job-board/locations";
 import { MAX_JOB_ROLES, resolveRoles, rolesToQuery } from "@/modules/job-board/roles";
 import { normalizeWorkModes, onsiteOnly } from "@/modules/job-board/work-modes";
+import { ingestJobsForPrefs } from "@/modules/job-board/ingest";
 import {
   getJobListingById,
   getJobListingByUrl,
@@ -97,6 +98,14 @@ export async function saveJobSearchConfig(
     cvDocumentId: cvId || null,
     keyword: (prefs.keyword ?? "").trim().slice(0, 80),
   });
+  try {
+    await ingestJobsForPrefs(saved);
+  } catch (err) {
+    console.warn(
+      "[jobs] live scrape failed",
+      err instanceof Error ? err.message : err,
+    );
+  }
   const cv = saved.cvDocumentId ? await getCvDocumentById(user.id, saved.cvDocumentId) : null;
   const listings = await listJobListingsForPrefs(saved, profileFromCv(cv) ?? []);
   revalidatePath("/app/career");

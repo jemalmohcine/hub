@@ -65,6 +65,8 @@ const KIND_HINT = {
 
 const SOURCE_LABEL: Record<string, string> = {
   wttj: "WTTJ",
+  rekrute: "Rekrute",
+  linkedin: "LinkedIn",
   remotive: "Remotive",
   jobicy: "Jobicy",
   arbeitnow: "Arbeitnow",
@@ -164,7 +166,7 @@ export function JobBoardWorkspace({
     if (!canSave) return;
     persist(
       prefs,
-      prefs.cvDocumentId ? "Offres filtrées selon ton CV" : "Filtres enregistrés",
+      prefs.cvDocumentId ? "Offres cherchées selon ton CV" : "On a cherché les offres",
     );
   }
 
@@ -455,7 +457,7 @@ export function JobBoardWorkspace({
             title={hasFilters ? "Rien d’assez proche pour l’instant" : "Dis-nous ce que tu cherches"}
             hint={
               hasFilters
-                ? "De nouvelles offres arrivent régulièrement. Les annonces trop anciennes sortent. Affine le titre, la ville ou les années."
+                ? "Enregistre ta recherche : on va chercher sur Rekrute, LinkedIn et WTTJ avec ta ville. Les liens ci-dessous ouvrent les mêmes sites."
                 : "Poste, ville, années d’expérience : tes filtres se sauvegardent. Le CV est optionnel, tu peux le retirer sans perdre le reste."
             }
             action={
@@ -475,7 +477,7 @@ export function JobBoardWorkspace({
         onOpenChange={setSheetOpen}
         desktop="full"
         title="Ta recherche"
-        description="Les offres se mettent à jour régulièrement. Tes filtres (poste, ville, années) restent. Le CV est un filtre en plus, tu peux le retirer."
+        description="Enregistrer lance la recherche sur Rekrute, LinkedIn et WTTJ. Tes filtres (poste, ville, années) restent. Le CV est un filtre en plus, tu peux le retirer."
         headerActions={
           <IconButton label="Fermer" size="sm" onClick={() => setSheetOpen(false)}>
             <X className="h-4 w-4" />
@@ -667,7 +669,7 @@ export function JobBoardWorkspace({
           ) : null}
           <Button type="button" disabled={saveAction.pending || !canSave} onClick={handleSave}>
             {saveAction.pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Filtrer les offres
+            Chercher les offres
           </Button>
           {boards.length > 0 ? (
             <Stack gap={2}>

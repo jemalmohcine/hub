@@ -3,7 +3,9 @@ import type { JobListing } from "@/modules/job-board/types";
 
 /** Higher = a source that actually produces landable offers. */
 export const JOB_SOURCE_QUALITY: Record<string, number> = {
+  rekrute: 92,
   wttj: 90,
+  linkedin: 88,
   remotive: 86,
   wwr: 84,
   himalayas: 80,

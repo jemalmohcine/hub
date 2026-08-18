@@ -2,6 +2,8 @@ import { collectArbeitnow } from "@/modules/job-board/collectors/arbeitnow";
 import { collectHimalayas } from "@/modules/job-board/collectors/himalayas";
 import { collectIndeedFr } from "@/modules/job-board/collectors/indeed-fr";
 import { collectJobicy } from "@/modules/job-board/collectors/jobicy";
+import { collectLinkedIn } from "@/modules/job-board/collectors/linkedin";
+import { collectRekrute } from "@/modules/job-board/collectors/rekrute";
 import { collectRemotive } from "@/modules/job-board/collectors/remotive";
 import { collectWttj, collectWttjPool } from "@/modules/job-board/collectors/wttj";
 import { collectWwr } from "@/modules/job-board/collectors/wwr";
@@ -45,12 +47,14 @@ async function settled(label: string, task: Promise<RawJobHit[]>): Promise<RawJo
 }
 
 /**
- * WTTJ is the volume source for France/Maroc. Remote APIs fill Europe.
- * Indeed RSS is 403 most of the time — short timeout so it cannot block the rest.
+ * Go to the boards people actually open: WTTJ (FR/MA), Rekrute (Maroc),
+ * LinkedIn city search, then remote APIs. Indeed RSS is often 403.
  */
 export async function collectJobsForPrefs(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
   const batches = await Promise.all([
     settled("wttj", collectWttj(prefs)),
+    settled("rekrute", collectRekrute(prefs)),
+    settled("linkedin", collectLinkedIn(prefs)),
     settled("jobicy", collectJobicy(prefs)),
     settled("remotive", collectRemotiveForPrefs(prefs)),
     settled("wwr", collectWwr(prefs)),
@@ -66,6 +70,8 @@ export async function collectDevJobPool(): Promise<RawJobHit[]> {
   const prefs = DEV_POOL_PREFS;
   const batches = await Promise.all([
     settled("wttj", collectWttjPool()),
+    settled("rekrute", collectRekrute({ ...prefs, roleQuery: "développeur" })),
+    settled("linkedin", collectLinkedIn({ ...prefs, roleQuery: "développeur" })),
     settled("jobicy", collectJobicy(prefs)),
     settled("remotive", collectRemotive()),
     settled("wwr", collectWwr(prefs)),
