@@ -67,6 +67,7 @@ async function notifyNewMatches(listings: JobListing[], day: string) {
         href: "/app/career?tab=offers",
         severity: "info",
         dedupeKey: `jobs:matches:${row.user_id}:${day}`,
+        skipPush: true,
       });
       sent += 1;
     } catch {
@@ -100,8 +101,9 @@ async function notifyFollowUps(day: string) {
         title: copy.title,
         body: copy.body,
         href: "/app/career?tab=jobs",
-        severity: "urgent",
+        severity: "warning",
         dedupeKey: `jobs:followup:${userId}:${day}`,
+        skipPush: true,
       });
       sent += 1;
     } catch {

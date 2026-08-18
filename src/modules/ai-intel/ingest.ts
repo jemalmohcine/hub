@@ -7,12 +7,14 @@ import {
 } from "@/modules/ai-intel/enrich-classified";
 import { pushAlertTitle } from "@/modules/ai-intel/essential-recap";
 import { aiIntelItemHref } from "@/modules/ai-intel/item-link";
+import { truncateAtWord } from "@/lib/text";
 import { mergeHits } from "@/modules/ai-intel/merge/merge-hits";
 import { isWorthKeeping, preEnrichPriority } from "@/modules/ai-intel/score";
 import { scrapeDayIso } from "@/modules/ai-intel/scrape-date";
 import {
   timestampsForInsert,
   timestampsForUpdate,
+  isFreshPushAlert,
 } from "@/modules/ai-intel/item-timestamps";
 import { discoverNewSources } from "@/modules/ai-intel/sources/discover";
 import type { AiIntelSource, ClassifiedItem, RawHit } from "@/modules/ai-intel/types";
@@ -21,12 +23,14 @@ import { mapPool } from "@/lib/async-pool";
 
 const SOURCE_CONCURRENCY = 8;
 const ENRICH_CONCURRENCY = 4;
-const MAX_PUSH_ALERTS = 8;
+const MAX_PUSH_ALERTS = 4;
 
 type InsertedIntelItem = ClassifiedItem & { dbId: string };
 
 async function notifyCriticalAlerts(insertedItems: InsertedIntelItem[]) {
-  const critical = insertedItems.filter(isCriticalPushAlert);
+  const critical = insertedItems.filter(
+    (item) => isCriticalPushAlert(item) && isFreshPushAlert(item.publishedAt),
+  );
   if (critical.length === 0) {
     return {
       alerts: 0,
@@ -45,7 +49,7 @@ async function notifyCriticalAlerts(insertedItems: InsertedIntelItem[]) {
 
   for (const item of critical.slice(0, MAX_PUSH_ALERTS)) {
     const title = pushAlertTitle(item, "fr");
-    const body = item.summary.slice(0, 180);
+    const body = truncateAtWord(item.summary, 180);
     const href = aiIntelItemHref(item.dbId);
 
     try {

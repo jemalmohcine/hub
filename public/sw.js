@@ -1,5 +1,5 @@
 /* DevHub PWA — shell cache + Web Push */
-const CACHE = "devhub-shell-v2";
+const CACHE = "devhub-shell-v3";
 const PRECACHE = [
   "/",
   "/manifest.webmanifest",
@@ -89,14 +89,17 @@ self.addEventListener("push", (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title || "DevHub", {
-      body: data.body || "",
-      icon: "/icons/icon-192x192.png",
-      badge: "/icons/icon-192x192.png",
-      tag: data.tag || "devhub",
-      renotify: true,
-      data: { href: data.href || "/app/ai" },
-    }),
+    (async () => {
+      if (data.severity && data.severity !== "urgent") return;
+      await self.registration.showNotification(data.title || "DevHub", {
+        body: data.body || "",
+        icon: "/icons/icon-192x192.png",
+        badge: "/icons/icon-192x192.png",
+        tag: data.tag || "ai:urgent",
+        renotify: true,
+        data: { href: data.href || "/app/ai" },
+      });
+    })(),
   );
 });
 
