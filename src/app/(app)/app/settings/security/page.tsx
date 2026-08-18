@@ -76,11 +76,11 @@ export default async function SecuritySettingsPage({
               <div>
                 <Text weight="medium">Ajouter un mot de passe</Text>
                 <Text size="sm" tone="muted" className="mt-1">
-                  Ton compte a été créé avec Google ou GitHub. Ajoute un mot de
-                  passe pour te connecter aussi avec le même email.
+                  On envoie un code à {user.email} pour vérifier que c’est bien
+                  toi. Tu le saisis ici, puis tu choisis un mot de passe.
                 </Text>
               </div>
-              <SetPasswordForm />
+              <SetPasswordForm email={user.email} />
             </>
           )}
         </Stack>

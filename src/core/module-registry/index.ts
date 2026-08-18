@@ -78,9 +78,9 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     id: "snippets",
     label: "Snippets",
     description: "Snippets, notes et recherche doc",
-    pageDescription: "Tes bouts de code réutilisables et tes notes techniques.",
+    pageDescription: "Tes bouts de code, classés dans tes dossiers.",
     upsell:
-      "Stocke tes snippets, retrouve-les par langage ou tag, et cherche dans la doc sans quitter le hub.",
+      "Range tes snippets dans des dossiers (Personnel, Professionnel…), retrouve-les, et cherche dans la doc.",
     href: "/app/snippets",
     order: 30,
     requiredEntitlement: ENTITLEMENTS.snippets,

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/core/auth/supabase/server";
 import { getHubUser, getSessionUser } from "@/core/auth/get-user";
 import { hasPasswordLogin } from "@/core/auth/identities";
+import { isValidOtp, normalizeOtp, otpErrorMessage } from "@/lib/otp";
 import { getPaymentProvider } from "@/core/billing";
 import type { PlanId, ThemePreference } from "@/core/auth/types";
 import { siteOrigin } from "@/lib/site";
@@ -146,6 +147,40 @@ export async function resetPassword(
   redirect("/app/settings/security?password=updated");
 }
 
+/** Send a 6-digit code to the signed-in Google/GitHub user's email. */
+export async function requestPasswordOtp(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  void formData;
+  const user = await getHubUser();
+  if (!user) return { ok: false, error: "Non authentifié." };
+
+  const sessionUser = await getSessionUser();
+  if (hasPasswordLogin(sessionUser)) {
+    return {
+      ok: false,
+      error: "Un mot de passe existe déjà. Utilise le formulaire de changement.",
+    };
+  }
+  if (!user.email) {
+    return { ok: false, error: "Aucun email sur ce compte." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.reauthenticate();
+  if (!error) return { ok: true };
+
+  const otp = await supabase.auth.signInWithOtp({
+    email: user.email,
+    options: { shouldCreateUser: false },
+  });
+  if (otp.error) {
+    return { ok: false, error: otpErrorMessage(otp.error.message) };
+  }
+  return { ok: true };
+}
+
 export async function setPassword(
   _prev: ActionResult | null,
   formData: FormData,
@@ -161,9 +196,13 @@ export async function setPassword(
     };
   }
 
+  const code = normalizeOtp(String(formData.get("otp") ?? ""));
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm_password") ?? "");
 
+  if (!isValidOtp(code)) {
+    return { ok: false, error: "Entre le code reçu par email." };
+  }
   if (password.length < 8) {
     return {
       ok: false,
@@ -175,9 +214,32 @@ export async function setPassword(
   }
 
   const supabase = await createClient();
+  const withNonce = await supabase.auth.updateUser({
+    password,
+    nonce: code,
+  });
+  if (!withNonce.error) {
+    await supabase.auth.refreshSession();
+    revalidatePath("/app/settings/security");
+    return { ok: true };
+  }
+
+  if (!user.email) {
+    return { ok: false, error: otpErrorMessage(withNonce.error.message, "verify") };
+  }
+
+  const verified = await supabase.auth.verifyOtp({
+    email: user.email,
+    token: code,
+    type: "email",
+  });
+  if (verified.error) {
+    return { ok: false, error: otpErrorMessage(verified.error.message, "verify") };
+  }
+
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
-    return { ok: false, error: error.message };
+    return { ok: false, error: otpErrorMessage(error.message, "verify") };
   }
 
   await supabase.auth.refreshSession();

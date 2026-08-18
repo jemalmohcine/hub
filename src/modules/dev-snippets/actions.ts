@@ -66,13 +66,23 @@ async function categoryNamesForUser(userId: string): Promise<Map<string, string>
   return new Map(categories.map((category) => [category.id, category.name]));
 }
 
+async function ownedCategoryId(
+  userId: string,
+  categoryId: string | null | undefined,
+  names?: Map<string, string>,
+): Promise<string | null> {
+  if (!categoryId) return null;
+  const known = names ?? (await categoryNamesForUser(userId));
+  return known.has(categoryId) ? categoryId : null;
+}
+
 async function ensureCategory(
   userId: string,
   name: string,
 ): Promise<DevSnippetCategory> {
   const supabase = await createClient();
   const trimmed = normalizeCategoryName(name);
-  if (!trimmed) throw new Error("Impossible de nommer la catégorie.");
+  if (!trimmed) throw new Error("Impossible de nommer le dossier.");
   const existing = await listDevSnippetCategories(userId);
   const matched = matchExistingCategory(
     trimmed,
@@ -132,16 +142,27 @@ async function assignCategory(
 export async function createDevSnippet(input: DevSnippetInput) {
   const user = await requireUser();
   const supabase = await createClient();
+  const names = await categoryNamesForUser(user.id);
+  const categoryId = await ownedCategoryId(user.id, input.categoryId, names);
 
   const { data, error } = await supabase
     .from("dev_snippets")
-    .insert(rowFromInput(input, user.id, null))
+    .insert(rowFromInput(input, user.id, categoryId))
     .select(SNIPPET_SELECT)
     .single();
 
   if (error) throw new Error(error.message);
   revalidateSnippetsLater();
-  return rowToSnippet(data);
+  return rowToSnippet(data, names);
+}
+
+export async function createDevSnippetCategory(
+  name: string,
+): Promise<DevSnippetCategory> {
+  const user = await requireUser();
+  const category = await ensureCategory(user.id, name);
+  revalidatePath("/app/snippets");
+  return category;
 }
 
 export async function updateDevSnippet(
@@ -161,6 +182,9 @@ export async function updateDevSnippet(
   if (input.referenceUrl !== undefined) patch.reference_url = input.referenceUrl?.trim() || null;
   if (input.imageUrl !== undefined) patch.image_url = normalizeSnippetImage(input.imageUrl);
   if (input.isPinned !== undefined) patch.is_pinned = input.isPinned;
+  if (input.categoryId !== undefined) {
+    patch.category_id = await ownedCategoryId(user.id, input.categoryId, names);
+  }
 
   const { data, error } = await supabase
     .from("dev_snippets")

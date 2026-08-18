@@ -1,3 +1,5 @@
+import { isValidOtp, normalizeOtp } from "@/lib/otp";
+
 export type FieldErrors = Record<string, string>;
 
 export type ValidationResult = {
@@ -113,8 +115,26 @@ export function validateResetPassword(formData: FormData): ValidationResult {
   return { ok: true, data: { password, confirm_password: confirm } };
 }
 
-/** Same rules as a reset: password + confirm, no current password. */
-export const validateSetPassword = validateResetPassword;
+/** Same rules as a reset, plus the email verification code. */
+export function validateSetPassword(formData: FormData): ValidationResult {
+  const otp = String(formData.get("otp") ?? "");
+  const result = validateResetPassword(formData);
+  const fields: FieldErrors = result.ok ? {} : { ...result.fields };
+
+  if (!isValidOtp(otp)) {
+    fields.otp = "Entre le code à 6 chiffres reçu par email.";
+  }
+
+  if (Object.keys(fields).length > 0) return { ok: false, fields };
+  return {
+    ok: true,
+    data: {
+      otp: normalizeOtp(otp),
+      password: String(formData.get("password") ?? ""),
+      confirm_password: String(formData.get("confirm_password") ?? ""),
+    },
+  };
+}
 
 export function validateChangePassword(formData: FormData): ValidationResult {
   const current = String(formData.get("current_password") ?? "");

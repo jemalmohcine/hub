@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   Copy,
   ExternalLink,
+  FolderPlus,
   Loader2,
   Pin,
   PinOff,
@@ -34,8 +35,8 @@ import {
   useToast,
 } from "@/design-system";
 import {
-  assignDevSnippetCategory,
   createDevSnippet,
+  createDevSnippetCategory,
   deleteDevSnippet,
   deleteDevSnippetCategory,
   searchDevSnippets,
@@ -56,7 +57,8 @@ import type {
   DevSnippetKind,
   WebSearchProvider,
 } from "@/modules/dev-snippets/types";
-import { WEB_SEARCH_PROVIDERS } from "@/modules/dev-snippets/types";
+import { WEB_SEARCH_PROVIDERS, SUGGESTED_SNIPPET_FOLDERS } from "@/modules/dev-snippets/types";
+import { foldCase } from "@/lib/text";
 import { cn } from "@/lib/utils";
 
 const EMPTY_FORM = {
@@ -67,6 +69,7 @@ const EMPTY_FORM = {
   tags: "",
   referenceUrl: "",
   imageUrl: "",
+  categoryId: "",
 };
 
 export function SnippetsWorkspace({
@@ -89,9 +92,8 @@ export function SnippetsWorkspace({
   const [quickSearch, setQuickSearch] = useState("");
   const [editing, setEditing] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [pendingCategoryIds, setPendingCategoryIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [folderName, setFolderName] = useState("");
+  const [folderPending, setFolderPending] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const { run, pending } = useAsyncAction();
   const toast = useToast();
@@ -167,7 +169,7 @@ export function SnippetsWorkspace({
 
   function startCreate() {
     setEditing(true);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, categoryId: categoryFilter ?? "" });
     setSelectedId(null);
     setDetailOpen(true);
   }
@@ -183,6 +185,7 @@ export function SnippetsWorkspace({
       tags: item.tags.join(", "),
       referenceUrl: item.referenceUrl ?? "",
       imageUrl: item.imageUrl ?? "",
+      categoryId: item.categoryId ?? "",
     });
   }
 
@@ -224,30 +227,10 @@ export function SnippetsWorkspace({
     });
   }
 
-  function queueCategory(id: string) {
-    setPendingCategoryIds((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
-    void assignDevSnippetCategory(id)
-      .then((updated) => {
-        setSnippets((prev) =>
-          prev.map((item) => (item.id === id ? updated : item)),
-        );
-        rememberCategory(updated);
-      })
-      .catch(() => {
-        /* keep the snippet even if ranking fails */
-      })
-      .finally(() => {
-        setPendingCategoryIds((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-      });
-  }
+  const unusedSuggestions = useMemo(() => {
+    const used = new Set(categories.map((category) => foldCase(category.name)));
+    return SUGGESTED_SNIPPET_FOLDERS.filter((name) => !used.has(foldCase(name)));
+  }, [categories]);
 
   function handleSave() {
     const payload = {
@@ -256,6 +239,7 @@ export function SnippetsWorkspace({
       language: form.language,
       content: form.content,
       tags: parseTags(form.tags),
+      categoryId: form.categoryId || null,
       referenceUrl: form.referenceUrl || null,
       imageUrl: form.imageUrl || null,
     };
@@ -268,8 +252,8 @@ export function SnippetsWorkspace({
           setSnippets((prev) =>
             prev.map((item) => (item.id === selectedId ? updated : item)),
           );
+          rememberCategory(updated);
           setEditing(false);
-          queueCategory(updated.id);
         },
       });
       return;
@@ -280,21 +264,43 @@ export function SnippetsWorkspace({
       error: "Impossible de créer le snippet",
       onSuccess: (created) => {
         setSnippets((prev) => [created, ...prev]);
+        rememberCategory(created);
         setSelectedId(created.id);
         setEditing(false);
         setForm(EMPTY_FORM);
-        queueCategory(created.id);
       },
     });
+  }
+
+  async function addFolder(name: string) {
+    const trimmed = name.trim();
+    if (!trimmed || folderPending) return;
+    setFolderPending(true);
+    try {
+      const created = await createDevSnippetCategory(trimmed);
+      setCategories((prev) => {
+        if (prev.some((category) => category.id === created.id)) return prev;
+        return [...prev, created].sort((a, b) =>
+          a.name.localeCompare(b.name, "fr"),
+        );
+      });
+      setCategoryFilter(created.id);
+      setFolderName("");
+      toast.success("Dossier créé");
+    } catch {
+      toast.error("Impossible de créer le dossier");
+    } finally {
+      setFolderPending(false);
+    }
   }
 
   async function handleDeleteCategory(id: string) {
     const category = categories.find((item) => item.id === id);
     const ok = await confirm({
-      title: "Supprimer cette catégorie ?",
+      title: "Supprimer ce dossier ?",
       description: category
-        ? `« ${category.name} » sera retirée. Tes snippets restent, sans catégorie.`
-        : "Tes snippets restent, sans catégorie.",
+        ? `« ${category.name} » sera retiré. Tes snippets restent, sans dossier.`
+        : "Tes snippets restent, sans dossier.",
       confirmLabel: "Supprimer",
       tone: "danger",
       action: () => deleteDevSnippetCategory(id),
@@ -310,7 +316,7 @@ export function SnippetsWorkspace({
       ),
     );
     if (categoryFilter === id) setCategoryFilter(null);
-    toast.success("Catégorie supprimée");
+    toast.success("Dossier supprimé");
   }
 
   async function handleDelete(id: string) {
@@ -468,19 +474,20 @@ export function SnippetsWorkspace({
         </Cluster>
       ) : (
         <Text size="sm" tone="muted">
-          Tape un mot, un langage ou une intention. Filtre aussi par les catégories.
+          Tape un mot, un langage ou une intention. Filtre aussi par dossier.
         </Text>
       )}
 
       <Stack gap={2}>
         <Cluster gap={2} className="items-center">
-          <Sparkles className="h-3.5 w-3.5 text-primary" />
+          <FolderPlus className="h-3.5 w-3.5 text-primary" />
           <Text size="sm" weight="medium">
-            Catégories
+            Dossiers
           </Text>
         </Cluster>
         <Text size="sm" tone="muted">
-          L’IA les génère d’après le titre et le contenu. Tu n’as rien à ajouter.
+          Range tes snippets comme tu veux : Personnel, Professionnel, et les
+          dossiers que tu crées.
         </Text>
         <Cluster gap={2} className="flex-wrap items-center">
           <Button
@@ -489,7 +496,7 @@ export function SnippetsWorkspace({
             variant={categoryFilter === null ? "primary" : "outline"}
             onClick={() => setCategoryFilter(null)}
           >
-            Toutes
+            Tous
           </Button>
           {categories.map((category) => (
             <Button
@@ -519,6 +526,51 @@ export function SnippetsWorkspace({
             </Button>
           ) : null}
         </Cluster>
+        {unusedSuggestions.length > 0 ? (
+          <Cluster gap={2} className="flex-wrap items-center">
+            {unusedSuggestions.map((name) => (
+              <Button
+                key={name}
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={folderPending}
+                onClick={() => void addFolder(name)}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {name}
+              </Button>
+            ))}
+          </Cluster>
+        ) : null}
+        <Cluster gap={2} className="max-w-md items-center">
+          <Input
+            value={folderName}
+            onChange={(e) => setFolderName(e.target.value)}
+            placeholder="Nouveau dossier…"
+            aria-label="Nom du dossier"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void addFolder(folderName);
+              }
+            }}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={folderPending || !folderName.trim()}
+            onClick={() => void addFolder(folderName)}
+          >
+            {folderPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FolderPlus className="h-4 w-4" />
+            )}
+            Créer
+          </Button>
+        </Cluster>
       </Stack>
       </Stack>
 
@@ -532,7 +584,7 @@ export function SnippetsWorkspace({
                 search.trim()
                   ? `Aucun snippet ne correspond à « ${search.trim()} ».`
                   : categoryFilter
-                    ? "Cette catégorie est vide."
+                    ? "Ce dossier est vide."
                     : "Crée ta première note ou ton premier extrait de code."
               }
             />
@@ -609,11 +661,6 @@ export function SnippetsWorkspace({
                   <Cluster gap={2} className="mt-2 flex-wrap">
                     {item.categoryName ? (
                       <Badge tone="info">{item.categoryName}</Badge>
-                    ) : pendingCategoryIds.has(item.id) ? (
-                      <Badge tone="neutral" className="inline-flex items-center gap-1">
-                        <Sparkles className="h-3 w-3" />
-                        Classement…
-                      </Badge>
                     ) : null}
                     {item.language ? <Badge tone="neutral">{item.language}</Badge> : null}
                     {item.tags.slice(0, 3).map((tag) => (
@@ -677,6 +724,22 @@ export function SnippetsWorkspace({
                   </Select>
                 </Field>
               </div>
+              <Field label="Dossier" htmlFor="snippet-folder">
+                <Select
+                  id="snippet-folder"
+                  value={form.categoryId}
+                  onChange={(e) =>
+                    setForm({ ...form, categoryId: e.target.value })
+                  }
+                >
+                  <option value="">Sans dossier</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
               <Field label="Tags (séparés par des virgules)" htmlFor="snippet-tags">
                 <Input
                   id="snippet-tags"
@@ -710,9 +773,6 @@ export function SnippetsWorkspace({
                   placeholder="Collez votre code, une note, ou joignez une image…"
                 />
               </Field>
-              <Text size="sm" tone="muted">
-                L’IA range le snippet juste après la sauvegarde.
-              </Text>
               <Cluster gap={2}>
                 <Button
                   type="button"
@@ -753,11 +813,6 @@ export function SnippetsWorkspace({
                     ) : null}
                     {selected.categoryName ? (
                       <Badge tone="info">{selected.categoryName}</Badge>
-                    ) : pendingCategoryIds.has(selected.id) ? (
-                      <Badge tone="neutral" className="inline-flex items-center gap-1">
-                        <Sparkles className="h-3 w-3" />
-                        Classement…
-                      </Badge>
                     ) : null}
                   </Cluster>
                 </div>
