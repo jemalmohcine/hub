@@ -1,9 +1,11 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import {
-  requestPasswordReset,
+  changePassword,
+  requestPasswordOtp,
   resetPassword,
+  requestPasswordReset,
   setPassword,
   signInWithPassword,
   signUpWithPassword,
@@ -25,6 +27,7 @@ import {
   useActionToast,
 } from "@/design-system";
 import {
+  validateChangePassword,
   validateForgotPassword,
   validateResetPassword,
   validateSetPassword,
@@ -352,21 +355,56 @@ export function ResetPasswordForm() {
   );
 }
 
-export function SetPasswordForm({
-  existing = false,
-}: {
-  existing?: boolean;
-}) {
+export function SetPasswordForm({ email }: { email: string }) {
+  const [sent, setSent] = useState(false);
+  const [sendState, sendAction, sendPending] = useActionState(
+    requestPasswordOtp,
+    null,
+  );
   const [state, action, pending] = useActionState(setPassword, null);
+  useActionToast(sendState, {
+    success: "Code envoyé",
+    error: "Impossible d’envoyer le code",
+  });
   useActionToast(state, {
-    success: existing ? "Mot de passe mis à jour" : "Mot de passe ajouté",
-    error: existing
-      ? "Impossible de changer le mot de passe"
-      : "Impossible d’ajouter le mot de passe",
+    success: "Mot de passe ajouté",
+    error: "Impossible d’ajouter le mot de passe",
   });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isPending, startTransition] = useTransition();
-  const busy = pending || isPending;
+  const busy = pending || isPending || sendPending;
+
+  useEffect(() => {
+    if (sendState?.ok) setSent(true);
+  }, [sendState]);
+
+  if (state?.ok) {
+    return (
+      <Alert tone="success">
+        Mot de passe ajouté. Tu peux maintenant te connecter avec Google ou
+        avec email + mot de passe.
+      </Alert>
+    );
+  }
+
+  if (!sent) {
+    return (
+      <Form
+        action={(formData) => {
+          startTransition(() => sendAction(formData));
+        }}
+      >
+        <Stack gap={4}>
+          <AuthAlert state={sendState} />
+          <div className="pt-1">
+            <Button type="submit" disabled={sendPending}>
+              {sendPending ? "Envoi…" : "Envoyer le code"}
+            </Button>
+          </div>
+        </Stack>
+      </Form>
+    );
+  }
 
   return (
     <Form
@@ -381,52 +419,141 @@ export function SetPasswordForm({
       }}
     >
       <Stack gap={4}>
+          {sendState && !sendState.ok ? (
+            <AuthAlert state={sendState} />
+          ) : (
+            <Alert tone="success">Code envoyé à {email}. Il expire vite.</Alert>
+          )}
+          <AuthAlert state={state} />
+          <Field
+            label="Code de vérification"
+            htmlFor="otp"
+            error={errors.otp}
+            hint="6 chiffres, dans l’email"
+          >
+            <Input
+              id="otp"
+              name="otp"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={8}
+              onChange={() => clearField(setErrors, "otp")}
+            />
+          </Field>
+          <Field
+            label="Mot de passe"
+            htmlFor="password"
+            error={errors.password}
+            hint="Au moins 8 caractères"
+          >
+            <PasswordInput
+              id="password"
+              name="password"
+              autoComplete="new-password"
+              onChange={() => clearField(setErrors, "password")}
+            />
+          </Field>
+          <Field
+            label="Confirmer"
+            htmlFor="confirm_password"
+            error={errors.confirm_password}
+          >
+            <PasswordInput
+              id="confirm_password"
+              name="confirm_password"
+              autoComplete="new-password"
+              onChange={() => clearField(setErrors, "confirm_password")}
+            />
+          </Field>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Button type="submit" disabled={busy}>
+              {pending || isPending ? "Enregistrement…" : "Ajouter un mot de passe"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={sendPending}
+              onClick={() => {
+                startTransition(() => sendAction(new FormData()));
+              }}
+            >
+              {sendPending ? "Envoi…" : "Renvoyer le code"}
+            </Button>
+          </div>
+        </Stack>
+      </Form>
+  );
+}
+
+export function ChangePasswordForm() {
+  const [state, action, pending] = useActionState(changePassword, null);
+  useActionToast(state, {
+    success: "Mot de passe changé",
+    error: "Impossible de changer le mot de passe",
+  });
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [isPending, startTransition] = useTransition();
+  const busy = pending || isPending;
+
+  return (
+    <Form
+      action={(formData) => {
+        const result = validateChangePassword(formData);
+        if (!result.ok) {
+          setErrors(result.fields);
+          return;
+        }
+        setErrors({});
+        startTransition(() => action(formData));
+      }}
+    >
+      <Stack gap={4}>
         {state?.ok ? (
-          <Alert tone="success">
-            {existing
-              ? "Mot de passe mis à jour."
-              : "Mot de passe ajouté. Tu peux maintenant te connecter avec Google ou avec email + mot de passe."}
-          </Alert>
+          <Alert tone="success">Mot de passe mis à jour.</Alert>
         ) : null}
         <AuthAlert state={state} />
-        {state?.ok ? null : (
-          <>
-            <Field
-              label={existing ? "Nouveau mot de passe" : "Mot de passe"}
-              htmlFor="password"
-              error={errors.password}
-              hint="Au moins 8 caractères"
-            >
-              <PasswordInput
-                id="password"
-                name="password"
-                autoComplete="new-password"
-                onChange={() => clearField(setErrors, "password")}
-              />
-            </Field>
-            <Field
-              label="Confirmer"
-              htmlFor="confirm_password"
-              error={errors.confirm_password}
-            >
-              <PasswordInput
-                id="confirm_password"
-                name="confirm_password"
-                autoComplete="new-password"
-                onChange={() => clearField(setErrors, "confirm_password")}
-              />
-            </Field>
-            <div className="pt-1">
-              <Button type="submit" disabled={busy}>
-                {busy
-                  ? "Enregistrement…"
-                  : existing
-                    ? "Enregistrer"
-                    : "Ajouter un mot de passe"}
-              </Button>
-            </div>
-          </>
-        )}
+        <Field
+          label="Mot de passe actuel"
+          htmlFor="current_password"
+          error={errors.current_password}
+        >
+          <PasswordInput
+            id="current_password"
+            name="current_password"
+            autoComplete="current-password"
+            onChange={() => clearField(setErrors, "current_password")}
+          />
+        </Field>
+        <Field
+          label="Nouveau mot de passe"
+          htmlFor="password"
+          error={errors.password}
+          hint="Au moins 8 caractères"
+        >
+          <PasswordInput
+            id="password"
+            name="password"
+            autoComplete="new-password"
+            onChange={() => clearField(setErrors, "password")}
+          />
+        </Field>
+        <Field
+          label="Confirmer le nouveau"
+          htmlFor="confirm_password"
+          error={errors.confirm_password}
+        >
+          <PasswordInput
+            id="confirm_password"
+            name="confirm_password"
+            autoComplete="new-password"
+            onChange={() => clearField(setErrors, "confirm_password")}
+          />
+        </Field>
+        <div className="pt-1">
+          <Button type="submit" disabled={busy}>
+            {busy ? "Mise à jour…" : "Changer le mot de passe"}
+          </Button>
+        </div>
       </Stack>
     </Form>
   );

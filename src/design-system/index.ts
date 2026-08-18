@@ -118,5 +118,6 @@ export {
   validateForgotPassword,
   validateResetPassword,
   validateSetPassword,
+  validateChangePassword,
 } from "@/design-system/lib/validation";
 export type { FieldErrors, ValidationResult } from "@/design-system/lib/validation";

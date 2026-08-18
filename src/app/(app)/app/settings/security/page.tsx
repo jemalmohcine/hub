@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getHubUser, getSessionUser } from "@/core/auth/get-user";
 import { hasPasswordLogin } from "@/core/auth/identities";
 import { signOut } from "@/core/auth/actions";
-import { SetPasswordForm } from "@/shared/ui/auth-forms";
+import { ChangePasswordForm, SetPasswordForm } from "@/shared/ui/auth-forms";
 import {
   Alert,
   Button,
@@ -64,23 +64,23 @@ export default async function SecuritySettingsPage({
           {canSignInWithPassword ? (
             <>
               <div>
-                <Text weight="medium">Nouveau mot de passe</Text>
+                <Text weight="medium">Changer le mot de passe</Text>
                 <Text size="sm" tone="muted" className="mt-1">
-                  Tu es déjà connecté. Pas besoin de l’ancien mot de passe.
+                  Tu peux aussi continuer à te connecter avec Google ou GitHub.
                 </Text>
               </div>
-              <SetPasswordForm existing />
+              <ChangePasswordForm />
             </>
           ) : (
             <>
               <div>
                 <Text weight="medium">Ajouter un mot de passe</Text>
                 <Text size="sm" tone="muted" className="mt-1">
-                  Ton compte a été créé avec Google ou GitHub. Ajoute un mot de
-                  passe pour te connecter aussi avec le même email.
+                  On envoie un code à {user.email} pour vérifier que c’est bien
+                  toi. Tu le saisis ici, puis tu choisis un mot de passe.
                 </Text>
               </div>
-              <SetPasswordForm />
+              <SetPasswordForm email={user.email} />
             </>
           )}
         </Stack>
