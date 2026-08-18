@@ -115,33 +115,3 @@ export function validateResetPassword(formData: FormData): ValidationResult {
 
 /** Same rules as a reset: password + confirm, no current password. */
 export const validateSetPassword = validateResetPassword;
-
-export function validateChangePassword(formData: FormData): ValidationResult {
-  const current = String(formData.get("current_password") ?? "");
-  const password = String(formData.get("password") ?? "");
-  const confirm = String(formData.get("confirm_password") ?? "");
-  const fields: FieldErrors = {};
-
-  if (!current) {
-    fields.current_password = "Mot de passe actuel requis.";
-  }
-
-  const passwordError = validatePassword(password, { min: 8 });
-  if (passwordError) fields.password = passwordError;
-
-  if (!confirm) {
-    fields.confirm_password = "Confirme le nouveau mot de passe.";
-  } else if (password !== confirm) {
-    fields.confirm_password = "Les mots de passe ne correspondent pas.";
-  }
-
-  if (Object.keys(fields).length > 0) return { ok: false, fields };
-  return {
-    ok: true,
-    data: {
-      current_password: current,
-      password,
-      confirm_password: confirm,
-    },
-  };
-}

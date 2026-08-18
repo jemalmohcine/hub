@@ -3,8 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/core/auth/supabase/server";
-import { getHubUser, getSessionUser } from "@/core/auth/get-user";
-import { hasPasswordLogin } from "@/core/auth/identities";
+import { getHubUser } from "@/core/auth/get-user";
 import { getPaymentProvider } from "@/core/billing";
 import type { PlanId, ThemePreference } from "@/core/auth/types";
 import { siteOrigin } from "@/lib/site";
@@ -153,14 +152,6 @@ export async function setPassword(
   const user = await getHubUser();
   if (!user) return { ok: false, error: "Non authentifié." };
 
-  const sessionUser = await getSessionUser();
-  if (hasPasswordLogin(sessionUser)) {
-    return {
-      ok: false,
-      error: "Un mot de passe existe déjà. Utilise le formulaire de changement.",
-    };
-  }
-
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm_password") ?? "");
 
@@ -181,55 +172,6 @@ export async function setPassword(
   }
 
   await supabase.auth.refreshSession();
-  revalidatePath("/app/settings/security");
-  return { ok: true };
-}
-
-export async function changePassword(
-  _prev: ActionResult | null,
-  formData: FormData,
-): Promise<ActionResult> {
-  const user = await getHubUser();
-  if (!user) return { ok: false, error: "Non authentifié." };
-
-  const currentPassword = String(formData.get("current_password") ?? "");
-  const password = String(formData.get("password") ?? "");
-  const confirm = String(formData.get("confirm_password") ?? "");
-
-  if (!currentPassword) {
-    return { ok: false, error: "Mot de passe actuel requis." };
-  }
-  if (password.length < 8) {
-    return {
-      ok: false,
-      error: "Le nouveau mot de passe doit faire au moins 8 caractères.",
-    };
-  }
-  if (password !== confirm) {
-    return { ok: false, error: "Les mots de passe ne correspondent pas." };
-  }
-  if (password === currentPassword) {
-    return {
-      ok: false,
-      error: "Le nouveau mot de passe doit être différent de l’actuel.",
-    };
-  }
-
-  const supabase = await createClient();
-  const { error: reauthError } = await supabase.auth.signInWithPassword({
-    email: user.email,
-    password: currentPassword,
-  });
-
-  if (reauthError) {
-    return { ok: false, error: "Mot de passe actuel incorrect." };
-  }
-
-  const { error } = await supabase.auth.updateUser({ password });
-  if (error) {
-    return { ok: false, error: error.message };
-  }
-
   revalidatePath("/app/settings/security");
   return { ok: true };
 }

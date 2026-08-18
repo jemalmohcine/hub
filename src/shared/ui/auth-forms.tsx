@@ -2,7 +2,6 @@
 
 import { useActionState, useState, useTransition } from "react";
 import {
-  changePassword,
   requestPasswordReset,
   resetPassword,
   setPassword,
@@ -26,7 +25,6 @@ import {
   useActionToast,
 } from "@/design-system";
 import {
-  validateChangePassword,
   validateForgotPassword,
   validateResetPassword,
   validateSetPassword,
@@ -354,11 +352,17 @@ export function ResetPasswordForm() {
   );
 }
 
-export function SetPasswordForm() {
+export function SetPasswordForm({
+  existing = false,
+}: {
+  existing?: boolean;
+}) {
   const [state, action, pending] = useActionState(setPassword, null);
   useActionToast(state, {
-    success: "Mot de passe ajouté",
-    error: "Impossible d’ajouter le mot de passe",
+    success: existing ? "Mot de passe mis à jour" : "Mot de passe ajouté",
+    error: existing
+      ? "Impossible de changer le mot de passe"
+      : "Impossible d’ajouter le mot de passe",
   });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isPending, startTransition] = useTransition();
@@ -379,15 +383,16 @@ export function SetPasswordForm() {
       <Stack gap={4}>
         {state?.ok ? (
           <Alert tone="success">
-            Mot de passe ajouté. Tu peux maintenant te connecter avec Google
-            ou avec email + mot de passe.
+            {existing
+              ? "Mot de passe mis à jour."
+              : "Mot de passe ajouté. Tu peux maintenant te connecter avec Google ou avec email + mot de passe."}
           </Alert>
         ) : null}
         <AuthAlert state={state} />
         {state?.ok ? null : (
           <>
             <Field
-              label="Mot de passe"
+              label={existing ? "Nouveau mot de passe" : "Mot de passe"}
               htmlFor="password"
               error={errors.password}
               hint="Au moins 8 caractères"
@@ -413,85 +418,15 @@ export function SetPasswordForm() {
             </Field>
             <div className="pt-1">
               <Button type="submit" disabled={busy}>
-                {busy ? "Enregistrement…" : "Ajouter un mot de passe"}
+                {busy
+                  ? "Enregistrement…"
+                  : existing
+                    ? "Enregistrer"
+                    : "Ajouter un mot de passe"}
               </Button>
             </div>
           </>
         )}
-      </Stack>
-    </Form>
-  );
-}
-
-export function ChangePasswordForm() {
-  const [state, action, pending] = useActionState(changePassword, null);
-  useActionToast(state, {
-    success: "Mot de passe changé",
-    error: "Impossible de changer le mot de passe",
-  });
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const [isPending, startTransition] = useTransition();
-  const busy = pending || isPending;
-
-  return (
-    <Form
-      action={(formData) => {
-        const result = validateChangePassword(formData);
-        if (!result.ok) {
-          setErrors(result.fields);
-          return;
-        }
-        setErrors({});
-        startTransition(() => action(formData));
-      }}
-    >
-      <Stack gap={4}>
-        {state?.ok ? (
-          <Alert tone="success">Mot de passe mis à jour.</Alert>
-        ) : null}
-        <AuthAlert state={state} />
-        <Field
-          label="Mot de passe actuel"
-          htmlFor="current_password"
-          error={errors.current_password}
-        >
-          <PasswordInput
-            id="current_password"
-            name="current_password"
-            autoComplete="current-password"
-            onChange={() => clearField(setErrors, "current_password")}
-          />
-        </Field>
-        <Field
-          label="Nouveau mot de passe"
-          htmlFor="password"
-          error={errors.password}
-          hint="Au moins 8 caractères"
-        >
-          <PasswordInput
-            id="password"
-            name="password"
-            autoComplete="new-password"
-            onChange={() => clearField(setErrors, "password")}
-          />
-        </Field>
-        <Field
-          label="Confirmer le nouveau"
-          htmlFor="confirm_password"
-          error={errors.confirm_password}
-        >
-          <PasswordInput
-            id="confirm_password"
-            name="confirm_password"
-            autoComplete="new-password"
-            onChange={() => clearField(setErrors, "confirm_password")}
-          />
-        </Field>
-        <div className="pt-1">
-          <Button type="submit" disabled={busy}>
-            {busy ? "Mise à jour…" : "Changer le mot de passe"}
-          </Button>
-        </div>
       </Stack>
     </Form>
   );
