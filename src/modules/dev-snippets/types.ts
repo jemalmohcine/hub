@@ -28,10 +28,19 @@ export type DevSnippetInput = {
   language?: string | null;
   content: string;
   tags?: string[];
+  categoryId?: string | null;
   referenceUrl?: string | null;
   imageUrl?: string | null;
   isPinned?: boolean;
 };
+
+/** Starter folders the user can create in one tap. */
+export const SUGGESTED_SNIPPET_FOLDERS = [
+  "Personnel",
+  "Professionnel",
+  "Formation",
+  "Veille",
+] as const;
 
 export type WebSearchProvider =
   | "google"
