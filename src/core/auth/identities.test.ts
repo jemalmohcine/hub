@@ -1,5 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { hasPasswordLogin } from "@/core/auth/identities";
+import { hasOAuthLogin, hasPasswordLogin } from "@/core/auth/identities";
+
+describe("hasOAuthLogin", () => {
+  it("is true for a Google account, even with an email identity", () => {
+    expect(
+      hasOAuthLogin({
+        identities: [{ provider: "google" }, { provider: "email" }],
+        app_metadata: { providers: ["google", "email"] },
+      }),
+    ).toBe(true);
+  });
+
+  it("is false for a classic email account", () => {
+    expect(
+      hasOAuthLogin({
+        identities: [{ provider: "email" }],
+        app_metadata: { providers: ["email"] },
+      }),
+    ).toBe(false);
+  });
+});
 
 describe("hasPasswordLogin", () => {
   it("is false for a Google-only account", () => {
@@ -11,13 +31,13 @@ describe("hasPasswordLogin", () => {
     ).toBe(false);
   });
 
-  it("is true once the email identity is linked", () => {
+  it("is false when Google also has an email identity (no password to type)", () => {
     expect(
       hasPasswordLogin({
         identities: [{ provider: "google" }, { provider: "email" }],
         app_metadata: { providers: ["google", "email"] },
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("ignores email in app_metadata when a Google identity exists", () => {
@@ -40,6 +60,15 @@ describe("hasPasswordLogin", () => {
   it("reads app_metadata.providers for a classic email account", () => {
     expect(
       hasPasswordLogin({
+        app_metadata: { providers: ["email"] },
+      }),
+    ).toBe(true);
+  });
+
+  it("is true for an email-only identity", () => {
+    expect(
+      hasPasswordLogin({
+        identities: [{ provider: "email" }],
         app_metadata: { providers: ["email"] },
       }),
     ).toBe(true);

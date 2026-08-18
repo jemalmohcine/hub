@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getHubUser, getSessionUser } from "@/core/auth/get-user";
-import { hasPasswordLogin } from "@/core/auth/identities";
+import { hasOAuthLogin } from "@/core/auth/identities";
 import { signOut } from "@/core/auth/actions";
 import { ChangePasswordForm, SetPasswordForm } from "@/shared/ui/auth-forms";
 import {
@@ -28,7 +28,7 @@ export default async function SecuritySettingsPage({
   if (!user) redirect("/sign-in");
 
   const sessionUser = await getSessionUser();
-  const canSignInWithPassword = hasPasswordLogin(sessionUser);
+  const useEmailCode = hasOAuthLogin(sessionUser);
   const params = await searchParams;
 
   return (
@@ -61,7 +61,18 @@ export default async function SecuritySettingsPage({
 
       <Card>
         <Stack gap={4}>
-          {canSignInWithPassword ? (
+          {useEmailCode ? (
+            <>
+              <div>
+                <Text weight="medium">Ajouter un mot de passe</Text>
+                <Text size="sm" tone="muted" className="mt-1">
+                  On envoie un code à {user.email}. Tu le saisis ici, puis tu
+                  choisis un mot de passe. Pas d’ancien mot de passe.
+                </Text>
+              </div>
+              <SetPasswordForm email={user.email} />
+            </>
+          ) : (
             <>
               <div>
                 <Text weight="medium">Changer le mot de passe</Text>
@@ -70,17 +81,6 @@ export default async function SecuritySettingsPage({
                 </Text>
               </div>
               <ChangePasswordForm />
-            </>
-          ) : (
-            <>
-              <div>
-                <Text weight="medium">Ajouter un mot de passe</Text>
-                <Text size="sm" tone="muted" className="mt-1">
-                  On envoie un code à {user.email} pour vérifier que c’est bien
-                  toi. Tu le saisis ici, puis tu choisis un mot de passe.
-                </Text>
-              </div>
-              <SetPasswordForm email={user.email} />
             </>
           )}
         </Stack>
