@@ -172,10 +172,10 @@ export function PushEnableCard() {
           </Text>
           <Text size="sm" tone="muted" className="mt-1">
             {status === "on"
-              ? "OK. Tu recevras une alerte uniquement pour l’urgent (prix, modèle, projet qui décolle). Plan Pro requis."
+              ? "OK. Une seule alerte téléphone quand quelque chose d’urgent arrive (faille, prix, panne, projet qui explose). Plan Pro requis."
               : status === "denied"
                 ? "Permission refusée. Réactive-la dans Réglages → Notifications de ton téléphone."
-                : "Alertes urgentes seulement : prix, nouveau modèle, projet GitHub qui décolle. Plan Pro requis."}
+                : "Alertes urgentes seulement, une à la fois : faille, prix, panne, projet GitHub qui explose. Plan Pro requis."}
           </Text>
           {!isStandalonePwa() && status === "off" ? (
             <Text size="sm" tone="muted" className="mt-1">

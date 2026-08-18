@@ -41,6 +41,17 @@ async function deleteSubscription(endpoint: string) {
   await admin.from("hub_push_subscriptions").delete().eq("endpoint", endpoint);
 }
 
+function uniqueEndpoints(rows: PushRow[]): PushRow[] {
+  const seen = new Set<string>();
+  const unique: PushRow[] = [];
+  for (const row of rows) {
+    if (seen.has(row.endpoint)) continue;
+    seen.add(row.endpoint);
+    unique.push(row);
+  }
+  return unique;
+}
+
 async function sendToRow(row: PushRow, payload: PushPayload) {
   try {
     await webpush.sendNotification(
@@ -82,7 +93,7 @@ export async function sendPushToUser(userId: string, payload: PushPayload) {
     .select("id, user_id, endpoint, p256dh, auth")
     .eq("user_id", userId);
 
-  const rows = (data ?? []) as PushRow[];
+  const rows = uniqueEndpoints((data ?? []) as PushRow[]);
   let sent = 0;
   for (const row of rows) {
     if (await sendToRow(row, payload)) sent += 1;
@@ -121,7 +132,7 @@ export async function sendPushBroadcast(
     .from("hub_push_subscriptions")
     .select("id, user_id, endpoint, p256dh, auth");
 
-  let rows = (data ?? []) as PushRow[];
+  let rows = uniqueEndpoints((data ?? []) as PushRow[]);
 
   if (opts.category === "ai" && rows.length > 0) {
     const userIds = [...new Set(rows.map((r) => r.user_id))];

@@ -8,6 +8,7 @@ import {
 import { pushAlertTitle } from "@/modules/ai-intel/essential-recap";
 import { aiIntelItemHref } from "@/modules/ai-intel/item-link";
 import { mergeHits } from "@/modules/ai-intel/merge/merge-hits";
+import { buildCriticalPushPayload } from "@/modules/ai-intel/push-digest";
 import { isWorthKeeping, preEnrichPriority } from "@/modules/ai-intel/score";
 import { scrapeDayIso } from "@/modules/ai-intel/scrape-date";
 import {
@@ -21,7 +22,7 @@ import { mapPool } from "@/lib/async-pool";
 
 const SOURCE_CONCURRENCY = 8;
 const ENRICH_CONCURRENCY = 4;
-const MAX_PUSH_ALERTS = 8;
+const MAX_IN_APP_ALERTS = 5;
 
 type InsertedIntelItem = ClassifiedItem & { dbId: string };
 
@@ -41,9 +42,8 @@ async function notifyCriticalAlerts(insertedItems: InsertedIntelItem[]) {
   const { sendPushBroadcast } = await import("@/modules/notifications/push");
 
   let notifications = 0;
-  let pushSent = 0;
 
-  for (const item of critical.slice(0, MAX_PUSH_ALERTS)) {
+  for (const item of critical.slice(0, MAX_IN_APP_ALERTS)) {
     const title = pushAlertTitle(item, "fr");
     const body = item.summary.slice(0, 180);
     const href = aiIntelItemHref(item.dbId);
@@ -68,24 +68,21 @@ async function notifyCriticalAlerts(insertedItems: InsertedIntelItem[]) {
     } catch {
       // optional until migration applied
     }
-
-    const push = await sendPushBroadcast(
-      {
-        title,
-        body,
-        href,
-        tag: `ai:${item.canonicalKey}`,
-        severity: "urgent",
-      },
-      { category: "ai" },
-    );
-    pushSent += push.sent;
   }
+
+  const payload = buildCriticalPushPayload(critical);
+  const push = payload
+    ? await sendPushBroadcast(payload, { category: "ai" })
+    : { sent: 0, skipped: true as const };
 
   return {
     alerts: critical.length,
     notifications,
-    push: { sent: pushSent, skipped: false as const, reason: null },
+    push: {
+      sent: push.sent,
+      skipped: "skipped" in push ? push.skipped : false,
+      reason: null,
+    },
   };
 }
 
