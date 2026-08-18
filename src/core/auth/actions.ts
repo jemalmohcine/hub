@@ -150,7 +150,7 @@ export async function resetPassword(
 /** Send a 6-digit code to the signed-in Google/GitHub user's email. */
 export async function requestPasswordOtp(
   _prev: ActionResult | null,
-  _formData?: FormData,
+  _formData: FormData,
 ): Promise<ActionResult> {
   const user = await getHubUser();
   if (!user) return { ok: false, error: "Non authentifié." };
