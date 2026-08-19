@@ -110,11 +110,17 @@ const URGENCY_RANK: Record<AiUrgency, number> = {
   light: 2,
 };
 
-/** Hot alerts, then trending, then score — read state does not reorder. */
+/** Hot alerts, then unread, then trending, then score. */
 export function sortForDeveloper(a: AiIntelItem, b: AiIntelItem): number {
   const ha = isHotAlert(a) ? 1 : 0;
   const hb = isHotAlert(b) ? 1 : 0;
   if (ha !== hb) return hb - ha;
+
+  if (ha && hb) {
+    const ra = a.read ? 1 : 0;
+    const rb = b.read ? 1 : 0;
+    if (ra !== rb) return ra - rb;
+  }
 
   const ta = isTrending(a) ? 1 : 0;
   const tb = isTrending(b) ? 1 : 0;
