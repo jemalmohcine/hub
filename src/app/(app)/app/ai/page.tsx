@@ -13,7 +13,12 @@ import { ModulePage, isModulePageUnlocked } from "@/shared/ui/module-page";
 export const metadata = { title: "Intelligence AI" };
 
 type PageProps = {
-  searchParams: Promise<{ item?: string; key?: string }>;
+  searchParams: Promise<{
+    item?: string;
+    key?: string;
+    tab?: string;
+    period?: string;
+  }>;
 };
 
 export default async function AiModulePage({ searchParams }: PageProps) {
@@ -51,6 +56,8 @@ export default async function AiModulePage({ searchParams }: PageProps) {
         initialLocale={locale}
         deepLinkItemId={params.item ?? null}
         deepLinkCanonicalKey={params.key ?? null}
+        initialTab={params.tab ?? null}
+        initialPeriod={params.period ?? null}
       />
     </ModulePage>
   );
