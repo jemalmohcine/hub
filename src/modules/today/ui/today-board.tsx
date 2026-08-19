@@ -3,6 +3,7 @@ import { ArrowRight, CheckCircle2, ChevronRight } from "lucide-react";
 import { getModule } from "@/core/module-registry";
 import { Badge, Card, Heading, Stack, Text } from "@/design-system";
 import { cn } from "@/design-system/lib/cn";
+import { aiIntelInboxHref } from "@/modules/ai-intel/item-link";
 import type { TodayDigest, TodaySignal, TodayTone } from "@/modules/today/types";
 
 const TONE_ACCENT: Record<TodayTone, string> = {
@@ -91,9 +92,9 @@ export function TodayBoard({ digest }: { digest: TodayDigest }) {
       {digest.highlights.length > 0 ? (
         <Card>
           <div className="mb-3 flex items-center justify-between gap-3">
-            <Heading level={3}>Les alertes du jour</Heading>
+            <Heading level={3}>Alertes non traitées</Heading>
             <Link
-              href="/app/ai"
+              href={aiIntelInboxHref()}
               className="inline-flex items-center gap-1 text-[length:var(--dh-text-sm)] font-medium text-[var(--dh-brand)] hover:underline"
             >
               Tout voir
