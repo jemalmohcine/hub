@@ -287,6 +287,7 @@ export function buildCvHtml(doc: CvDocument): string {
     @media print {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .page { max-width: none; margin: 0; }
+      @page { size: A4; margin: 10mm; }
     }
   </style>
 </head>
@@ -304,16 +305,54 @@ export function buildCvHtml(doc: CvDocument): string {
 </html>`;
 }
 
-export function exportCvPdf(doc: CvDocument): void {
+/** Opens the browser print dialog from a hidden iframe (popups with noopener return null). */
+export function exportCvPdf(doc: CvDocument): boolean {
+  if (typeof document === "undefined") return false;
+
   const html = buildCvHtml(doc);
-  const win = window.open("", "_blank", "noopener,noreferrer");
-  if (!win) return;
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  win.onload = () => {
-    win.print();
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("title", "Export CV");
+  iframe.setAttribute("aria-hidden", "true");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.opacity = "0";
+  iframe.style.pointerEvents = "none";
+  document.body.appendChild(iframe);
+
+  const frameWindow = iframe.contentWindow;
+  const frameDoc = iframe.contentDocument ?? frameWindow?.document;
+  if (!frameWindow || !frameDoc) {
+    iframe.remove();
+    return false;
+  }
+
+  frameDoc.open();
+  frameDoc.write(html);
+  frameDoc.close();
+
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    iframe.remove();
   };
+
+  window.setTimeout(() => {
+    try {
+      frameWindow.focus();
+      frameWindow.print();
+      frameWindow.addEventListener("afterprint", cleanup, { once: true });
+      window.setTimeout(cleanup, 120_000);
+    } catch {
+      cleanup();
+    }
+  }, 350);
+
+  return true;
 }
 
 export function exportCvJson(doc: CvDocument): void {
@@ -399,6 +438,9 @@ function downloadBlob(blob: Blob, filename: string): void {
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  a.rel = "noopener";
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }

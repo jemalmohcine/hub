@@ -82,7 +82,7 @@ export function CvFormTabs({
   onChange: (section: CvFormSection) => void;
 }) {
   return (
-    <div className="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="flex gap-1.5 overflow-x-auto pb-0.5 lg:flex-wrap lg:overflow-visible [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {CV_FORM_TABS.map((tab) => {
         const isActive = active === tab.id;
         return (
@@ -92,13 +92,14 @@ export function CvFormTabs({
             onClick={() => onChange(tab.id)}
             className={cn(
               "inline-flex h-10 shrink-0 flex-col items-start justify-center rounded-2xl border px-3.5 text-left transition-colors",
+              "lg:h-9 lg:flex-row lg:items-center lg:gap-1.5",
               isActive
                 ? "border-[var(--dh-brand)]/40 bg-[var(--dh-brand-soft)]/40"
                 : "border-border/80 bg-card/60 hover:bg-muted/40",
             )}
           >
             <span className="text-sm font-medium leading-none">{tab.label}</span>
-            <span className="mt-1 text-[length:var(--dh-text-2xs)] text-muted-foreground">
+            <span className="mt-1 text-[length:var(--dh-text-2xs)] text-muted-foreground lg:hidden">
               {tab.hint}
             </span>
           </button>

@@ -7,12 +7,14 @@ import { cn } from "@/lib/utils";
 export function ThemePicker({
   value,
   onChange,
+  dense = false,
 }: {
   value: CvThemeId;
   onChange: (theme: CvThemeId) => void;
+  dense?: boolean;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className={dense ? "grid grid-cols-4 gap-2" : "grid grid-cols-2 gap-2"}>
       {CV_THEMES.map((theme) => {
         const active = value === theme.id;
         const c = theme.colors;
@@ -29,7 +31,7 @@ export function ThemePicker({
             )}
           >
             <div
-              className="flex h-16"
+              className={dense ? "flex h-12" : "flex h-16"}
               style={{ background: c.bg }}
             >
               {theme.layout === "sidebar" ? (
@@ -83,11 +85,18 @@ export function ThemePicker({
                 </div>
               )}
             </div>
-            <div className="border-t border-border/60 bg-card/80 px-3 py-2.5">
-              <div className="text-sm font-medium">{theme.label}</div>
-              <div className="mt-0.5 text-[length:var(--dh-text-2xs)] leading-snug text-muted-foreground">
-                {theme.description}
+            <div className={cn(
+              "border-t border-border/60 bg-card/80",
+              dense ? "px-2 py-1.5" : "px-3 py-2.5",
+            )}>
+              <div className={cn("font-medium", dense ? "truncate text-[length:var(--dh-text-2xs)]" : "text-sm")}>
+                {theme.label}
               </div>
+              {dense ? null : (
+                <div className="mt-0.5 text-[length:var(--dh-text-2xs)] leading-snug text-muted-foreground">
+                  {theme.description}
+                </div>
+              )}
             </div>
           </button>
         );

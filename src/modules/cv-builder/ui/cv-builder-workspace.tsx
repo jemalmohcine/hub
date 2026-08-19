@@ -219,8 +219,8 @@ export function CvBuilderWorkspace({
         })}
       </div>
 
-      <div className="hidden gap-6 lg:grid lg:grid-cols-[220px_minmax(0,1fr)_minmax(0,1fr)]">
-        <Stack gap={3}>
+      <div className="hidden lg:grid lg:grid-cols-[16.5rem_minmax(0,1fr)] lg:items-start lg:gap-6">
+        <Stack gap={3} className="min-w-0">
           <CvDocumentPicker
             documents={documents}
             activeId={doc.id}
@@ -231,35 +231,27 @@ export function CvBuilderWorkspace({
             disabled={pending}
           />
           <CvReadinessCard doc={doc} onJump={setFormSection} />
-          <JobTailorCard sourceDoc={doc} onTailored={handleTailored} />
         </Stack>
-        <Stack gap={3}>
+        <Stack gap={4} className="min-w-0">
           <CvFormTabs active={formSection} onChange={setFormSection} />
           <CvForm doc={doc} onChange={update} section={formSection} />
+          <JobTailorCard sourceDoc={doc} onTailored={handleTailored} />
+          {doc.tailorRecommendations && doc.tailorRecommendations.length > 0 ? (
+            <TailorRecommendationsPanel recommendations={doc.tailorRecommendations} />
+          ) : null}
+          <Card className="p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <Text weight="medium">Thème et export</Text>
+              <ExportButtons doc={doc} compact />
+            </div>
+            <ThemePicker
+              dense
+              value={doc.themeId}
+              onChange={(themeId) => update({ ...doc, themeId })}
+            />
+          </Card>
+          <CvPreview doc={doc} className="h-[min(78vh,960px)]" />
         </Stack>
-        <div className="sticky top-24 self-start">
-          <Stack gap={3}>
-            <Card className="p-4">
-              <Text weight="medium" className="mb-3">
-                Thème
-              </Text>
-              <ThemePicker
-                value={doc.themeId}
-                onChange={(themeId) => update({ ...doc, themeId })}
-              />
-            </Card>
-            <CvPreview doc={doc} />
-            {doc.tailorRecommendations && doc.tailorRecommendations.length > 0 ? (
-              <TailorRecommendationsPanel recommendations={doc.tailorRecommendations} />
-            ) : null}
-            <Card className="p-4">
-              <Text weight="medium" className="mb-3">
-                Exporter
-              </Text>
-              <ExportButtons doc={doc} />
-            </Card>
-          </Stack>
-        </div>
       </div>
 
       <div className="lg:hidden">
@@ -299,18 +291,60 @@ export function CvBuilderWorkspace({
   );
 }
 
-function ExportButtons({ doc }: { doc: CvDocument }) {
+function ExportButtons({
+  doc,
+  compact = false,
+}: {
+  doc: CvDocument;
+  compact?: boolean;
+}) {
   const toast = useToast();
+
+  function handlePdf() {
+    const ok = exportCvPdf(doc);
+    if (ok) {
+      toast.info("Choisis « Enregistrer au format PDF » dans la fenêtre d’impression.");
+      return;
+    }
+    toast.error("Impossible d’exporter le PDF. Réessaie.");
+  }
+
+  if (compact) {
+    return (
+      <Cluster gap={2} className="flex-wrap justify-end">
+        <Button type="button" size="sm" onClick={handlePdf}>
+          <Download className="h-4 w-4" />
+          PDF
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            exportCvMarkdown(doc);
+            toast.success("Markdown téléchargé");
+          }}
+        >
+          MD
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            exportCvJson(doc);
+            toast.success("Sauvegarde JSON téléchargée");
+          }}
+        >
+          JSON
+        </Button>
+      </Cluster>
+    );
+  }
 
   return (
     <Stack gap={2}>
-      <Button
-        type="button"
-        onClick={() => {
-          exportCvPdf(doc);
-          toast.info("Fenêtre d'impression ouverte pour exporter en PDF");
-        }}
-      >
+      <Button type="button" onClick={handlePdf}>
         <Download className="h-4 w-4" />
         Exporter en PDF
       </Button>
@@ -337,8 +371,8 @@ function ExportButtons({ doc }: { doc: CvDocument }) {
         Télécharger JSON
       </Button>
       <Text size="sm" tone="muted">
-        Le PDF utilise l’impression du navigateur. Choisissez « Enregistrer au
-        format PDF ».
+        Le PDF ouvre l’impression du navigateur. Choisis « Enregistrer au format
+        PDF ».
       </Text>
     </Stack>
   );

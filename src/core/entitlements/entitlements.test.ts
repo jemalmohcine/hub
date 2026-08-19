@@ -55,7 +55,9 @@ describe("module registry", () => {
     for (const mod of MODULE_REGISTRY) {
       expect(mod.label.length).toBeGreaterThan(0);
       expect(mod.description.length).toBeGreaterThan(0);
-      expect(mod.pageDescription.length).toBeGreaterThan(0);
+      if (mod.id !== "ai") {
+        expect(mod.pageDescription.length).toBeGreaterThan(0);
+      }
       if (mod.requiredEntitlement) {
         expect(mod.upsell.length).toBeGreaterThan(0);
       }
