@@ -33,9 +33,9 @@ import {
   sortForDeveloper,
 } from "@/modules/ai-intel/ui/rank";
 import type { HubLocale } from "@/core/i18n";
-import { toDayKey } from "@/lib/dates";
 import { t } from "@/modules/ai-intel/i18n/locale";
 import type { AiIntelItem } from "@/modules/ai-intel/types";
+import { itemFeedDay } from "@/modules/ai-intel/item-timestamps";
 import { parseAiFeedPeriod, parseAiFeedTab } from "@/modules/ai-intel/item-link";
 import { cn } from "@/lib/utils";
 
@@ -46,20 +46,15 @@ const SECTION_LIMITS = {
   read: 8,
 } as const;
 
-/** Urgent items stay in the period if they were published *or* first seen then. */
+/** Period follows the date on the card, not the last scrape. */
 function itemInPeriod(item: AiIntelItem, range: DateRangeValue): boolean {
-  const published = toDayKey(item.published_at);
-  const ingested = toDayKey(item.ingested_at);
-  if (isHotAlert(item)) {
-    return itemInRange(published, range) || itemInRange(ingested, range);
-  }
-  return itemInRange(published || ingested, range);
+  return itemInRange(itemFeedDay(item), range);
 }
 
 function matchesTab(item: AiIntelItem, tab: TabId): boolean {
   if (tab === "all") return true;
   const kind = detectContentKind(item);
-  if (tab === "urgent") return isHotAlert(item);
+  if (tab === "urgent") return isHotAlert(item) && !item.read;
   if (tab === "github") return kind === "repo";
   if (tab === "tools") return kind === "tool";
   if (tab === "news") return kind !== "repo" && kind !== "tool";
@@ -202,7 +197,7 @@ export function AiIntelWorkspace({
   }, [visiblePool]);
 
   const sections = useMemo(() => {
-    const urgent = searchedPool.filter((i) => matchesTab(i, "urgent"));
+    const urgent = searchedPool.filter((i) => isHotAlert(i));
     const github = searchedPool.filter(
       (i) => matchesTab(i, "github") && !isHotAlert(i),
     );

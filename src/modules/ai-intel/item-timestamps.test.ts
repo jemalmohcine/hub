@@ -3,6 +3,7 @@ import {
   timestampsForInsert,
   timestampsForUpdate,
   isFreshPushAlert,
+  itemFeedDay,
 } from "@/modules/ai-intel/item-timestamps";
 
 const scrapeDay = "2026-08-17T12:00:00.000Z";
@@ -70,5 +71,25 @@ describe("isFreshPushAlert", () => {
   it("treats a missing source date as just seen", () => {
     expect(isFreshPushAlert(null, now)).toBe(true);
     expect(isFreshPushAlert("", now)).toBe(true);
+  });
+});
+
+describe("itemFeedDay", () => {
+  it("uses the published date shown on the card, not the last scrape", () => {
+    expect(
+      itemFeedDay({
+        published_at: "2026-08-17T09:00:00.000Z",
+        ingested_at: "2026-08-19T12:00:00.000Z",
+      }),
+    ).toBe("2026-08-17");
+  });
+
+  it("falls back to ingested_at when the source has no date", () => {
+    expect(
+      itemFeedDay({
+        published_at: null,
+        ingested_at: "2026-08-19T12:00:00.000Z",
+      }),
+    ).toBe("2026-08-19");
   });
 });

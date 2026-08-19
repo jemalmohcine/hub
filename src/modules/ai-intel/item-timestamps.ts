@@ -1,3 +1,5 @@
+import { toDayKey } from "@/lib/dates";
+
 /**
  * published_at is the source date, or the first scrape that saw the item.
  * ingested_at is the last scrape that still listed it.
@@ -51,4 +53,16 @@ export function isFreshPushAlert(
   const t = Date.parse(publishedAt);
   if (!Number.isFinite(t)) return false;
   return utcDayKey(t) === utcDayKey(now);
+}
+
+/**
+ * Day the feed and “Aujourd’hui” use: the date on the card (`published_at`).
+ * `ingested_at` is only the last scrape — GitHub trending still listed today
+ * must not reappear under Today.
+ */
+export function itemFeedDay(item: {
+  published_at: string | null;
+  ingested_at: string;
+}): string {
+  return toDayKey(item.published_at) || toDayKey(item.ingested_at);
 }

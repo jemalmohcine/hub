@@ -29,7 +29,8 @@ export async function getAiIntelFeed(
     .from("ai_intel_items")
     .select("*")
     .order("published_at", { ascending: false, nullsFirst: false })
-    .limit(500);
+    // Year inbox / « À traiter » needs more than a couple of scrape days.
+    .limit(1500);
 
   if (filters.pillar && filters.pillar !== "all") {
     query = query.eq("pillar", filters.pillar);
