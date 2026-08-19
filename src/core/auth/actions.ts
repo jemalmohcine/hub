@@ -147,7 +147,7 @@ export async function resetPassword(
   redirect("/app/settings/security?password=updated");
 }
 
-/** Send a 6-digit code to the signed-in Google/GitHub user's email. */
+/** Send an email verification code to the signed-in Google/GitHub user. */
 export async function requestPasswordOtp(
   _prev: ActionResult | null,
   formData: FormData,

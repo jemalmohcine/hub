@@ -1,4 +1,4 @@
-/** Email OTP / reauthentication nonce from Supabase (usually 6 digits). */
+/** Email OTP / reauthentication nonce from Supabase. Length is not advertised in the UI. */
 const OTP_RE = /^\d{6,8}$/;
 
 export function normalizeOtp(value: string): string {

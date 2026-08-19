@@ -1,8 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { Check, ChevronRight } from "lucide-react";
-import { Text } from "@/design-system";
+import { IconButton, Text } from "@/design-system";
 import { resolveBrief } from "@/modules/ai-intel/brief";
 import type { HubLocale } from "@/core/i18n";
 import { formatDate } from "@/lib/dates";
@@ -52,11 +52,13 @@ export function FeedItemRow({
   item,
   locale,
   onOpen,
+  onToggleTreated,
   compact = false,
 }: {
   item: AiIntelItem;
   locale: HubLocale;
   onOpen: (item: AiIntelItem) => void;
+  onToggleTreated?: (item: AiIntelItem) => void;
   compact?: boolean;
 }) {
   const copy = t(locale);
@@ -90,18 +92,20 @@ export function FeedItemRow({
   }
 
   return (
+    <div
+      className={cn(
+        "mb-1.5 flex w-full items-start gap-2 rounded-2xl border border-transparent px-3 py-3 text-left transition-colors",
+        hot
+          ? "border-[var(--dh-danger)]/15 bg-[var(--dh-danger-soft)]/35"
+          : "bg-background/70",
+        !isRead && "ring-1 ring-[var(--dh-brand)]/10",
+      )}
+    >
     <button
       type="button"
       onClick={() => onOpen(item)}
-      aria-label={`${brief.title}. ${isRead ? copy.read : copy.unread}`}
-      className={cn(
-        "mb-1.5 flex w-full items-start gap-3 rounded-2xl border border-transparent px-3 py-3 text-left transition-colors",
-        "active:scale-[0.995]",
-        hot
-          ? "border-[var(--dh-danger)]/15 bg-[var(--dh-danger-soft)]/35 hover:bg-[var(--dh-danger-soft)]/45"
-          : "bg-background/70 hover:bg-muted/45",
-        !isRead && "ring-1 ring-[var(--dh-brand)]/10",
-      )}
+      aria-label={`${brief.title}. ${isRead ? copy.treated : copy.unread}`}
+      className="flex min-w-0 flex-1 items-start gap-3 text-left active:scale-[0.995]"
     >
       <span className="min-w-0 flex-1">
         <span className="mb-1.5 flex flex-wrap items-center gap-1">
@@ -112,6 +116,7 @@ export function FeedItemRow({
           ) : (
             <Chip>{brief.typeLabel}</Chip>
           )}
+          {isRead ? <Chip tone="ok">{copy.treated}</Chip> : null}
         </span>
 
         <Text
@@ -146,17 +151,39 @@ export function FeedItemRow({
       </span>
 
       <span className="mt-1 flex shrink-0 flex-col items-center gap-2">
-        {isRead ? (
-          <Check
-            className="h-4 w-4 text-[var(--dh-brand)]"
-            strokeWidth={2.5}
-            aria-hidden
-          />
-        ) : (
-          <span className="h-2 w-2 rounded-full bg-[var(--dh-brand)]" aria-hidden />
-        )}
         <ChevronRight className="h-4 w-4 text-muted-foreground/55" />
       </span>
     </button>
+      {onToggleTreated ? (
+        <IconButton
+          type="button"
+          size="sm"
+          variant={isRead ? "secondary" : "ghost"}
+          label={isRead ? copy.treated : copy.markTreated}
+          className="mt-0.5"
+          onClick={(event: MouseEvent<HTMLButtonElement>) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onToggleTreated(item);
+          }}
+        >
+          <Check
+            className={cn(
+              "h-4 w-4",
+              isRead ? "text-[var(--dh-brand)]" : "text-muted-foreground",
+            )}
+            strokeWidth={2.5}
+          />
+        </IconButton>
+      ) : isRead ? (
+        <Check
+          className="mt-1 h-4 w-4 shrink-0 text-[var(--dh-brand)]"
+          strokeWidth={2.5}
+          aria-hidden
+        />
+      ) : (
+        <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[var(--dh-brand)]" aria-hidden />
+      )}
+    </div>
   );
 }

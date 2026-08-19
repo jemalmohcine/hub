@@ -3,12 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Bookmark, Search } from "lucide-react";
 import {
-  Card,
-  Cluster,
   EmptyState,
   Input,
   Stack,
   Text,
+  useAsyncAction,
 } from "@/design-system";
 import { FeedItemRow } from "@/modules/ai-intel/ui/feed-item-row";
 import { FeedSection } from "@/modules/ai-intel/ui/feed-section";
@@ -24,7 +23,7 @@ import {
   itemInRange,
   type DateRangeValue,
 } from "@/modules/ai-intel/ui/date-range-picker";
-import { markAiIntelRead } from "@/modules/ai-intel/actions";
+import { markAiIntelRead, setAiIntelTreated } from "@/modules/ai-intel/actions";
 import { ensureItemTranslation } from "@/modules/ai-intel/actions-i18n";
 import { getItemI18n } from "@/modules/ai-intel/brief";
 import { detectContentKind } from "@/modules/ai-intel/content-kind";
@@ -34,32 +33,26 @@ import {
   sortForDeveloper,
 } from "@/modules/ai-intel/ui/rank";
 import type { HubLocale } from "@/core/i18n";
+import { toDayKey } from "@/lib/dates";
 import { t } from "@/modules/ai-intel/i18n/locale";
 import type { AiIntelItem } from "@/modules/ai-intel/types";
 import { cn } from "@/lib/utils";
-import { useAsyncAction } from "@/design-system";
 
 type TabId = FeedTabId;
 
 const SECTION_LIMITS = {
-  urgent: 4,
   github: 5,
   read: 8,
 } as const;
 
-function toLocalIsoDay(raw: string | null | undefined): string {
-  if (!raw) return "";
-  const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return "";
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-/** Date used by the period filter: source date, or first scrape that saw it. */
-function itemDay(item: AiIntelItem): string {
-  return toLocalIsoDay(item.published_at);
+/** Urgent items stay in the period if they were published *or* first seen then. */
+function itemInPeriod(item: AiIntelItem, range: DateRangeValue): boolean {
+  const published = toDayKey(item.published_at);
+  const ingested = toDayKey(item.ingested_at);
+  if (isHotAlert(item)) {
+    return itemInRange(published, range) || itemInRange(ingested, range);
+  }
+  return itemInRange(published || ingested, range);
 }
 
 function matchesTab(item: AiIntelItem, tab: TabId): boolean {
@@ -175,7 +168,7 @@ export function AiIntelWorkspace({
   }, [locale, initialItems]);
 
   const datedItems = useMemo(() => {
-    return items.filter((item) => itemInRange(itemDay(item), dateRange));
+    return items.filter((item) => itemInPeriod(item, dateRange));
   }, [items, dateRange]);
 
   const visiblePool = useMemo(() => {
@@ -242,6 +235,13 @@ export function AiIntelWorkspace({
     );
   }
 
+  function handleTreatedChange(itemId: string, treated: boolean) {
+    setItems((prev) =>
+      prev.map((x) => (x.id === itemId ? { ...x, read: treated } : x)),
+    );
+    void run(() => setAiIntelTreated(itemId, treated), { silent: true });
+  }
+
   function renderItems(list: AiIntelItem[], compact = false) {
     return list.map((item) => (
       <FeedItemRow
@@ -249,6 +249,7 @@ export function AiIntelWorkspace({
         item={item}
         locale={locale}
         onOpen={openItem}
+        onToggleTreated={() => handleTreatedChange(item.id, !item.read)}
         compact={compact}
       />
     ));
@@ -269,18 +270,18 @@ export function AiIntelWorkspace({
 
   return (
     <Stack gap={4} className="pb-8">
-      <Cluster gap={2} className="w-full items-center justify-between">
+      <Stack gap={2}>
         <Text size="sm" tone="muted" className="min-w-0 truncate">
           {digestLabel || copy.digestEmpty}
         </Text>
-        <Cluster gap={1} className="shrink-0">
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5">
           <button
             type="button"
             aria-label={copy.tabSaved}
             aria-pressed={tab === "saved"}
             onClick={() => setTab(tab === "saved" ? "all" : "saved")}
             className={cn(
-              "relative inline-flex h-9 w-9 items-center justify-center rounded-xl",
+              "relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
               tab === "saved"
                 ? "bg-foreground text-background"
                 : "bg-muted text-muted-foreground",
@@ -297,7 +298,7 @@ export function AiIntelWorkspace({
             aria-pressed={searchOpen}
             onClick={() => setSearchOpen((v) => !v)}
             className={cn(
-              "inline-flex h-9 w-9 items-center justify-center rounded-xl",
+              "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
               searchOpen
                 ? "bg-foreground text-background"
                 : "bg-muted text-muted-foreground",
@@ -315,8 +316,8 @@ export function AiIntelWorkspace({
             onChange={setDateRange}
             locale={locale}
           />
-        </Cluster>
-      </Cluster>
+        </div>
+      </Stack>
 
       {searchOpen ? (
         <Input
@@ -366,10 +367,7 @@ export function AiIntelWorkspace({
               viewAllLabel={copy.viewAll}
               onViewAll={() => setTab("urgent")}
             >
-              {renderItems(
-                sections.urgent.slice(0, SECTION_LIMITS.urgent),
-                true,
-              )}
+              {renderItems(sections.urgent, true)}
             </FeedSection>
           ) : null}
 
@@ -421,6 +419,7 @@ export function AiIntelWorkspace({
           );
         }}
         onSavedChange={handleSavedChange}
+        onTreatedChange={handleTreatedChange}
       />
     </Stack>
   );

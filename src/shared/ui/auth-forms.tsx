@@ -429,7 +429,7 @@ export function SetPasswordForm({ email }: { email: string }) {
             label="Code de vérification"
             htmlFor="otp"
             error={errors.otp}
-            hint="6 chiffres, dans l’email"
+            hint="Le code reçu par email"
           >
             <Input
               id="otp"

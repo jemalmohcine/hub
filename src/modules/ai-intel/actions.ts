@@ -48,22 +48,40 @@ export async function toggleAiIntelSave(itemId: string): Promise<{ saved: boolea
 }
 
 export async function markAiIntelRead(itemId: string) {
+  await setAiIntelTreated(itemId, true);
+}
+
+export async function setAiIntelTreated(
+  itemId: string,
+  treated: boolean,
+): Promise<{ treated: boolean }> {
   const user = await requireUser();
-
   const supabase = await createClient();
-  const { error } = await supabase.from("ai_intel_reads").upsert(
-    {
-      user_id: user.id,
-      item_id: itemId,
-      read_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,item_id" },
-  );
 
-  // Table may not exist yet before migration 006
-  if (error && !/ai_intel_reads|schema cache|does not exist/i.test(error.message)) {
-    throw new Error(error.message);
+  if (treated) {
+    const { error } = await supabase.from("ai_intel_reads").upsert(
+      {
+        user_id: user.id,
+        item_id: itemId,
+        read_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,item_id" },
+    );
+    if (error && !/ai_intel_reads|schema cache|does not exist/i.test(error.message)) {
+      throw new Error(error.message);
+    }
+  } else {
+    const { error } = await supabase
+      .from("ai_intel_reads")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("item_id", itemId);
+    if (error && !/ai_intel_reads|schema cache|does not exist/i.test(error.message)) {
+      throw new Error(error.message);
+    }
   }
 
   revalidatePath("/app/ai");
+  revalidatePath("/app/overview");
+  return { treated };
 }

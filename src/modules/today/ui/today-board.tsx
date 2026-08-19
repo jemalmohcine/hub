@@ -49,44 +49,44 @@ function SignalRow({ signal }: { signal: TodaySignal }) {
  * Deliberately short — anything longer than a screen kills the daily habit.
  */
 export function TodayBoard({ digest }: { digest: TodayDigest }) {
-  if (digest.signals.length === 0) {
-    return (
-      <Card>
-        <div className="flex items-center gap-3">
-          <span
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--dh-success-soft)] text-[var(--dh-success)]"
-            aria-hidden
-          >
-            <CheckCircle2 className="h-5 w-5" />
-          </span>
-          <div>
-            <Heading level={3}>Rien d’urgent aujourd’hui</Heading>
-            <Text size="sm" tone="muted">
-              Aucune alerte, aucune relance en attente. Reviens demain.
-            </Text>
-          </div>
-        </div>
-      </Card>
-    );
-  }
+  const hasActions = digest.signals.length > 0;
 
   return (
     <Stack gap={4}>
-      <Card>
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <Heading level={3}>À traiter</Heading>
-          {digest.allClear ? (
-            <Badge tone="success">Rien d’urgent</Badge>
-          ) : (
-            <Badge tone="danger">Action requise</Badge>
-          )}
-        </div>
-        <Stack gap={2}>
-          {digest.signals.map((signal) => (
-            <SignalRow key={signal.id} signal={signal} />
-          ))}
-        </Stack>
-      </Card>
+      {hasActions ? (
+        <Card>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <Heading level={3}>À traiter</Heading>
+            {digest.allClear ? (
+              <Badge tone="success">Rien d’urgent</Badge>
+            ) : (
+              <Badge tone="danger">Action requise</Badge>
+            )}
+          </div>
+          <Stack gap={2}>
+            {digest.signals.map((signal) => (
+              <SignalRow key={signal.id} signal={signal} />
+            ))}
+          </Stack>
+        </Card>
+      ) : (
+        <Card>
+          <div className="flex items-center gap-3">
+            <span
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--dh-success-soft)] text-[var(--dh-success)]"
+              aria-hidden
+            >
+              <CheckCircle2 className="h-5 w-5" />
+            </span>
+            <div>
+              <Heading level={3}>Rien d’urgent aujourd’hui</Heading>
+              <Text size="sm" tone="muted">
+                Aucune alerte, aucune relance en attente. Reviens demain.
+              </Text>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {digest.highlights.length > 0 ? (
         <Card>
@@ -111,6 +111,7 @@ export function TodayBoard({ digest }: { digest: TodayDigest }) {
                   {highlight.title}
                 </Text>
                 <Text as="span" size="2xs" tone="muted" className="mt-0.5 block uppercase tracking-wide">
+                  {highlight.treated ? "Traité · " : ""}
                   {highlight.source}
                 </Text>
               </Link>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { ChevronDown, ExternalLink, Languages, Loader2 } from "lucide-react";
+import { ChevronDown, Check, ExternalLink, Languages, Loader2 } from "lucide-react";
 import {
   Badge,
   Button,
@@ -172,6 +172,7 @@ export function ItemDetailModal({
   onOpenChange,
   onMetadataUpdate,
   onSavedChange,
+  onTreatedChange,
 }: {
   item: AiIntelItem | null;
   open: boolean;
@@ -182,6 +183,7 @@ export function ItemDetailModal({
     metadata: Record<string, unknown>,
   ) => void;
   onSavedChange?: (itemId: string, saved: boolean) => void;
+  onTreatedChange?: (itemId: string, treated: boolean) => void;
 }) {
   if (!item) return null;
 
@@ -194,6 +196,7 @@ export function ItemDetailModal({
       onOpenChange={onOpenChange}
       onMetadataUpdate={onMetadataUpdate}
       onSavedChange={onSavedChange}
+      onTreatedChange={onTreatedChange}
     />
   );
 }
@@ -205,6 +208,7 @@ function ItemDetailModalBody({
   onOpenChange,
   onMetadataUpdate,
   onSavedChange,
+  onTreatedChange,
 }: {
   item: AiIntelItem;
   open: boolean;
@@ -215,6 +219,7 @@ function ItemDetailModalBody({
     metadata: Record<string, unknown>,
   ) => void;
   onSavedChange?: (itemId: string, saved: boolean) => void;
+  onTreatedChange?: (itemId: string, treated: boolean) => void;
 }) {
   const copy = t(locale);
   const { run, pending } = useAsyncAction();
@@ -283,6 +288,9 @@ function ItemDetailModalBody({
           {isHotAlert(localItem) ? (
             <Badge tone="danger">{copy.urgent}</Badge>
           ) : null}
+          {localItem.read ? (
+            <Badge tone="success">{copy.treated}</Badge>
+          ) : null}
           <Badge tone={kindBadgeTone}>{contentKindLabel(kind, locale)}</Badge>
           {tags.map((tag) => (
             <Badge key={tag} tone="neutral">
@@ -319,16 +327,30 @@ function ItemDetailModalBody({
               onSavedChange?.(localItem.id, saved);
             }}
           />
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() =>
-              window.open(visitUrl, "_blank", "noopener,noreferrer")
-            }
-          >
-            <ExternalLink className="h-4 w-4" />
-            {copy.visitSource}
-          </Button>
+          <Cluster gap={2}>
+            <Button
+              size="sm"
+              variant={localItem.read ? "secondary" : "primary"}
+              onClick={() => {
+                const next = !localItem.read;
+                setLocalItem((prev) => ({ ...prev, read: next }));
+                onTreatedChange?.(localItem.id, next);
+              }}
+            >
+              <Check className="h-4 w-4" />
+              {localItem.read ? copy.treated : copy.markTreated}
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() =>
+                window.open(visitUrl, "_blank", "noopener,noreferrer")
+              }
+            >
+              <ExternalLink className="h-4 w-4" />
+              {copy.visitSource}
+            </Button>
+          </Cluster>
         </div>
       }
     >
