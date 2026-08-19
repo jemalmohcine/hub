@@ -158,7 +158,13 @@ export function AppShell({
         </header>
 
         <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] lg:overflow-visible">
-          <div className="mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] pb-[var(--dh-space-8)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)]">
+          <div
+            className={
+              pathname.startsWith("/app/career") || pathname.startsWith("/app/cv")
+                ? "mx-auto w-full max-w-[90rem] px-[var(--dh-space-4)] py-[var(--dh-space-5)] pb-[var(--dh-space-8)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)]"
+                : "mx-auto w-full max-w-[var(--dh-content-max)] px-[var(--dh-space-4)] py-[var(--dh-space-5)] pb-[var(--dh-space-8)] lg:px-[var(--dh-space-8)] lg:py-[var(--dh-space-8)]"
+            }
+          >
             {children}
           </div>
         </main>

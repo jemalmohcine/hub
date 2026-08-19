@@ -77,7 +77,6 @@ function filterByQuery(items: AiIntelItem[], query: string): AiIntelItem[] {
 
 export function AiIntelWorkspace({
   initialItems,
-  digestLabel,
   initialLocale = "fr",
   deepLinkItemId = null,
   deepLinkCanonicalKey = null,
@@ -85,7 +84,6 @@ export function AiIntelWorkspace({
   initialPeriod = null,
 }: {
   initialItems: AiIntelItem[];
-  digestLabel: string | null;
   initialLocale?: HubLocale;
   deepLinkItemId?: string | null;
   deepLinkCanonicalKey?: string | null;
@@ -278,11 +276,7 @@ export function AiIntelWorkspace({
 
   return (
     <Stack gap={4} className="pb-8">
-      <Stack gap={2}>
-        <Text size="sm" tone="muted" className="min-w-0 truncate">
-          {digestLabel || copy.digestEmpty}
-        </Text>
-        <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5">
+      <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5">
           <button
             type="button"
             aria-label={copy.tabSaved}
@@ -324,8 +318,7 @@ export function AiIntelWorkspace({
             onChange={setDateRange}
             locale={locale}
           />
-        </div>
-      </Stack>
+      </div>
 
       {searchOpen ? (
         <Input

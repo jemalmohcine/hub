@@ -3,8 +3,15 @@
 import { useMemo } from "react";
 import { buildCvHtml } from "@/modules/cv-builder/export";
 import type { CvDocument } from "@/modules/cv-builder/types";
+import { cn } from "@/lib/utils";
 
-export function CvPreview({ doc }: { doc: CvDocument }) {
+export function CvPreview({
+  doc,
+  className,
+}: {
+  doc: CvDocument;
+  className?: string;
+}) {
   const html = useMemo(() => buildCvHtml(doc), [doc]);
 
   return (
@@ -12,7 +19,7 @@ export function CvPreview({ doc }: { doc: CvDocument }) {
       <iframe
         title="Aperçu CV"
         srcDoc={html}
-        className="h-[min(70vh,900px)] w-full bg-white"
+        className={cn("h-[min(70vh,900px)] w-full bg-white", className)}
         sandbox="allow-same-origin"
       />
     </div>

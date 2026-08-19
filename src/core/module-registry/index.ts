@@ -38,8 +38,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     id: "ai",
     label: "AI",
     description: "Veille modèles, prix, repos et changements",
-    pageDescription:
-      "Urgent = agir. GitHub = repos en tendance. Le reste se lit quand tu as le temps.",
+    pageDescription: "",
     upsell: "Accède au fil d’actualités, aux favoris et aux alertes urgentes.",
     href: "/app/ai",
     order: 10,
