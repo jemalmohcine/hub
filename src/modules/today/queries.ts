@@ -1,6 +1,6 @@
 import type { HubUser } from "@/core/auth/types";
 import { hasEntitlement, ENTITLEMENTS } from "@/core/entitlements";
-import { toDayKey } from "@/lib/dates";
+import { daysBetween, toDayKey } from "@/lib/dates";
 import { plainDash } from "@/lib/text";
 import { aiIntelItemHref } from "@/modules/ai-intel/item-link";
 import { getAiIntelFeed, getLatestAiIntelRun } from "@/modules/ai-intel/queries";
