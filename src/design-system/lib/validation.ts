@@ -122,7 +122,7 @@ export function validateSetPassword(formData: FormData): ValidationResult {
   const fields: FieldErrors = result.ok ? {} : { ...result.fields };
 
   if (!isValidOtp(otp)) {
-    fields.otp = "Entre le code à 6 chiffres reçu par email.";
+    fields.otp = "Entre le code reçu par email.";
   }
 
   if (Object.keys(fields).length > 0) return { ok: false, fields };

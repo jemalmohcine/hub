@@ -8,8 +8,8 @@ describe("normalizeOtp", () => {
 });
 
 describe("isValidOtp", () => {
-  it("accepts a 6-digit code", () => {
-    expect(isValidOtp("482913")).toBe(true);
+  it("accepts an 8-digit code", () => {
+    expect(isValidOtp("49703391")).toBe(true);
   });
 
   it("rejects letters or a short code", () => {

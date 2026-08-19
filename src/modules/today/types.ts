@@ -19,6 +19,7 @@ export type TodayHighlight = {
   title: string;
   source: string;
   href: string;
+  treated?: boolean;
 };
 
 export type TodayDigest = {

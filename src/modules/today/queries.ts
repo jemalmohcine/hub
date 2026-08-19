@@ -1,6 +1,6 @@
 import type { HubUser } from "@/core/auth/types";
 import { hasEntitlement, ENTITLEMENTS } from "@/core/entitlements";
-import { daysBetween } from "@/lib/dates";
+import { toDayKey } from "@/lib/dates";
 import { plainDash } from "@/lib/text";
 import { aiIntelItemHref } from "@/modules/ai-intel/item-link";
 import { getAiIntelFeed, getLatestAiIntelRun } from "@/modules/ai-intel/queries";
@@ -27,25 +27,37 @@ async function aiSignals(userId: string): Promise<{
   highlights: TodayHighlight[];
 }> {
   const items = await getAiIntelFeed(userId, {}).catch(() => []);
-  const alerts = items.filter((item) => isHotAlert(item) && !item.read);
+  const today = toDayKey(new Date());
+  const todaysAlerts = items.filter((item) => {
+    if (!isHotAlert(item)) return false;
+    const published = toDayKey(item.published_at);
+    const ingested = toDayKey(item.ingested_at);
+    return published === today || ingested === today;
+  });
+  const openAlerts = todaysAlerts.filter((item) => !item.read);
 
-  if (alerts.length === 0) return { signal: null, highlights: [] };
+  const highlights = todaysAlerts.slice(0, MAX_HIGHLIGHTS).map((item) => ({
+    id: item.id,
+    title: plainDash(item.title),
+    source: sourceDisplayName(item.primary_source),
+    href: aiIntelItemHref(item.id),
+    treated: Boolean(item.read),
+  }));
+
+  if (openAlerts.length === 0) {
+    return { signal: null, highlights };
+  }
 
   return {
     signal: {
       id: "ai-alerts",
       module: "ai",
       tone: "urgent",
-      label: `${alerts.length} ${plural(alerts.length, "alerte urgente", "alertes urgentes")}`,
+      label: `${openAlerts.length} ${plural(openAlerts.length, "alerte urgente", "alertes urgentes")}`,
       detail: "Sécurité, prix, fin de support ou projet qui décolle.",
       href: "/app/ai",
     },
-    highlights: alerts.slice(0, MAX_HIGHLIGHTS).map((item) => ({
-      id: item.id,
-      title: plainDash(item.title),
-      source: sourceDisplayName(item.primary_source),
-      href: aiIntelItemHref(item.id),
-    })),
+    highlights,
   };
 }
 
