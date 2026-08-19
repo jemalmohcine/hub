@@ -2,7 +2,7 @@ import type { HubUser } from "@/core/auth/types";
 import { hasEntitlement, ENTITLEMENTS } from "@/core/entitlements";
 import { daysBetween, toDayKey } from "@/lib/dates";
 import { plainDash } from "@/lib/text";
-import { aiIntelItemHref } from "@/modules/ai-intel/item-link";
+import { aiIntelInboxHref, aiIntelItemHref } from "@/modules/ai-intel/item-link";
 import { getAiIntelFeed, getLatestAiIntelRun } from "@/modules/ai-intel/queries";
 import { isHotAlert } from "@/modules/ai-intel/ui/rank";
 import { sourceDisplayName } from "@/modules/ai-intel/source-label";
@@ -36,12 +36,11 @@ async function aiSignals(userId: string): Promise<{
   });
   const openAlerts = todaysAlerts.filter((item) => !item.read);
 
-  const highlights = todaysAlerts.slice(0, MAX_HIGHLIGHTS).map((item) => ({
+  const highlights = openAlerts.slice(0, MAX_HIGHLIGHTS).map((item) => ({
     id: item.id,
     title: plainDash(item.title),
     source: sourceDisplayName(item.primary_source),
     href: aiIntelItemHref(item.id),
-    treated: Boolean(item.read),
   }));
 
   if (openAlerts.length === 0) {
@@ -55,7 +54,7 @@ async function aiSignals(userId: string): Promise<{
       tone: "urgent",
       label: `${openAlerts.length} ${plural(openAlerts.length, "alerte urgente", "alertes urgentes")}`,
       detail: "Sécurité, prix, fin de support ou projet qui décolle.",
-      href: "/app/ai",
+      href: aiIntelInboxHref(),
     },
     highlights,
   };

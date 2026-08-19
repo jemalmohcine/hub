@@ -111,7 +111,6 @@ export function TodayBoard({ digest }: { digest: TodayDigest }) {
                   {highlight.title}
                 </Text>
                 <Text as="span" size="2xs" tone="muted" className="mt-0.5 block uppercase tracking-wide">
-                  {highlight.treated ? "Traité · " : ""}
                   {highlight.source}
                 </Text>
               </Link>

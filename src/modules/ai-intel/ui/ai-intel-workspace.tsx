@@ -19,8 +19,8 @@ import { ItemDetailModal } from "@/modules/ai-intel/ui/item-detail-modal";
 import {
   DateRangePicker,
   DateRangeQuickPills,
-  defaultDateRange,
   itemInRange,
+  rangeForPreset,
   type DateRangeValue,
 } from "@/modules/ai-intel/ui/date-range-picker";
 import { markAiIntelRead, setAiIntelTreated } from "@/modules/ai-intel/actions";
@@ -36,6 +36,7 @@ import type { HubLocale } from "@/core/i18n";
 import { toDayKey } from "@/lib/dates";
 import { t } from "@/modules/ai-intel/i18n/locale";
 import type { AiIntelItem } from "@/modules/ai-intel/types";
+import { parseAiFeedPeriod, parseAiFeedTab } from "@/modules/ai-intel/item-link";
 import { cn } from "@/lib/utils";
 
 type TabId = FeedTabId;
@@ -80,19 +81,26 @@ export function AiIntelWorkspace({
   initialLocale = "fr",
   deepLinkItemId = null,
   deepLinkCanonicalKey = null,
+  initialTab = null,
+  initialPeriod = null,
 }: {
   initialItems: AiIntelItem[];
   digestLabel: string | null;
   initialLocale?: HubLocale;
   deepLinkItemId?: string | null;
   deepLinkCanonicalKey?: string | null;
+  initialTab?: string | null;
+  initialPeriod?: string | null;
 }) {
   const locale = initialLocale;
   const copy = t(locale);
-  const [tab, setTab] = useState<TabId>("all");
+  const [tab, setTab] = useState<TabId>(() => parseAiFeedTab(initialTab));
   const [q, setQ] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [dateRange, setDateRange] = useState<DateRangeValue>(defaultDateRange);
+  const [dateRange, setDateRange] = useState<DateRangeValue>(() => {
+    const preset = parseAiFeedPeriod(initialPeriod);
+    return { preset, ...rangeForPreset(preset) };
+  });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [items, setItems] = useState(initialItems);
   const { run } = useAsyncAction();
