@@ -3,6 +3,7 @@ import { hasEntitlement, ENTITLEMENTS } from "@/core/entitlements";
 import { daysBetween, toDayKey } from "@/lib/dates";
 import { plainDash } from "@/lib/text";
 import { aiIntelInboxHref, aiIntelItemHref } from "@/modules/ai-intel/item-link";
+import { itemFeedDay } from "@/modules/ai-intel/item-timestamps";
 import { getAiIntelFeed, getLatestAiIntelRun } from "@/modules/ai-intel/queries";
 import { isHotAlert } from "@/modules/ai-intel/ui/rank";
 import { sourceDisplayName } from "@/modules/ai-intel/source-label";
@@ -30,9 +31,7 @@ async function aiSignals(userId: string): Promise<{
   const today = toDayKey(new Date());
   const todaysAlerts = items.filter((item) => {
     if (!isHotAlert(item)) return false;
-    const published = toDayKey(item.published_at);
-    const ingested = toDayKey(item.ingested_at);
-    return published === today || ingested === today;
+    return itemFeedDay(item) === today;
   });
   const openAlerts = todaysAlerts.filter((item) => !item.read);
 
