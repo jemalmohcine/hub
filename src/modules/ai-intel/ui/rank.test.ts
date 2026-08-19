@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AiIntelItem } from "@/modules/ai-intel/types";
-import { isHotAlert, isNoise, isTrending } from "@/modules/ai-intel/ui/rank";
+import { isHotAlert, isNoise, isTrending, sortForDeveloper } from "@/modules/ai-intel/ui/rank";
 
 function item(overrides: Partial<AiIntelItem> = {}): AiIntelItem {
   return {
@@ -121,5 +121,17 @@ describe("isNoise", () => {
     expect(isNoise(item({ metadata: { verdict: "skip", score: 80 } }))).toBe(true);
     expect(isNoise(item({ metadata: { score: 30 } }))).toBe(true);
     expect(isNoise(item({ metadata: { score: 70, verdict: "use_it" } }))).toBe(false);
+  });
+});
+
+describe("sortForDeveloper", () => {
+  it("keeps untreated urgents above treated ones", () => {
+    const hot = { exploding: true, kind: "repo", contentKind: "repo" };
+    const open = item({ id: "open", metadata: hot, read: false });
+    const treated = item({ id: "treated", metadata: hot, read: true });
+    expect([treated, open].sort(sortForDeveloper).map((row) => row.id)).toEqual([
+      "open",
+      "treated",
+    ]);
   });
 });
