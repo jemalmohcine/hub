@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boardSearchQueries, linkedinSearchKeywords, prefsForScrape } from "@/modules/job-board/scrape-query";
+import { boardSearchQueries, collectorSearchQueries, linkedinSearchKeywords, prefsForScrape } from "@/modules/job-board/scrape-query";
 import type { CvJobProfile } from "@/modules/job-board/cv-skills";
 import { withJobSearchPrefs } from "@/modules/job-board/types";
 
@@ -67,5 +67,13 @@ describe("linkedinSearchKeywords", () => {
     expect(
       linkedinSearchKeywords(withJobSearchPrefs({ roles: ["frontend"], locations: ["casablanca"] })),
     ).toBe("développeur");
+  });
+});
+
+describe("collectorSearchQueries", () => {
+  it("leads with développeur so Maroc boards are not limited to the frontend label", () => {
+    expect(
+      collectorSearchQueries(withJobSearchPrefs({ roles: ["frontend"], locations: ["casablanca"] })),
+    ).toEqual(["développeur", "Développeur frontend"]);
   });
 });

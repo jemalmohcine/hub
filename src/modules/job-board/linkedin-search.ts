@@ -1,4 +1,4 @@
-import { resolveLocations } from "@/modules/job-board/locations";
+import { isMoroccoPlace, resolveLocations } from "@/modules/job-board/locations";
 import { linkedinSearchKeywords } from "@/modules/job-board/scrape-query";
 import type { JobSearchPrefs } from "@/modules/job-board/types";
 import { normalizeWorkModes } from "@/modules/job-board/work-modes";
@@ -11,11 +11,7 @@ export function linkedinJobsSearchUrl(prefs: JobSearchPrefs): string {
   const params = new URLSearchParams();
   if (keywords) params.set("keywords", keywords);
   if (place) {
-    const city = place.indeed || place.label;
-    params.set(
-      "location",
-      place.kind === "city" && place.countryId === "maroc" ? `${city}, Morocco` : place.label,
-    );
+    params.set("location", isMoroccoPlace(place) ? "Morocco" : place.label);
   }
   if (modes.length === 1 && modes[0] === "remote") {
     params.set("f_WT", "2");

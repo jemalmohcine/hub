@@ -63,3 +63,10 @@ export function linkedinSearchKeywords(prefs: JobSearchPrefs): string {
   if (roles.some((role) => isSoftwareFamilyRole(role.id))) return "développeur";
   return boardSearchQueries(prefs, 1)[0] || "développeur";
 }
+
+/** Broad query first so Maroc boards return volume, then the role label. */
+export function collectorSearchQueries(prefs: JobSearchPrefs, max = 2): string[] {
+  const broad = linkedinSearchKeywords(prefs);
+  const rest = boardSearchQueries(prefs, max);
+  return [...new Set([broad, ...rest].filter((query) => query.trim().length > 0))].slice(0, max);
+}

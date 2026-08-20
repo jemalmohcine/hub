@@ -64,6 +64,15 @@ export function expandWithParentCountries(selected: JobLocation[]): JobLocation[
   return resolveLocations(ids, MAX_JOB_LOCATIONS + 8);
 }
 
+/**
+ * Casablanca is Morocco: keep Rabat, Tanger, Marrakech and “Maroc” listings
+ * even when the saved city is Casablanca.
+ */
+export function expandMoroccoCountry(selected: JobLocation[]): JobLocation[] {
+  if (!selected.some(isMoroccoPlace)) return selected;
+  return expandWithParentCountries(selected);
+}
+
 export function citiesInCountry(countryId: string): JobLocation[] {
   return CATALOG_CITIES.filter((city) => city.countryId === countryId);
 }

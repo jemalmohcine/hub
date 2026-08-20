@@ -2,19 +2,17 @@ import { daysBetween } from "@/lib/dates";
 import { foldCase } from "@/lib/text";
 import type { CvJobProfile } from "@/modules/job-board/cv-skills";
 import { keywordTokens, parseJobSearchFilters } from "@/modules/job-board/filters";
-import {
-  expandWithParentCountries,
-  resolveLocations,
-} from "@/modules/job-board/locations";
+import { resolveLocations } from "@/modules/job-board/locations";
 import {
   locationMatches,
   placeFitsPrefs,
+  regionForPrefs,
   roleMatches,
 } from "@/modules/job-board/match";
 import { resolveRoles } from "@/modules/job-board/roles";
 import { listingHeatScore, isTrendingListing } from "@/modules/job-board/trending";
 import type { JobListing, JobSearchPrefs } from "@/modules/job-board/types";
-import { acceptsWorkMode, wantsRemote } from "@/modules/job-board/work-modes";
+import { acceptsWorkMode } from "@/modules/job-board/work-modes";
 
 export type JobFitLabel = "excellent" | "good" | "ok";
 
@@ -196,8 +194,7 @@ export function listingWorthShowing(
 ): boolean {
   const cv = asFit(cvInput);
   const extra = parseJobSearchFilters(prefs);
-  const selected = resolveLocations(prefs.locations);
-  const region = wantsRemote(prefs) ? expandWithParentCountries(selected) : selected;
+  const region = regionForPrefs(prefs);
   const mode = listing.workMode;
   if (!acceptsWorkMode(prefs, mode)) return false;
   const remoteEligible = mode !== "onsite";
@@ -330,5 +327,5 @@ export function rankListingsForPrefs(
       };
     })
     .sort((a, b) => b.fitScore - a.fitScore || (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""))
-    .slice(0, 40);
+    .slice(0, 80);
 }

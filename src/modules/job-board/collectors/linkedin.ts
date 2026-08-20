@@ -2,6 +2,7 @@ import * as cheerio from "cheerio";
 import { tryFetchText, HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
 import { JOB_BOARD_HEADERS } from "@/modules/job-board/collectors/board-headers";
 import {
+  expandMoroccoCountry,
   isMoroccoPlace,
   resolveLocation,
   resolveLocations,
@@ -96,14 +97,14 @@ export function parseLinkedInGuestHtml(html: string): ParsedLinkedInHit[] {
   return hits;
 }
 
-/** Country-only Maroc → also hit Casablanca and Rabat, where the volume is. */
+/** Morocco is one market: country search plus the cities that actually have volume. */
+const MOROCCO_LINKEDIN_HUBS = ["maroc", "casablanca", "rabat", "marrakech"];
+
 export function linkedinSearchPlaces(prefs: JobSearchPrefs): JobLocation[] {
   const selected = resolveLocations(prefs.locations);
-  const morocco = selected.filter(isMoroccoPlace);
-  if (morocco.length > 0) {
-    const cities = morocco.filter((entry) => entry.kind === "city");
-    if (cities.length > 0) return cities.slice(0, 2);
-    return resolveLocations(["casablanca", "rabat", "maroc"]);
+  if (selected.some(isMoroccoPlace)) {
+    const extra = selected.filter(isMoroccoPlace).map((entry) => entry.id);
+    return resolveLocations([...MOROCCO_LINKEDIN_HUBS, ...extra], 5);
   }
   return selected.slice(0, 1);
 }
@@ -142,7 +143,7 @@ async function collectLinkedInPlace(
   prefs: JobSearchPrefs,
   place: JobLocation,
 ): Promise<RawJobHit[]> {
-  const selected = resolveLocations(prefs.locations);
+  const selected = expandMoroccoCountry(resolveLocations(prefs.locations));
   const hits: RawJobHit[] = [];
   const seen = new Set<string>();
 
@@ -166,7 +167,7 @@ async function collectLinkedInPlace(
   return hits;
 }
 
-/** LinkedIn’s public job cards for the selected city — not the worldwide aggregators. */
+/** LinkedIn public cards for Morocco (country + hub cities) or the selected place. */
 export async function collectLinkedIn(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
   const places = linkedinSearchPlaces(prefs);
   if (places.length === 0) return [];

@@ -1,6 +1,7 @@
 import { foldCase } from "@/lib/text";
 import {
   citiesInCountry,
+  expandMoroccoCountry,
   expandWithParentCountries,
   isEuropeanPlace,
   resolveLocation,
@@ -357,6 +358,13 @@ export function roleMatchesAny(prefs: JobSearchPrefs, blob: string): boolean {
   return needles.some((role) => roleMatches(role, blob));
 }
 
+/** Remote feeds match the country; Morocco cities also match the whole country. */
+export function regionForPrefs(prefs: JobSearchPrefs): JobLocation[] {
+  const selected = resolveLocations(prefs.locations);
+  if (wantsRemote(prefs)) return expandWithParentCountries(selected);
+  return expandMoroccoCountry(selected);
+}
+
 export function matchesSearchPrefs(
   listing: {
     title: string;
@@ -367,8 +375,7 @@ export function matchesSearchPrefs(
   },
   prefs: JobSearchPrefs,
 ): boolean {
-  const selected = resolveLocations(prefs.locations);
-  const region = wantsRemote(prefs) ? expandWithParentCountries(selected) : selected;
+  const region = regionForPrefs(prefs);
 
   const mode = listing.workMode ?? classifyWorkMode({
     title: listing.title,

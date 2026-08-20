@@ -20,7 +20,7 @@ describe("linkedinJobsSearchUrl", () => {
     expect(url).not.toContain("f_WT=");
   });
 
-  it("uses Casablanca, Morocco so the browser search matches the scrape", () => {
+  it("opens Morocco, not a single city, for a Casablanca search", () => {
     const url = linkedinJobsSearchUrl(
       withJobSearchPrefs({
         roles: ["frontend"],
@@ -29,6 +29,7 @@ describe("linkedinJobsSearchUrl", () => {
         workMode: "hybrid",
       }),
     );
-    expect(url).toContain("Casablanca%2C+Morocco");
+    expect(url).toContain("Morocco");
+    expect(url).not.toContain("Casablanca");
   });
 });

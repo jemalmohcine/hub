@@ -1,5 +1,6 @@
 import { decodeXmlEntities, tryFetchText } from "@/lib/http/fetch-text";
 import {
+  expandMoroccoCountry,
   expandWithParentCountries,
   resolveLocations,
 } from "@/modules/job-board/locations";
@@ -64,7 +65,7 @@ function indeedQueries(prefs: JobSearchPrefs): string[] {
 function indeedTargets(prefs: JobSearchPrefs): { query: string; location: string; host: string }[] {
   const selected = resolveLocations(prefs.locations);
   const expanded =
-    wantsRemote(prefs) ? expandWithParentCountries(selected) : selected;
+    wantsRemote(prefs) ? expandWithParentCountries(selected) : expandMoroccoCountry(selected);
   const places =
     expanded.length > 0
       ? expanded.slice(0, 5)

@@ -197,6 +197,16 @@ describe("listingWorthShowing", () => {
         ["React", "TypeScript"],
       ),
     ).toBe(true);
+    expect(
+      listingWorthShowing(
+        listing({
+          title: "Développeur (H/F)",
+          location: "Rabat, Maroc",
+          workMode: null,
+        }),
+        prefs,
+      ),
+    ).toBe(true);
   });
 
   it("drops an 8-year ask when yearsMin is 2", () => {

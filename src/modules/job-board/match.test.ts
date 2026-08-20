@@ -198,6 +198,40 @@ describe("matchesSearchPrefs", () => {
     ).toBe(true);
   });
 
+  it("keeps Rabat and Maroc-wide cards when Casablanca is the saved city", () => {
+    const search = jobPrefs({
+      roleQuery: "frontend",
+      roles: ["frontend"],
+      locations: ["casablanca"],
+      workModes: ["hybrid"],
+      workMode: "hybrid",
+    });
+    expect(
+      matchesSearchPrefs(
+        {
+          title: "Software Engineer",
+          description: "",
+          location: "Rabat, Rabat-Salé-Kénitra, Maroc",
+          tags: [],
+          workMode: null,
+        },
+        search,
+      ),
+    ).toBe(true);
+    expect(
+      matchesSearchPrefs(
+        {
+          title: "Développeur (H/F)",
+          description: "",
+          location: "Maroc",
+          tags: [],
+          workMode: null,
+        },
+        search,
+      ),
+    ).toBe(true);
+  });
+
   it("keeps an unlabeled Software Engineer in Casablanca", () => {
     expect(
       matchesSearchPrefs(
