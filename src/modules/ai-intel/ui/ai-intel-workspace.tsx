@@ -30,6 +30,7 @@ import { detectContentKind } from "@/modules/ai-intel/content-kind";
 import {
   isHotAlert,
   isNoise,
+  isTrending,
   sortForDeveloper,
 } from "@/modules/ai-intel/ui/rank";
 import type { HubLocale } from "@/core/i18n";
@@ -55,7 +56,7 @@ function matchesTab(item: AiIntelItem, tab: TabId): boolean {
   if (tab === "all") return true;
   const kind = detectContentKind(item);
   if (tab === "urgent") return isHotAlert(item) && !item.read;
-  if (tab === "github") return kind === "repo";
+  if (tab === "github") return isTrending(item);
   if (tab === "tools") return kind === "tool";
   if (tab === "news") return kind !== "repo" && kind !== "tool";
   if (tab === "saved") return Boolean(item.saved);

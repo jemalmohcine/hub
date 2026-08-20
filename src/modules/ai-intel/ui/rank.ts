@@ -1,5 +1,5 @@
 import { detectContentKind } from "@/modules/ai-intel/content-kind";
-import { isRepoExploding, readRepoMomentum } from "@/modules/ai-intel/repo-momentum";
+import { readRepoMomentum } from "@/modules/ai-intel/repo-momentum";
 import type { AiIntelItem, AiUrgency } from "@/modules/ai-intel/types";
 
 export function itemVerdict(item: AiIntelItem): string {
@@ -52,33 +52,44 @@ function asIntelItem(item: AlertItem): AiIntelItem {
 
 /**
  * Phone alerts and the Urgent tab share this rule: only act-now signals.
- * A new model, a changelog, or a merely trending repo is interesting, not urgent.
+ * Security / CVE, a price change, or a genuinely revolutionary tool.
+ * A changelog, an outage, a breaking change, or a trending GitHub repo is not urgent.
  */
 export function isCriticalPushAlert(item: AlertItem): boolean {
-  const meta = (item.metadata ?? {}) as Record<string, unknown>;
-
-  if (meta.hardSignal) return true;
-  if (meta.exploding === true) return true;
-  if (meta.actionRequired === true && item.urgency === "urgent") return true;
-
-  // Analysed items have already been judged above; only legacy rows fall through.
-  if (meta.contentKind) return false;
-
   const intel = asIntelItem(item);
+  const meta = (item.metadata ?? {}) as Record<string, unknown>;
   const kind = detectContentKind(intel);
+  const signal = typeof meta.hardSignal === "string" ? meta.hardSignal : "";
 
-  if (kind === "repo") return isRepoExploding(intel);
-  return kind === "pricing" || kind === "breaking" || kind === "security";
+  if (signal === "security" || kind === "security") return true;
+  if (signal === "pricing" || kind === "pricing") return true;
+  return isRevolutionaryTool(intel);
 }
 
-/** Same rule as push: CVE / prix / breaking / panne / repo qui explose. */
+function isRevolutionaryTool(item: AiIntelItem): boolean {
+  if (itemKind(item) === "repo") return false;
+  if (detectContentKind(item) !== "tool") return false;
+
+  const meta = (item.metadata ?? {}) as Record<string, unknown>;
+  const score = Number(meta.score) || 0;
+  if (meta.exploding === true) return true;
+  if (item.urgency === "urgent" && meta.actionRequired === true) return true;
+  if (item.urgency === "urgent" && score >= 80) return true;
+  return false;
+}
+
+/** Same rule as push: faille / prix / outil révolutionnaire. */
 export function isHotAlert(item: AiIntelItem): boolean {
   return isCriticalPushAlert(item);
 }
 
-/** Trending = accelerating repo with measurable daily growth. */
+const TRENDING_SOURCES = new Set(["github-trending", "gittrend"]);
+
+/** Trending = GitHub trending list, or a repo with measurable daily growth. */
 export function isTrending(item: AiIntelItem): boolean {
   if (itemKind(item) !== "repo") return false;
+  if (TRENDING_SOURCES.has(item.primary_source)) return true;
+
   const { starsToday, starsWeek, stars, rank } = readRepoMomentum(item);
 
   if (starsToday >= 200) return true;

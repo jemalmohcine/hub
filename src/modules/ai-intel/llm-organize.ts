@@ -30,8 +30,8 @@ export type LlmUrgency = (typeof LLM_URGENCIES)[number];
 const intelSchema = z.object({
   title: z
     .string()
-    .max(110)
-    .describe("Titre court et explicite au format « Nom : ce que c'est »"),
+    .max(90)
+    .describe("Titre court « Nom : un fait utile pour un dev », sans chrome de page"),
   purpose: z
     .string()
     .max(220)
@@ -111,12 +111,12 @@ function resolveModel() {
 }
 
 const URGENCY_RUBRIC = [
-  "urgent — le dev doit agir vite: faille de sécurité ou CVE sur un service/lib courant,",
-  "  hausse ou refonte de prix d'un LLM ou d'un service dev, modèle ou API supprimé / déprécié /",
-  "  arrêté à une date, breaking change qui impose une migration, panne majeure, quota ou rate",
-  "  limit réduit, ou dépôt GitHub qui explose vraiment (croissance quotidienne massive).",
-  "medium — à connaître cette semaine: nouveau modèle notable, release importante, nouvel outil",
-  "  sérieux, fonctionnalité utile. Aucune action forcée.",
+  "urgent — uniquement trois cas:",
+  "  1) faille de sécurité / CVE / vulnérabilité sur un outil, une lib ou un service qu'un dev utilise;",
+  "  2) changement de prix concret (hausse, fin de free tier, nouveau tarif) d'un LLM ou d'un service dev;",
+  "  3) outil vraiment révolutionnaire (change la façon de coder, pas un clone ni une mise à jour mineure).",
+  "  JAMAIS urgent: changelog, nouveau modèle, dépréciation, panne, repo GitHub qui explose, actu, marketing.",
+  "medium — à connaître cette semaine: breaking / dépréciation, nouveau modèle, release, nouvel outil utile, panne.",
   "light — contexte, opinion, actu générale, annonce marketing, sujet non technique.",
 ].join("\n");
 
@@ -152,9 +152,9 @@ function buildPrompt(input: {
     URGENCY_RUBRIC,
     "",
     "Règles:",
-    "- title: « Nom : ce que c'est » en une ligne compréhensible. Jamais une phrase du README, jamais un nombre de stars. N'utilise pas de tiret long (—).",
-    "- purpose: une phrase qui explique précisément le sujet.",
-    "- essentialPoints: 3 à 5 points factuels tirés du contenu (ce que c'est, chiffres réels, ce qui change). Aucun remplissage.",
+    "- title: « Nom : un fait utile » en une ligne courte. Jamais une phrase du README, jamais « Back to changelog », jamais un nombre de stars, jamais un tiret long (—).",
+    "- purpose: une phrase concrète pour un dev (ce que ça fait, ce qui change, CVE, prix). Pas de marketing ni de navigation.",
+    "- essentialPoints: 3 à 5 faits utiles tirés du contenu (changement, chiffres réels, langage, ce que ça remplace). Ignore cookies, nav, changelog chrome.",
     "- impact: la conséquence concrète pour le dev. Si aucune, dis-le franchement.",
     "- actionRequired: true uniquement si une action est nécessaire (patcher, migrer, vérifier son plan ou ses coûts).",
     "- tags: 2 à 4 étiquettes techniques précises (ex: « MCP », « Sécurité », « Pricing », « TypeScript », « Agents »). Interdit: « IA », « Tech », « Nouveauté », « Outil ».",

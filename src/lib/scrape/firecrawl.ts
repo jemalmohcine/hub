@@ -58,8 +58,28 @@ type FirecrawlResponse = {
 
 const cache = new Map<string, ScrapedPage>();
 
+/** Once credits are gone, skip Firecrawl for the rest of this process/run. */
+let firecrawlCircuitOpen = false;
+
+const FIRECRAWL_CREDIT_RE =
+  /\bHTTP 402\b|\bquota\b|insufficient credits|out of credits|plan limit|payment required|credit(?:s)? (?:exhausted|exceeded|limit)/i;
+
 export function hasFirecrawl(): boolean {
   return Boolean(process.env.FIRECRAWL_API_KEY?.trim());
+}
+
+export function isFirecrawlCircuitOpen(): boolean {
+  return firecrawlCircuitOpen;
+}
+
+export function isFirecrawlCreditError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return FIRECRAWL_CREDIT_RE.test(msg);
+}
+
+/** Called at the start of each ingest so a topped-up plan is retried. */
+export function resetFirecrawlCircuit(): void {
+  firecrawlCircuitOpen = false;
 }
 
 export function clearScrapeCache(): void {
@@ -164,6 +184,7 @@ async function scrapeDirect(
 
 function wantsFirecrawl(via: ScrapeVia | undefined): boolean {
   if (via === "direct") return false;
+  if (firecrawlCircuitOpen) return false;
   if (!hasFirecrawl()) return false;
   return true;
 }
@@ -183,7 +204,10 @@ export async function scrapePage(
   }
 
   const page = wantsFirecrawl(opts.via)
-    ? await scrapeWithFirecrawl(url, opts).catch(() => scrapeDirect(url, opts))
+    ? await scrapeWithFirecrawl(url, opts).catch((err) => {
+        if (isFirecrawlCreditError(err)) firecrawlCircuitOpen = true;
+        return scrapeDirect(url, opts);
+      })
     : await scrapeDirect(url, opts);
 
   if (!opts.noCache) cache.set(key, page);

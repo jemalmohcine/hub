@@ -31,7 +31,25 @@ describe("isHotAlert", () => {
     ).toBe(true);
   });
 
-  it("marks an exploding GitHub repo as urgent", () => {
+  it("marks a price change as urgent", () => {
+    expect(
+      isHotAlert(item({ metadata: { hardSignal: "pricing", contentKind: "pricing" } })),
+    ).toBe(true);
+  });
+
+  it("marks a revolutionary tool as urgent", () => {
+    expect(
+      isHotAlert(
+        item({
+          pillar: "tools",
+          urgency: "urgent",
+          metadata: { kind: "tool", contentKind: "tool", actionRequired: true, score: 88 },
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not mark an exploding GitHub repo as urgent", () => {
     expect(
       isHotAlert(
         item({
@@ -39,7 +57,28 @@ describe("isHotAlert", () => {
           metadata: { exploding: true, kind: "repo", contentKind: "repo" },
         }),
       ),
-    ).toBe(true);
+    ).toBe(false);
+  });
+
+  it("does not mark an outage as urgent", () => {
+    expect(
+      isHotAlert(item({ metadata: { hardSignal: "outage", contentKind: "news" } })),
+    ).toBe(false);
+  });
+
+  it("does not mark a breaking changelog as urgent", () => {
+    expect(
+      isHotAlert(
+        item({
+          urgency: "urgent",
+          metadata: {
+            hardSignal: "breaking",
+            contentKind: "breaking",
+            actionRequired: true,
+          },
+        }),
+      ),
+    ).toBe(false);
   });
 
   it("does not mark a new model as urgent", () => {
@@ -72,7 +111,7 @@ describe("isHotAlert", () => {
     ).toBe(false);
   });
 
-  it("treats a young repo gaining 10% of its stars today as urgent", () => {
+  it("does not treat a young repo gaining 10% of its stars today as urgent", () => {
     expect(
       isHotAlert(
         item({
@@ -85,7 +124,7 @@ describe("isHotAlert", () => {
           },
         }),
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 });
 
@@ -110,6 +149,39 @@ describe("isTrending", () => {
             stars: 40_000,
             rank: 12,
           },
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("flags every repo from the GitHub trending sources", () => {
+    expect(
+      isTrending(
+        item({
+          pillar: "opensource",
+          primary_source: "github-trending",
+          metadata: { kind: "repo", contentKind: "repo", starsToday: 40, stars: 800 },
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      isTrending(
+        item({
+          pillar: "opensource",
+          primary_source: "gittrend",
+          metadata: { kind: "repo", contentKind: "repo" },
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not flag a random repo that is not growing", () => {
+    expect(
+      isTrending(
+        item({
+          pillar: "opensource",
+          primary_source: "hn-ai",
+          metadata: { kind: "repo", contentKind: "repo", stars: 800, starsToday: 12 },
         }),
       ),
     ).toBe(false);

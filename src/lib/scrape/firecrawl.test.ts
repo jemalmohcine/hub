@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearScrapeCache,
   fetchHtml,
+  resetFirecrawlCircuit,
   scrapePage,
 } from "@/lib/scrape/firecrawl";
 
@@ -32,6 +33,7 @@ describe("scrapePage", () => {
 
   beforeEach(() => {
     clearScrapeCache();
+    resetFirecrawlCircuit();
     fetchMock.mockReset();
     vi.stubGlobal("fetch", fetchMock);
     vi.stubEnv("FIRECRAWL_API_KEY", "fc-test");
@@ -134,6 +136,27 @@ describe("scrapePage", () => {
     const [calledUrl] = fetchMock.mock.calls[0] as [string, FetchInit];
     expect(calledUrl).toBe("https://openai.com/news");
   });
+
+  it("stops calling Firecrawl after a credit error and keeps using direct GET", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({ success: false, error: "Insufficient credits" }, false, 402),
+      )
+      .mockResolvedValueOnce(htmlResponse("<html>first</html>"))
+      .mockResolvedValueOnce(htmlResponse("<html>second</html>"));
+
+    const first = await scrapePage("https://openai.com/index/a");
+    const second = await scrapePage("https://anthropic.com/news/b");
+
+    expect(first.source).toBe("direct");
+    expect(second.source).toBe("direct");
+
+    const firecrawlCalls = fetchMock.mock.calls.filter(
+      ([url]) => url === "https://api.firecrawl.dev/v2/scrape",
+    );
+    expect(firecrawlCalls).toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe("fetchHtml", () => {
@@ -141,6 +164,7 @@ describe("fetchHtml", () => {
 
   beforeEach(() => {
     clearScrapeCache();
+    resetFirecrawlCircuit();
     fetchMock.mockReset();
     vi.stubGlobal("fetch", fetchMock);
     vi.stubEnv("FIRECRAWL_API_KEY", "fc-test");

@@ -1,6 +1,11 @@
 import * as cheerio from "cheerio";
 import { HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
-import { hasFirecrawl, scrapePage } from "@/lib/scrape/firecrawl";
+import {
+  hasFirecrawl,
+  isFirecrawlCircuitOpen,
+  resetFirecrawlCircuit,
+  scrapePage,
+} from "@/lib/scrape/firecrawl";
 import { extractMainText, readOpenGraph } from "@/lib/scrape/page";
 import { FIELD_LIMITS, clampField } from "@/lib/text";
 import { isEssentialAiIntelUrl } from "@/modules/ai-intel/essential-hosts";
@@ -39,6 +44,7 @@ export function resetFirecrawlArticleBudget() {
   );
   firecrawlUsed = 0;
   firecrawlFallback = 0;
+  resetFirecrawlCircuit();
 }
 
 export function firecrawlArticleStats() {
@@ -46,6 +52,7 @@ export function firecrawlArticleStats() {
     used: firecrawlUsed,
     fallback: firecrawlFallback,
     remaining: firecrawlPagesLeft,
+    circuitOpen: isFirecrawlCircuitOpen(),
   };
 }
 
@@ -62,9 +69,9 @@ function cleanText(raw: string): string {
 
 function takeFirecrawlSlot(url: string): boolean {
   if (!hasFirecrawl()) return false;
+  if (isFirecrawlCircuitOpen()) return false;
   if (!isEssentialAiIntelUrl(url)) return false;
   if (firecrawlPagesLeft <= 0) return false;
-  firecrawlPagesLeft -= 1;
   return true;
 }
 
@@ -78,7 +85,10 @@ export async function scrapeArticlePage(url: string): Promise<ScrapedArticle | n
       via: useFirecrawl ? "firecrawl" : "direct",
     });
 
-    if (useFirecrawl && page.source === "firecrawl") firecrawlUsed += 1;
+    if (useFirecrawl && page.source === "firecrawl") {
+      firecrawlPagesLeft -= 1;
+      firecrawlUsed += 1;
+    }
     if (useFirecrawl && page.source === "direct") firecrawlFallback += 1;
 
     const $ = cheerio.load(page.html);
