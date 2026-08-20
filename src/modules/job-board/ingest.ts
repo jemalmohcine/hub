@@ -3,10 +3,10 @@ import { buildCanonicalKey, classifyEmployment } from "@/modules/job-board/class
 import { collectJobsForPrefs } from "@/modules/job-board/collectors";
 import type { CvJobProfile } from "@/modules/job-board/cv-skills";
 import { shouldScrapeJobSearch } from "@/modules/job-board/filters";
-import { listingTtlCutoffIso } from "@/modules/job-board/listing-ttl";
 import { notifyJobFollowUps } from "@/modules/job-board/notify";
 import { classifyWorkMode, matchesSearchPrefs } from "@/modules/job-board/match";
 import { prefsForScrape } from "@/modules/job-board/scrape-query";
+import { purgeExpiredJobOffers, purgeExpiredUserOffers } from "@/modules/job-board/listing-purge";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 
 function devRelevant(hit: RawJobHit): boolean {
@@ -115,20 +115,6 @@ async function attachListingsToUser(userId: string, listingIds: string[]) {
   }
 }
 
-async function purgeStaleListings() {
-  const admin = createAdminClient();
-  const cutoff = listingTtlCutoffIso();
-  const { error, count } = await admin
-    .from("job_listings")
-    .delete({ count: "exact" })
-    .lt("scraped_at", cutoff);
-  if (error) {
-    console.warn("[jobs] purge stale", error.message);
-    return 0;
-  }
-  return count ?? 0;
-}
-
 export async function ingestJobsForPrefs(
   prefs: JobSearchPrefs,
   options?: { userId?: string; cv?: CvJobProfile | null },
@@ -140,6 +126,13 @@ export async function ingestJobsForPrefs(
   const queryPrefs = prefsForScrape(prefs, options?.cv);
   const hits = await collectJobsForPrefs(queryPrefs);
   const result = await upsertHits(hits, queryPrefs, options?.userId);
+  if (options?.userId) {
+    try {
+      await purgeExpiredUserOffers(options.userId);
+    } catch (err) {
+      console.warn("[jobs] purge user offers", err instanceof Error ? err.message : err);
+    }
+  }
   console.info("[jobs] ingest", {
     roles: queryPrefs.roles,
     locations: queryPrefs.locations,
@@ -153,7 +146,7 @@ export async function ingestJobsForPrefs(
 
 /** Cron: drop stale rows and remind follow-ups. Offers are scraped on demand. */
 export async function runJobBoardIngest() {
-  const purged = await purgeStaleListings();
+  const purged = await purgeExpiredJobOffers();
   let followUps = 0;
   try {
     followUps = await notifyJobFollowUps();
@@ -163,3 +156,4 @@ export async function runJobBoardIngest() {
   console.info("[jobs] maintenance", { purged, followUps });
   return { purged, followUps };
 }
+

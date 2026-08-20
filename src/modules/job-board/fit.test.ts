@@ -271,6 +271,19 @@ describe("listingWorthShowing", () => {
     ).toBe(true);
   });
 
+  it("drops an offer published more than 30 days ago", () => {
+    expect(
+      listingWorthShowing(
+        listing({
+          title: "Développeur frontend",
+          location: "Paris",
+          publishedAt: "2026-07-01T00:00:00.000Z",
+        }),
+        PREFS,
+      ),
+    ).toBe(false);
+  });
+
   it("drops offers older than postedWithinDays", () => {
     const prefs = withJobSearchPrefs({ ...PREFS, postedWithinDays: 7 });
     expect(
