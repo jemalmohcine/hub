@@ -221,6 +221,32 @@ export async function saveJobSearchPrefs(
   throw new Error(lastError?.message ?? "Impossible d’enregistrer la recherche");
 }
 
+export async function getJobSearchLastScrapedAt(userId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const result = await supabase
+    .from("job_search_prefs")
+    .select("last_scraped_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (result.error || !result.data) return null;
+  const value = (result.data as { last_scraped_at?: string | null }).last_scraped_at;
+  return value ?? null;
+}
+
+export async function stampJobSearchScrapedAt(
+  userId: string,
+  at: Date = new Date(),
+): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("job_search_prefs")
+    .update({ last_scraped_at: at.toISOString() })
+    .eq("user_id", userId);
+  if (error && !missingColumn(error)) {
+    console.warn("[jobs] stamp last scrape", error.message);
+  }
+}
+
 export async function listJobListings(
   filter: JobListingFilter = "all",
   query = "",

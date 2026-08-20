@@ -1,8 +1,9 @@
 name: Job Board Maintenance
 
 # Triggered on every main merge via post-merge-main.yml (workflow_call).
-# Every 3 hours + manual dispatch. Does not scrape a global job pool —
-# listings are collected on demand from each user's saved search config.
+# Every 3 hours + manual dispatch. Does not scrape jobs for all users.
+# Each person collects offers with their own saved search: on demand, or
+# silently once per day when they open the app.
 on:
   workflow_call:
   schedule:

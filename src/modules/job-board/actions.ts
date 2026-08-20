@@ -15,10 +15,14 @@ import { shouldScrapeJobSearch } from "@/modules/job-board/filters";
 import {
   getJobListingById,
   getJobListingByUrl,
+  getJobSearchLastScrapedAt,
+  getJobSearchPrefs,
   listUserJobListings,
   saveJobSearchPrefs,
+  stampJobSearchScrapedAt,
 } from "@/modules/job-board/queries";
 import { scrapeJobOfferPage } from "@/modules/job-board/scrape-offer";
+import { jobScrapeIsDue } from "@/modules/job-board/scrape-schedule";
 import type { JobListing, JobSearchPrefs } from "@/modules/job-board/types";
 import type { JobApplication } from "@/modules/job-tracker/types";
 
@@ -109,6 +113,7 @@ export async function saveJobSearchConfig(
         userId: user.id,
         cv: profileFromCv(cv),
       });
+      await stampJobSearchScrapedAt(user.id);
       scraped = true;
     } catch (err) {
       console.warn(
@@ -121,6 +126,42 @@ export async function saveJobSearchConfig(
   const library = await listUserJobListings(user.id);
   revalidatePath("/app/career");
   return { prefs: saved, library, scraped };
+}
+
+/**
+ * Quiet daily refresh: only this user, only with their saved config,
+ * only if the last collection was on a previous day. Triggered when they
+ * open the app — never a global morning scrape for everyone.
+ */
+export async function refreshJobOffersIfDue(): Promise<{ scraped: boolean }> {
+  const user = await requireUser();
+  const prefs = await getJobSearchPrefs(user.id);
+  if (!prefs || !shouldScrapeJobSearch(prefs)) {
+    return { scraped: false };
+  }
+  const lastScrapedAt = await getJobSearchLastScrapedAt(user.id);
+  if (!jobScrapeIsDue(lastScrapedAt)) {
+    return { scraped: false };
+  }
+  const cv = prefs.cvDocumentId
+    ? await getCvDocumentById(user.id, prefs.cvDocumentId)
+    : null;
+  try {
+    await ingestJobsForPrefs(prefs, {
+      userId: user.id,
+      cv: profileFromCv(cv),
+    });
+    await stampJobSearchScrapedAt(user.id);
+  } catch (err) {
+    console.warn(
+      "[jobs] silent daily scrape failed",
+      err instanceof Error ? err.message : err,
+    );
+    return { scraped: false };
+  }
+  revalidatePath("/app/career");
+  revalidatePath("/app");
+  return { scraped: true };
 }
 
 /** Start tracking an offer — no extra scrape, so it stays instant. */
