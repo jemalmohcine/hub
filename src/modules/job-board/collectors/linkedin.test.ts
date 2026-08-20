@@ -77,16 +77,26 @@ describe("parseLinkedInGuestHtml", () => {
 });
 
 describe("linkedinSearchPlaces", () => {
-  it("searches Casablanca when that city is selected", () => {
+  it("searches Morocco plus hub cities, not Casablanca alone", () => {
     const places = linkedinSearchPlaces(
       withJobSearchPrefs({ locations: ["casablanca"] }),
     );
-    expect(places.map((place) => place.id)).toEqual(["casablanca"]);
+    expect(places.map((place) => place.id)).toEqual([
+      "maroc",
+      "casablanca",
+      "rabat",
+      "marrakech",
+    ]);
   });
 
-  it("expands a Morocco-only country search to Casablanca and Rabat", () => {
+  it("expands a Morocco-only country search to the same hubs", () => {
     const places = linkedinSearchPlaces(withJobSearchPrefs({ locations: ["maroc"] }));
-    expect(places.map((place) => place.id)).toEqual(["casablanca", "rabat", "maroc"]);
+    expect(places.map((place) => place.id)).toEqual([
+      "maroc",
+      "casablanca",
+      "rabat",
+      "marrakech",
+    ]);
   });
 });
 
@@ -104,7 +114,8 @@ describe("linkedinGuestSearchUrl", () => {
     expect(url).toContain("jobs-guest/jobs/api/seeMoreJobPostings/search");
     expect(url).toContain("Casablanca");
     expect(url).toContain("Morocco");
-    expect(url).toContain("f_WT=1");
+    expect(decodeURIComponent(url)).toContain("développeur");
+    expect(url).not.toContain("f_WT=");
   });
 
   it("adds the keyword to the LinkedIn query", () => {
@@ -119,6 +130,19 @@ describe("linkedinGuestSearchUrl", () => {
     expect(url).toContain("React");
     expect(url).toContain("frontend");
     expect(url).toContain("keywords=");
+  });
+
+  it("does not pin LinkedIn to hybrid-only for a Casablanca search", () => {
+    const url = linkedinGuestSearchUrl(
+      withJobSearchPrefs({
+        roles: ["frontend"],
+        locations: ["casablanca"],
+        workModes: ["hybrid"],
+        workMode: "hybrid",
+      }),
+      resolveLocation("casablanca"),
+    );
+    expect(url).not.toContain("f_WT=");
   });
 });
 

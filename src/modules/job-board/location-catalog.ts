@@ -121,7 +121,7 @@ export const CATALOG_COUNTRIES: JobLocation[] = [
 ];
 
 export const CATALOG_CITIES: JobLocation[] = [
-  city("casablanca", "Casablanca", "maroc", ["casa", "dar el beida"], "Casablanca"),
+  city("casablanca", "Casablanca", "maroc", ["casa", "dar el beida", "casablanca-settat", "casa-settat"], "Casablanca"),
   city("rabat", "Rabat", "maroc", [], "Rabat"),
   city("marrakech", "Marrakech", "maroc", ["marrakesh"], "Marrakech"),
   city("tanger", "Tanger", "maroc", ["tangier"], "Tangier"),

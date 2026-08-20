@@ -35,6 +35,19 @@ const BY_ID = new Map(ROLES.map((role) => [role.id, role]));
 
 export const JOB_ROLES = ROLES;
 
+/** Roles whose LinkedIn/Rekrute neighbours are generic software titles. */
+export const SOFTWARE_FAMILY_ROLE_IDS = new Set([
+  "frontend",
+  "backend",
+  "fullstack",
+  "software-engineer",
+  "mobile",
+]);
+
+export function isSoftwareFamilyRole(roleQuery: string): boolean {
+  return SOFTWARE_FAMILY_ROLE_IDS.has(resolveRole(roleQuery).id);
+}
+
 /** Generic “dev” words must not collapse onto “Développeur frontend”. */
 const GENERIC_SOFTWARE_QUERIES = new Set([
   "dev",

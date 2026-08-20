@@ -2,13 +2,14 @@ import * as cheerio from "cheerio";
 import { tryFetchText, HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
 import { JOB_BOARD_HEADERS } from "@/modules/job-board/collectors/board-headers";
 import {
+  expandMoroccoCountry,
   isMoroccoPlace,
   resolveLocation,
   resolveLocations,
   type JobLocation,
 } from "@/modules/job-board/locations";
 import { classifyWorkMode, placeFitsPrefs, roleMatchesAny } from "@/modules/job-board/match";
-import { boardSearchQueries } from "@/modules/job-board/scrape-query";
+import { linkedinSearchKeywords } from "@/modules/job-board/scrape-query";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 import { normalizeWorkModes } from "@/modules/job-board/work-modes";
 
@@ -20,11 +21,7 @@ export type ParsedLinkedInHit = {
   publishedAt: string | null;
 };
 
-const LINKEDIN_WT: Record<string, string> = {
-  onsite: "1",
-  remote: "2",
-  hybrid: "3",
-};
+const LINKEDIN_REMOTE_WT = "2";
 
 export function canonicalLinkedInJobUrl(href: string): string {
   const match = href.match(/\/jobs\/view\/(?:[\w%-]+-)?(\d{5,})/i);
@@ -43,7 +40,7 @@ export function linkedinPlaceLabel(place: JobLocation): string {
 }
 
 export function searchKeywords(prefs: JobSearchPrefs): string {
-  return boardSearchQueries(prefs, 1)[0] || "développeur";
+  return linkedinSearchKeywords(prefs);
 }
 
 export function linkedinGuestSearchUrl(
@@ -56,9 +53,9 @@ export function linkedinGuestSearchUrl(
   params.set("location", linkedinPlaceLabel(place));
   params.set("start", String(start));
   const modes = normalizeWorkModes(prefs);
-  if (modes.length === 1) {
-    const wt = LINKEDIN_WT[modes[0] ?? ""];
-    if (wt) params.set("f_WT", wt);
+  // Guest cards rarely label hybrid/onsite. Restricting f_WT hides Casablanca CDI.
+  if (modes.length === 1 && modes[0] === "remote") {
+    params.set("f_WT", LINKEDIN_REMOTE_WT);
   }
   return `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?${params.toString()}`;
 }
@@ -100,14 +97,14 @@ export function parseLinkedInGuestHtml(html: string): ParsedLinkedInHit[] {
   return hits;
 }
 
-/** Country-only Maroc → also hit Casablanca and Rabat, where the volume is. */
+/** Morocco is one market: country search plus the cities that actually have volume. */
+const MOROCCO_LINKEDIN_HUBS = ["maroc", "casablanca", "rabat", "marrakech"];
+
 export function linkedinSearchPlaces(prefs: JobSearchPrefs): JobLocation[] {
   const selected = resolveLocations(prefs.locations);
-  const morocco = selected.filter(isMoroccoPlace);
-  if (morocco.length > 0) {
-    const cities = morocco.filter((entry) => entry.kind === "city");
-    if (cities.length > 0) return cities.slice(0, 2);
-    return resolveLocations(["casablanca", "rabat", "maroc"]);
+  if (selected.some(isMoroccoPlace)) {
+    const extra = selected.filter(isMoroccoPlace).map((entry) => entry.id);
+    return resolveLocations([...MOROCCO_LINKEDIN_HUBS, ...extra], 5);
   }
   return selected.slice(0, 1);
 }
@@ -146,7 +143,7 @@ async function collectLinkedInPlace(
   prefs: JobSearchPrefs,
   place: JobLocation,
 ): Promise<RawJobHit[]> {
-  const selected = resolveLocations(prefs.locations);
+  const selected = expandMoroccoCountry(resolveLocations(prefs.locations));
   const hits: RawJobHit[] = [];
   const seen = new Set<string>();
 
@@ -170,7 +167,7 @@ async function collectLinkedInPlace(
   return hits;
 }
 
-/** LinkedIn’s public job cards for the selected city — not the worldwide aggregators. */
+/** LinkedIn public cards for Morocco (country + hub cities) or the selected place. */
 export async function collectLinkedIn(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
   const places = linkedinSearchPlaces(prefs);
   if (places.length === 0) return [];

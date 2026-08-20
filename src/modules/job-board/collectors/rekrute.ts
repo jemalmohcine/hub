@@ -2,11 +2,12 @@ import * as cheerio from "cheerio";
 import { absoluteUrl, tryFetchText, HTTP_TIMEOUTS } from "@/lib/http/fetch-text";
 import { JOB_BOARD_HEADERS } from "@/modules/job-board/collectors/board-headers";
 import {
+  expandMoroccoCountry,
   isMoroccoPlace,
   resolveLocations,
 } from "@/modules/job-board/locations";
 import { classifyWorkMode, placeFitsPrefs, roleMatchesAny } from "@/modules/job-board/match";
-import { boardSearchQueries } from "@/modules/job-board/scrape-query";
+import { collectorSearchQueries } from "@/modules/job-board/scrape-query";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 
 export type ParsedRekruteHit = {
@@ -71,14 +72,14 @@ export function parseRekruteSearchHtml(html: string): ParsedRekruteHit[] {
 }
 
 function searchQueries(prefs: JobSearchPrefs): string[] {
-  const queries = boardSearchQueries(prefs, 2);
+  const queries = collectorSearchQueries(prefs, 2);
   return queries.length > 0 ? queries : ["développeur"];
 }
 
-export function rekruteSearchUrl(query: string): string {
+export function rekruteSearchUrl(query: string, page = 1): string {
   const params = new URLSearchParams({
     s: "1",
-    p: "1",
+    p: String(page),
     o: "1",
     query,
     keyword: query,
@@ -92,39 +93,46 @@ export function wantsRekrute(prefs: JobSearchPrefs): boolean {
   return selected.some(isMoroccoPlace);
 }
 
+const REKRUTE_PAGES = 3;
+
 async function collectRekruteQuery(
   query: string,
   prefs: JobSearchPrefs,
 ): Promise<RawJobHit[]> {
-  const html = await tryFetchText(rekruteSearchUrl(query), {
-    timeoutMs: HTTP_TIMEOUTS.page,
-    headers: JOB_BOARD_HEADERS,
-  });
-  if (!html || !html.includes("titreJob")) return [];
-  const selected = resolveLocations(prefs.locations);
+  const selected = expandMoroccoCountry(resolveLocations(prefs.locations));
   const hits: RawJobHit[] = [];
   const seen = new Set<string>();
 
-  for (const parsed of parseRekruteSearchHtml(html)) {
-    if (seen.has(parsed.url)) continue;
-    if (!placeFitsPrefs(selected, parsed.location, parsed.title, false)) continue;
-    if (!roleMatchesAny(prefs, parsed.title)) continue;
-    seen.add(parsed.url);
-    hits.push({
-      source: "rekrute",
-      externalId: parsed.url,
-      company: parsed.company,
-      title: parsed.title,
-      description: parsed.description,
-      url: parsed.url,
-      location: parsed.location,
-      publishedAt: parsed.publishedAt,
-      workMode: classifyWorkMode({
-        title: parsed.title,
-        description: parsed.description,
-        location: parsed.location,
-      }),
+  for (let page = 1; page <= REKRUTE_PAGES; page += 1) {
+    const html = await tryFetchText(rekruteSearchUrl(query, page), {
+      timeoutMs: HTTP_TIMEOUTS.page,
+      headers: JOB_BOARD_HEADERS,
     });
+    if (!html || !html.includes("titreJob")) break;
+    const parsed = parseRekruteSearchHtml(html);
+    if (parsed.length === 0) break;
+    for (const row of parsed) {
+      if (seen.has(row.url)) continue;
+      if (!placeFitsPrefs(selected, row.location, row.title, true)) continue;
+      if (!roleMatchesAny(prefs, row.title)) continue;
+      seen.add(row.url);
+      hits.push({
+        source: "rekrute",
+        externalId: row.url,
+        company: row.company,
+        title: row.title,
+        description: row.description,
+        url: row.url,
+        location: row.location,
+        publishedAt: row.publishedAt,
+        workMode: classifyWorkMode({
+          title: row.title,
+          description: row.description,
+          location: row.location,
+        }),
+      });
+    }
+    if (parsed.length < 8) break;
   }
   return hits;
 }

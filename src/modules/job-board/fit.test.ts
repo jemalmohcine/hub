@@ -30,7 +30,7 @@ function listing(
     url: "https://example.com",
     employmentCategory: over.employmentCategory ?? "salaried",
     freelanceSubtype: null,
-    workMode: over.workMode ?? "hybrid",
+    workMode: over.workMode !== undefined ? over.workMode : "hybrid",
     location: over.location ?? "Paris",
     salaryHint: null,
     tags: over.tags ?? [],
@@ -169,18 +169,44 @@ describe("listingWorthShowing", () => {
     ).toBe(true);
   });
 
-  it("drops a backend title even if the CV stack appears in the description", () => {
+  it("keeps a Casablanca LinkedIn card with unknown work mode", () => {
+    const prefs = withJobSearchPrefs({
+      roles: ["frontend"],
+      locations: ["casablanca"],
+      workModes: ["hybrid"],
+      workMode: "hybrid",
+    });
     expect(
       listingWorthShowing(
         listing({
-          title: "Développeur Python",
-          description: "React, TypeScript, Next.js",
-          location: "Paris",
+          title: "Full Stack Developer",
+          location: "Casablanca, Casablanca-Settat, Maroc",
+          workMode: null,
         }),
-        PREFS,
+        prefs,
+      ),
+    ).toBe(true);
+    expect(
+      listingWorthShowing(
+        listing({
+          title: "Software Engineer - Casablanca CDI",
+          location: "Casablanca, Maroc",
+          workMode: null,
+        }),
+        prefs,
         ["React", "TypeScript"],
       ),
-    ).toBe(false);
+    ).toBe(true);
+    expect(
+      listingWorthShowing(
+        listing({
+          title: "Développeur (H/F)",
+          location: "Rabat, Maroc",
+          workMode: null,
+        }),
+        prefs,
+      ),
+    ).toBe(true);
   });
 
   it("drops an 8-year ask when yearsMin is 2", () => {
