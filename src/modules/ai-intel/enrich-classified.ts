@@ -11,7 +11,8 @@ import { organizeIntelLocalized } from "@/modules/ai-intel/organize-intel";
 import { isRepoExploding } from "@/modules/ai-intel/repo-momentum";
 import { scrapeGithubRepo } from "@/modules/ai-intel/scrape-github-repo";
 import { attachScoreToRaw, isOffTopic, verdictFromScore } from "@/modules/ai-intel/score";
-import type { AiCategory, AiPillar, AiUrgency, ClassifiedItem } from "@/modules/ai-intel/types";
+import type { AiCategory, AiIntelItem, AiPillar, AiUrgency, ClassifiedItem } from "@/modules/ai-intel/types";
+import { isWellUsedExplodingRepo } from "@/modules/ai-intel/ui/rank";
 
 const MAX_ARTICLE_SCRAPES = Number(process.env.AI_INTEL_ARTICLE_SCRAPES || 60);
 const MAX_REPO_SCRAPES = Number(process.env.AI_INTEL_REPO_SCRAPES || 40);
@@ -245,21 +246,34 @@ export async function enrichClassifiedItem(
     ? decision.urgency
     : (rescored.verdict === "use_it" ? "medium" : "light");
 
-  if (hardSignal) urgency = "urgent";
-  if (kind === "repo") {
-    // A repo never forces an action — only a real explosion earns an alert.
-    urgency = exploding ? "urgent" : urgency === "urgent" ? "medium" : urgency;
+  if (hardSignal === "security" || hardSignal === "pricing") urgency = "urgent";
+  else if (hardSignal) {
+    urgency = urgency === "light" ? "medium" : urgency;
   }
-  if (offTopic && !hardSignal) urgency = "light";
+  if (kind === "repo") {
+    urgency = isWellUsedExplodingRepo({
+      pillar: item.pillar,
+      metadata: meta,
+    } as AiIntelItem)
+      ? "urgent"
+      : urgency === "urgent"
+        ? "medium"
+        : urgency;
+  }
+  if (offTopic && hardSignal !== "security" && hardSignal !== "pricing") {
+    urgency = "light";
+  }
 
   const actionRequired =
-    Boolean(hardSignal) || (decision?.actionRequired === true && !offTopic);
+    hardSignal === "security" ||
+    hardSignal === "pricing" ||
+    (decision?.actionRequired === true && !offTopic && kind !== "repo");
 
   const contentKind: LlmContentKind | null = hardSignal
-    ? (hardSignal === "outage" ? "news" : hardSignal)
-    : exploding
-      ? "repo"
-      : (decision?.contentKind ?? null);
+    ? hardSignal === "outage"
+      ? "news"
+      : hardSignal
+    : (decision?.contentKind ?? null);
 
   const pillar = contentKind
     ? pillarFromContentKind(contentKind, item.pillar)

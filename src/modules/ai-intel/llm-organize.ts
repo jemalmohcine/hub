@@ -30,8 +30,8 @@ export type LlmUrgency = (typeof LLM_URGENCIES)[number];
 const intelSchema = z.object({
   title: z
     .string()
-    .max(110)
-    .describe("Titre court et explicite au format « Nom : ce que c'est »"),
+    .max(90)
+    .describe("Titre court « Nom : un fait utile pour un dev », sans chrome de page"),
   purpose: z
     .string()
     .max(220)
@@ -39,8 +39,8 @@ const intelSchema = z.object({
   essentialPoints: z
     .array(z.string().max(240))
     .min(2)
-    .max(5)
-    .describe("Points factuels: ce que c'est, chiffres, changement concret"),
+    .max(3)
+    .describe("2 à 3 faits utiles: ce que c'est, ce qui change. Pas un copier-coller."),
   contentKind: z
     .enum(LLM_CONTENT_KINDS)
     .describe("Nature réelle du contenu après lecture"),
@@ -111,13 +111,14 @@ function resolveModel() {
 }
 
 const URGENCY_RUBRIC = [
-  "urgent — le dev doit agir vite: faille de sécurité ou CVE sur un service/lib courant,",
-  "  hausse ou refonte de prix d'un LLM ou d'un service dev, modèle ou API supprimé / déprécié /",
-  "  arrêté à une date, breaking change qui impose une migration, panne majeure, quota ou rate",
-  "  limit réduit, ou dépôt GitHub qui explose vraiment (croissance quotidienne massive).",
-  "medium — à connaître cette semaine: nouveau modèle notable, release importante, nouvel outil",
-  "  sérieux, fonctionnalité utile. Aucune action forcée.",
-  "light — contexte, opinion, actu générale, annonce marketing, sujet non technique.",
+  "urgent — uniquement:",
+  "  1) faille de sécurité / CVE / vulnérabilité;",
+  "  2) changement de prix d'un LLM (token, free tier, OpenAI / Anthropic / Gemini / …);",
+  "  3) dépôt GitHub AI déjà très utilisé (des milliers de stars) qui explose vraiment;",
+  "  4) outil IA vraiment révolutionnaire (change la façon de coder).",
+  "  JAMAIS urgent: changelog, nouveau modèle seul, dépréciation, panne, petit repo qui décolle, actu.",
+  "medium — à connaître: nouveau LLM, nouvel outil, nouveau module / lib AI, release, breaking.",
+  "light — contexte, opinion, marketing, hors IA.",
 ].join("\n");
 
 function buildPrompt(input: {
@@ -144,17 +145,17 @@ function buildPrompt(input: {
         : "article ou annonce";
 
   return [
-    "Tu es l'analyste d'une veille technique destinée à un développeur qui construit des apps IA.",
-    "Tu lis le contenu de l'article ou du dépôt et tu décides toi-même de quoi il s'agit et si ça mérite une alerte.",
+    "Tu es l'analyste d'une veille IA: le lecteur vient ici au lieu de checker le web.",
+    "Tu résumes ce que c'est. Le détail est dans la source, tu n'as pas à tout recopier.",
     lang,
     "",
     "Niveaux d'urgence:",
     URGENCY_RUBRIC,
     "",
     "Règles:",
-    "- title: « Nom : ce que c'est » en une ligne compréhensible. Jamais une phrase du README, jamais un nombre de stars. N'utilise pas de tiret long (—).",
-    "- purpose: une phrase qui explique précisément le sujet.",
-    "- essentialPoints: 3 à 5 points factuels tirés du contenu (ce que c'est, chiffres réels, ce qui change). Aucun remplissage.",
+    "- title: « Nom : un fait utile » en une ligne courte. Jamais une phrase du README, jamais « Back to changelog », jamais un nombre de stars, jamais un tiret long (—).",
+    "- purpose: UNE phrase « ça fait quoi » / ce qui change. Le lecteur ouvre la source s'il veut le détail.",
+    "- essentialPoints: 2 à 3 faits utiles max (CVE, prix, langage, ce que ça remplace). Pas de copier-coller d'article.",
     "- impact: la conséquence concrète pour le dev. Si aucune, dis-le franchement.",
     "- actionRequired: true uniquement si une action est nécessaire (patcher, migrer, vérifier son plan ou ses coûts).",
     "- tags: 2 à 4 étiquettes techniques précises (ex: « MCP », « Sécurité », « Pricing », « TypeScript », « Agents »). Interdit: « IA », « Tech », « Nouveauté », « Outil ».",
@@ -284,7 +285,7 @@ export async function llmOrganizeIntel(input: {
     return {
       title,
       purpose,
-      essentialPoints: essentialPoints.slice(0, 5),
+      essentialPoints: essentialPoints.slice(0, 3),
       longAbout,
       model: modelLabel,
       contentKind: output.contentKind,

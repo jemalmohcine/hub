@@ -9,7 +9,7 @@ import type { HubLocale } from "@/core/i18n";
 import { translateOnce } from "@/modules/ai-intel/i18n/translate";
 import { sanitizePlainText } from "@/modules/ai-intel/html-to-text";
 import { formatCompactNumber } from "@/lib/numbers";
-import { truncateAtWord, plainDash } from "@/lib/text";
+import { truncateAtWord, plainDash, collapseWhitespace, isNearDuplicate } from "@/lib/text";
 import { sourceDisplayName } from "@/modules/ai-intel/source-label";
 import type { AiIntelItem, ClassifiedItem } from "@/modules/ai-intel/types";
 
@@ -112,7 +112,7 @@ const ACTION = {
 } as const;
 
 const FLUFF_RE =
-  /bon à savoir|agis seulement|touche (ton|votre) setup|conservez-le en veille|si le sujet vous concerne|safe to ignore|keep it on your radar|good to know|act only if|utile à connaître|planifiez un essai|schedule a trial|interesting, not urgent|contexte général|priorité faible|low priority|general context|signal de pertinence|relevance signal|à parcourir|watchlist|dépôt prometteur|promising repository|activit[eé] modérée|moderate activity/i;
+  /bon à savoir|agis seulement|touche (ton|votre) setup|conservez-le en veille|si le sujet vous concerne|safe to ignore|keep it on your radar|good to know|act only if|utile à connaître|planifiez un essai|schedule a trial|interesting, not urgent|contexte général|priorité faible|low priority|general context|signal de pertinence|relevance signal|à parcourir|watchlist|dépôt prometteur|promising repository|activit[eé] modérée|moderate activity|back to changelog|skip to (content|main)|table of contents|cookie (policy|settings)/i;
 
 function isFluff(text: string): boolean {
   const value = text.trim();
@@ -198,7 +198,43 @@ function firstClause(text: string, max = 78): string {
 }
 
 /** A title longer than this stops being a title and becomes a paragraph. */
-const MAX_TITLE = 100;
+const MAX_TITLE = 78;
+
+const TITLE_JUNK_RE =
+  /\b(back to changelog|skip to (content|main|navigation)|table of contents|all (posts|articles)|subscribe now|cookie (policy|settings)|privacy policy|sign in|log in|read more)\b/i;
+
+function stripTitleJunk(title: string): string {
+  let value = collapseWhitespace(title);
+  value = value.replace(/\s*(?:[-:|•]|: )?\s*back to changelog.*$/i, "");
+  value = value.replace(/\s*[\-|]\s*GitHub\s*$/i, "");
+  value = value.replace(TITLE_JUNK_RE, " ");
+  return collapseWhitespace(value);
+}
+
+function isNoisyTitle(title: string): boolean {
+  const value = stripTitleJunk(title);
+  if (value.length < 6) return true;
+  if (TITLE_JUNK_RE.test(title)) return true;
+  if (/^(changelog|release notes|updates?|home)$/i.test(value)) return true;
+  return false;
+}
+
+function composeSimpleTitle(
+  name: string,
+  fact: string,
+  max = MAX_TITLE,
+): string {
+  const label = collapseWhitespace(name);
+  const detail = firstClause(stripTitleJunk(fact), max);
+  if (!label) return truncateAtWord(detail, max);
+  if (!detail || isNearDuplicate(detail, label, 24)) {
+    return truncateAtWord(label, max);
+  }
+  if (detail.toLowerCase().startsWith(label.toLowerCase())) {
+    return truncateAtWord(detail, max);
+  }
+  return truncateAtWord(`${label} : ${detail}`, max);
+}
 
 function repoShortName(name: string): string {
   if (!name.includes("/")) return name;
@@ -207,7 +243,7 @@ function repoShortName(name: string): string {
 
 /**
  * Title that explains what the thing is, not just a raw slug.
- * Pattern: "Name: what it does"
+ * Pattern: "Name : useful fact"
  */
 export function explainTitle(
   item: Pick<
@@ -233,11 +269,18 @@ export function explainTitle(
   const kind = detectContentKind(item);
   const typeLabel = contentKindLabel(kind, locale);
   const product = productOf(item);
-  const name = pickLocalized(i18n?.title, locale, item.title);
+  const name = stripTitleJunk(pickLocalized(i18n?.title, locale, item.title));
+  const purpose = pickClean(
+    readMeta(meta, "purpose"),
+    pickLocalized(i18n?.about, locale, ""),
+    pickLocalized(i18n?.summary, locale, ""),
+  );
 
-  // Rows organised by earlier pipeline versions stored a whole paragraph here.
-  const organizedTitle = readMeta(meta, "organizedTitle") || readMeta(meta, "displayTitle");
-  if (organizedTitle) {
+  const organizedRaw =
+    readMeta(meta, "organizedTitle") || readMeta(meta, "displayTitle") || "";
+  const organizedTitle = stripTitleJunk(organizedRaw);
+
+  if (organizedTitle && !isNoisyTitle(organizedTitle)) {
     return {
       title: truncateAtWord(organizedTitle, MAX_TITLE),
       name,
@@ -247,68 +290,13 @@ export function explainTitle(
     };
   }
 
-  // News-like items: enrich headline by kind when possible.
-  if (kind !== "repo" && kind !== "tool") {
-    if (kind === "pricing") {
-      return {
-        title: product
-          ? locale === "fr"
-            ? `${product} : changement de prix`
-            : `${product} : pricing change`
-          : name,
-        name,
-        typeLabel,
-        kind,
-        product,
-      };
-    }
-    if (kind === "model") {
-      return {
-        title: product
-          ? locale === "fr"
-            ? `${product} : nouveau modèle`
-            : `${product} : new model`
-          : name,
-        name,
-        typeLabel,
-        kind,
-        product,
-      };
-    }
-    if (kind === "breaking") {
-      return {
-        title: product
-          ? locale === "fr"
-            ? `${product} : changement majeur`
-            : `${product} : breaking change`
-          : name,
-        name,
-        typeLabel,
-        kind,
-        product,
-      };
-    }
-    if (kind === "security") {
-      return {
-        title: product
-          ? locale === "fr"
-            ? `${product} : sécurité`
-            : `${product} : security`
-          : name,
-        name,
-        typeLabel,
-        kind,
-        product,
-      };
-    }
-    return { title: name, name, typeLabel, kind, product };
-  }
-
   const whatSource = pickClean(
+    purpose,
     pickLocalized(i18n?.about, locale, ""),
     readMeta(meta, "tagline"),
     readMeta(meta, "description"),
     pickLocalized(i18n?.summary, locale, ""),
+    isNoisyTitle(name) ? "" : name,
     item.summary,
   );
 
@@ -323,20 +311,12 @@ export function explainTitle(
 
   if (kind === "repo") {
     const short = repoShortName(name);
-    if (what) {
-      return {
-        title: truncateAtWord(`${short}: ${what}`, MAX_TITLE),
-        name,
-        typeLabel,
-        kind,
-        product,
-      };
-    }
     return {
-      title:
-        locale === "fr"
-          ? `${short}: dépôt open source`
-          : `${short}: open-source repository`,
+      title: what
+        ? composeSimpleTitle(short, what)
+        : locale === "fr"
+          ? `${short} : dépôt open source`
+          : `${short} : open-source repository`,
       name,
       typeLabel,
       kind,
@@ -344,17 +324,54 @@ export function explainTitle(
     };
   }
 
-  if (what && what.toLowerCase() !== name.toLowerCase()) {
+  if (kind === "tool") {
     return {
-      title: truncateAtWord(`${name}: ${what}`, MAX_TITLE),
+      title: what
+        ? composeSimpleTitle(product || name, what)
+        : locale === "fr"
+          ? `${name} : outil`
+          : `${name} : tool`,
       name,
       typeLabel,
       kind,
       product,
     };
   }
+
+  const label = product || name;
+  if (what) {
+    return {
+      title: composeSimpleTitle(label, what),
+      name,
+      typeLabel,
+      kind,
+      product,
+    };
+  }
+
+  const fallbackKind =
+    kind === "pricing"
+      ? locale === "fr"
+        ? "changement de prix"
+        : "pricing change"
+      : kind === "security"
+        ? locale === "fr"
+          ? "faille de sécurité"
+          : "security issue"
+        : kind === "breaking"
+          ? locale === "fr"
+            ? "changement majeur"
+            : "breaking change"
+          : kind === "model"
+            ? locale === "fr"
+              ? "nouveau modèle"
+              : "new model"
+            : "";
+
   return {
-    title: locale === "fr" ? `${name}: outil d’IA` : `${name}: AI tool`,
+    title: fallbackKind
+      ? composeSimpleTitle(label, fallbackKind)
+      : truncateAtWord(stripTitleJunk(name) || label, MAX_TITLE),
     name,
     typeLabel,
     kind,

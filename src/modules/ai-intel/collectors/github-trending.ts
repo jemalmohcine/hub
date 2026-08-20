@@ -147,12 +147,11 @@ export async function collectGithubTrending(
     hits.push(...enriched);
   }
 
-  // Prefer repos a builder would actually open; keep a few high-momentum outliers
-  const useful = hits.filter((h) => {
-    const blob = `${h.title} ${h.summary} ${JSON.stringify(h.raw?.topics ?? [])}`;
-    const starsToday = Number(h.raw?.starsToday) || 0;
-    return DEV_SIGNAL_RE.test(blob) || starsToday >= 1200;
-  });
-
-  return (useful.length >= 5 ? useful : hits).slice(0, 22);
+  // AI-related repos only. Non-AI trending is not this feed.
+  return hits
+    .filter((h) => {
+      const blob = `${h.title} ${h.summary} ${JSON.stringify(h.raw?.topics ?? [])}`;
+      return DEV_SIGNAL_RE.test(blob);
+    })
+    .slice(0, 22);
 }

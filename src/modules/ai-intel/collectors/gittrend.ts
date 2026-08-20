@@ -2,6 +2,7 @@ import * as cheerio from "cheerio";
 import { fetchText } from "@/lib/http/fetch-text";
 import { formatCompactNumber } from "@/lib/numbers";
 import type { RawHit } from "@/modules/ai-intel/types";
+import { DEV_SIGNAL_RE } from "@/modules/ai-intel/score";
 
 type ListItem = { position?: number; url?: string; name?: string };
 
@@ -155,5 +156,5 @@ export async function collectGitTrend(
     for (const hit of enriched) if (hit) hits.push(hit);
   }
 
-  return hits;
+  return hits.filter((h) => DEV_SIGNAL_RE.test(`${h.title} ${h.summary}`));
 }

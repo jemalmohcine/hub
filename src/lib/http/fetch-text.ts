@@ -82,7 +82,12 @@ export async function postJson<T>(
       next: { revalidate: 0 },
     });
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status} for ${url}`);
+      const snippet = (await res.text().catch(() => "")).trim().slice(0, 240);
+      throw new Error(
+        snippet
+          ? `HTTP ${res.status} for ${url}: ${snippet}`
+          : `HTTP ${res.status} for ${url}`,
+      );
     }
     return (await res.json()) as T;
   } finally {

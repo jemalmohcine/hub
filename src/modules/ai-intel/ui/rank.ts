@@ -52,39 +52,85 @@ function asIntelItem(item: AlertItem): AiIntelItem {
 
 /**
  * Phone alerts and the Urgent tab share this rule: only act-now signals.
- * A new model, a changelog, or a merely trending repo is interesting, not urgent.
+ * Security / CVE, an LLM price change, or a widely used AI repo that explodes.
+ * A changelog, an outage, or a new model is interesting, not urgent.
  */
 export function isCriticalPushAlert(item: AlertItem): boolean {
-  const meta = (item.metadata ?? {}) as Record<string, unknown>;
-
-  if (meta.hardSignal) return true;
-  if (meta.exploding === true) return true;
-  if (meta.actionRequired === true && item.urgency === "urgent") return true;
-
-  // Analysed items have already been judged above; only legacy rows fall through.
-  if (meta.contentKind) return false;
-
   const intel = asIntelItem(item);
   const kind = detectContentKind(intel);
+  const signal =
+    typeof intel.metadata?.hardSignal === "string"
+      ? String(intel.metadata.hardSignal)
+      : "";
 
-  if (kind === "repo") return isRepoExploding(intel);
-  return kind === "pricing" || kind === "breaking" || kind === "security";
+  if (signal === "security" || kind === "security") return true;
+  if (isLlmPriceChange(intel, signal, kind)) return true;
+  if (isWellUsedExplodingRepo(intel)) return true;
+  return isRevolutionaryTool(intel);
 }
 
-/** Same rule as push: CVE / prix / breaking / panne / repo qui explose. */
+const LLM_PRICE_RE =
+  /\b(llm|gpt-?\d|claude|gemini|openai|anthropic|mistral|llama|grok|token(?:s)?|per[- ]token|copilot)\b/i;
+
+function isLlmPriceChange(
+  item: AiIntelItem,
+  signal: string,
+  kind: ReturnType<typeof detectContentKind>,
+): boolean {
+  if (signal !== "pricing" && kind !== "pricing") return false;
+  if (item.pillar === "models" || kind === "model") return true;
+  const text = `${item.title} ${item.summary ?? ""}`;
+  return LLM_PRICE_RE.test(text);
+}
+
+/** Popular enough that an explosion actually matters to a working dev. */
+const WELL_USED_STARS = 2_000;
+
+export function isWellUsedExplodingRepo(item: AiIntelItem): boolean {
+  if (itemKind(item) !== "repo") return false;
+  const { stars, starsToday, rank } = readRepoMomentum(item);
+  const wellUsed = stars >= WELL_USED_STARS || (rank > 0 && rank <= 3 && stars >= 1_000);
+  if (!wellUsed) return false;
+
+  const meta = (item.metadata ?? {}) as Record<string, unknown>;
+  if (meta.exploding === true) return true;
+  return isRepoExploding(item) || starsToday >= 400;
+}
+
+function isRevolutionaryTool(item: AiIntelItem): boolean {
+  if (itemKind(item) === "repo") return false;
+  if (detectContentKind(item) !== "tool") return false;
+
+  const meta = (item.metadata ?? {}) as Record<string, unknown>;
+  const score = Number(meta.score) || 0;
+  if (meta.exploding === true) return true;
+  if (item.urgency === "urgent" && meta.actionRequired === true) return true;
+  if (item.urgency === "urgent" && score >= 80) return true;
+  return false;
+}
+
+/** Same rule as push: faille / prix LLM / repo AI très utilisé qui explose. */
 export function isHotAlert(item: AiIntelItem): boolean {
   return isCriticalPushAlert(item);
 }
 
-/** Trending = accelerating repo with measurable daily growth. */
+const TRENDING_SOURCES = new Set(["github-trending", "gittrend"]);
+
+/** GitHub tab: AI repos that are already used and taking off. */
 export function isTrending(item: AiIntelItem): boolean {
   if (itemKind(item) !== "repo") return false;
   const { starsToday, starsWeek, stars, rank } = readRepoMomentum(item);
+  const wellUsed = stars >= 1_000;
+  const hotGrowth =
+    starsToday >= 200 ||
+    (starsWeek >= 1_000 && starsToday >= 80) ||
+    (rank > 0 && rank <= 5 && starsToday >= 150);
 
-  if (starsToday >= 200) return true;
-  if (starsWeek >= 1000 && starsToday >= 80) return true;
-  if (rank > 0 && rank <= 5 && starsToday >= 150) return true;
-  if (stars > 0 && starsToday >= 100 && starsToday >= stars * 0.12) return true;
+  if (TRENDING_SOURCES.has(item.primary_source) && (wellUsed || hotGrowth)) {
+    return true;
+  }
+  if (wellUsed && hotGrowth) return true;
+  if (wellUsed && starsToday >= 100 && starsToday >= stars * 0.12) return true;
   return false;
 }
 
