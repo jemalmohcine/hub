@@ -101,6 +101,27 @@ describe("scoreListingFit", () => {
     expect(withSkills).toBeGreaterThan(without);
   });
 
+  it("ranks a CV skill hit above a role-only title when a CV is selected", () => {
+    const cv = { skills: ["Kotlin", "Vue"], years: 3, roles: ["fullstack"] };
+    const close = scoreListingFit(
+      listing({
+        title: "Fullstack Engineer (Kotlin / Vue)",
+        location: "Paris",
+      }),
+      withJobSearchPrefs({ roles: ["fullstack"], locations: ["paris"] }),
+      cv,
+    );
+    const far = scoreListingFit(
+      listing({
+        title: "Développeur full stack PHP",
+        location: "Paris",
+      }),
+      withJobSearchPrefs({ roles: ["fullstack"], locations: ["paris"] }),
+      cv,
+    );
+    expect(close).toBeGreaterThan(far);
+  });
+
   it("demotes an 8-year ask when the CV only has two years", () => {
     const cv = { skills: ["React"], years: 2, roles: ["frontend"] };
     const mid = scoreListingFit(

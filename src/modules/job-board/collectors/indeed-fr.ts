@@ -3,7 +3,7 @@ import {
   expandWithParentCountries,
   resolveLocations,
 } from "@/modules/job-board/locations";
-import { resolveRoles } from "@/modules/job-board/roles";
+import { boardSearchQueries } from "@/modules/job-board/scrape-query";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 import { wantsRemote } from "@/modules/job-board/work-modes";
 
@@ -57,16 +57,8 @@ export function parseIndeedRssTitle(titleRaw: string): {
 }
 
 function indeedQueries(prefs: JobSearchPrefs): string[] {
-  const roles = resolveRoles(
-    prefs.roles.length > 0 ? prefs.roles : prefs.roleQuery ? [prefs.roleQuery] : [],
-  );
-  const queries: string[] = [];
-  for (const role of roles) {
-    queries.push(role.label);
-    const alias = role.aliases.find((value) => value.length >= 3 && !value.includes(" "));
-    if (alias && alias.toLowerCase() !== role.label.toLowerCase()) queries.push(alias);
-  }
-  return (queries.length > 0 ? [...new Set(queries)] : ["développeur"]).slice(0, 3);
+  const queries = boardSearchQueries(prefs, 3);
+  return queries.length > 0 ? queries : ["développeur"];
 }
 
 function indeedTargets(prefs: JobSearchPrefs): { query: string; location: string; host: string }[] {

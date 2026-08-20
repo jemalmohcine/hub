@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Briefcase,
   ExternalLink,
   Loader2,
   MapPin,
   Pencil,
+  RefreshCw,
   X,
 } from "lucide-react";
 import {
@@ -28,11 +29,11 @@ import {
   applyToJobListing,
   importJobFromUrl,
   saveJobSearchConfig,
-  scrapeSavedJobSearch,
 } from "@/modules/job-board/actions";
 import { applyBoardsForPrefs } from "@/modules/job-board/apply-boards";
 import type { CvJobProfile } from "@/modules/job-board/cv-skills";
 import type { RankedJobListing } from "@/modules/job-board/fit";
+import { rankListingsForPrefs } from "@/modules/job-board/fit";
 import {
   EMPLOYMENT_FILTER_LABELS,
   POSTED_WITHIN_LABELS,
@@ -52,6 +53,7 @@ import { truncateAtWord } from "@/lib/text";
 import {
   WORK_MODE_LABELS,
   withJobSearchPrefs,
+  type JobListing,
   type JobSearchPrefs,
 } from "@/modules/job-board/types";
 import { JOB_WORK_MODES, normalizeWorkModes, onsiteOnly } from "@/modules/job-board/work-modes";
@@ -88,25 +90,23 @@ function modeTone(mode: RankedJobListing["workMode"]): "info" | "brand" | "neutr
 }
 
 export function JobBoardWorkspace({
-  initialListings,
+  initialLibrary,
   initialPrefs,
   hasSavedSearch,
-  offersActive,
   cvProfiles,
   cvDocuments,
   trackedListingIds,
   onApplicationCreated,
 }: {
-  initialListings: RankedJobListing[];
+  initialLibrary: JobListing[];
   initialPrefs: JobSearchPrefs;
   hasSavedSearch: boolean;
-  offersActive: boolean;
   cvProfiles: CvJobProfile[];
   cvDocuments: CvDocumentSummary[];
   trackedListingIds: string[];
   onApplicationCreated?: (application: JobApplication) => void;
 }) {
-  const [listings, setListings] = useState(initialListings);
+  const [library, setLibrary] = useState(initialLibrary);
   const [prefs, setPrefs] = useState(() => withJobSearchPrefs(initialPrefs));
   const [savedSearch, setSavedSearch] = useState(hasSavedSearch);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -114,33 +114,21 @@ export function JobBoardWorkspace({
   const [tracked, setTracked] = useState(() => new Set(trackedListingIds));
   const [followingId, setFollowingId] = useState<string | null>(null);
   const saveAction = useAsyncAction();
-  const scrapeAction = useAsyncAction();
+  const searchAction = useAsyncAction();
   const importAction = useAsyncAction();
   const followAction = useAsyncAction();
-  const searching = saveAction.pending || scrapeAction.pending;
-
-  useEffect(() => {
-    if (!offersActive || !savedSearch) return;
-    let cancelled = false;
-    void scrapeAction.run(() => scrapeSavedJobSearch(), {
-      silent: true,
-      error: (err) =>
-        err instanceof Error ? err.message : "Impossible de chercher les offres",
-      onSuccess: (result) => {
-        if (cancelled) return;
-        setPrefs(withJobSearchPrefs(result.prefs));
-        setListings(result.listings);
-      },
-    });
-    return () => {
-      cancelled = true;
-    };
-    // Re-scrape each time the Offres tab is opened, using the saved config.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [offersActive]);
+  const searching = searchAction.pending;
 
   const cvId = prefs.cvDocumentId ?? "";
   const canSave = !onsiteOnly(prefs) || prefs.locations.length > 0;
+  const activeCv = useMemo(
+    () => cvProfiles.find((profile) => profile.id === cvId) ?? null,
+    [cvId, cvProfiles],
+  );
+  const listings = useMemo(
+    () => rankListingsForPrefs(library, prefs, activeCv ?? []),
+    [library, prefs, activeCv],
+  );
 
   const summaryChips = useMemo(() => {
     const roles = prefs.roles.map((id) => resolveRole(id).label);
@@ -172,38 +160,51 @@ export function JobBoardWorkspace({
     prefs.employment !== "all" ||
     Boolean(prefs.cvDocumentId);
   const boards = useMemo(() => (hasSearch ? applyBoardsForPrefs(prefs) : []), [hasSearch, prefs]);
-  const activeCv = useMemo(
-    () => cvProfiles.find((profile) => profile.id === cvId) ?? null,
-    [cvId, cvProfiles],
-  );
 
-  function persist(next: JobSearchPrefs, success: string) {
-    void saveAction.run(() => saveJobSearchConfig(next), {
-      success,
+  function persist(
+    next: JobSearchPrefs,
+    options: { scrape: boolean; success?: string; silent?: boolean; closeSheet?: boolean },
+  ) {
+    const runner = options.scrape ? searchAction : saveAction;
+    void runner.run(() => saveJobSearchConfig(next, { scrape: options.scrape }), {
+      silent: options.silent,
+      success: options.success,
       error: (err) =>
         err instanceof Error ? err.message : "Impossible d’enregistrer la recherche",
       onSuccess: (result) => {
         setPrefs(withJobSearchPrefs(result.prefs));
-        setListings(result.listings);
         setSavedSearch(true);
-        setSheetOpen(false);
+        if (options.scrape) setLibrary(result.library);
+        if (options.closeSheet) setSheetOpen(false);
       },
     });
   }
 
-  function handleSave() {
+  function handleSaveFilters() {
     if (!canSave) return;
-    persist(
-      prefs,
-      prefs.cvDocumentId ? "Offres cherchées selon ton CV" : "On a cherché les offres",
-    );
+    persist(prefs, {
+      scrape: false,
+      success: "Filtres enregistrés",
+      closeSheet: true,
+    });
+  }
+
+  function handleSearch() {
+    if (!canSave) return;
+    persist(prefs, {
+      scrape: true,
+      success: prefs.cvDocumentId
+        ? "Nouvelles offres selon ton CV"
+        : "Nouvelles offres trouvées",
+      closeSheet: true,
+    });
   }
 
   function handleCvChange(nextId: string) {
     if (!nextId) {
       const next: JobSearchPrefs = { ...prefs, cvDocumentId: null };
       setPrefs(next);
-      persist(next, "CV retiré du filtre");
+      persist(next, { scrape: false, silent: true });
       return;
     }
     const profile = cvProfiles.find((entry) => entry.id === nextId);
@@ -217,7 +218,7 @@ export function JobBoardWorkspace({
         profile && profile.years > 0 ? yearsMinFromExperience(profile.years) : prefs.yearsMin,
     };
     setPrefs(next);
-    persist(next, "Offres adaptées à ce CV");
+    persist(next, { scrape: false, success: "CV ajouté à ta recherche" });
   }
 
   function handleFollow(listing: RankedJobListing) {
@@ -257,9 +258,9 @@ export function JobBoardWorkspace({
   const freelanceOnly = prefs.employment === "freelance";
   const trendingOnly = prefs.postedWithinDays === 7;
 
-  function applyQuick(next: JobSearchPrefs, success: string) {
+  function applyQuick(next: JobSearchPrefs) {
     setPrefs(next);
-    persist(next, success);
+    persist(next, { scrape: false, silent: true });
   }
 
   return (
@@ -309,10 +310,14 @@ export function JobBoardWorkspace({
             type="button"
             size="sm"
             disabled={searching || !canSave}
-            onClick={handleSave}
+            onClick={handleSearch}
           >
-            {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Chercher
+            {searching ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            {library.length > 0 ? "Nouvelles offres" : "Chercher les offres"}
           </Button>
         </Cluster>
       </Cluster>
@@ -323,16 +328,13 @@ export function JobBoardWorkspace({
           size="sm"
           variant={!remoteOnly && !freelanceOnly && !trendingOnly ? "primary" : "outline"}
           onClick={() =>
-            applyQuick(
-              {
-                ...prefs,
-                workModes: [...JOB_WORK_MODES],
-                workMode: "hybrid",
-                employment: "all",
-                postedWithinDays: null,
-              },
-              "Tous les types d’offres",
-            )
+            applyQuick({
+              ...prefs,
+              workModes: [...JOB_WORK_MODES],
+              workMode: "hybrid",
+              employment: "all",
+              postedWithinDays: null,
+            })
           }
         >
           Tous
@@ -342,14 +344,11 @@ export function JobBoardWorkspace({
           size="sm"
           variant={remoteOnly ? "primary" : "outline"}
           onClick={() =>
-            applyQuick(
-              {
-                ...prefs,
-                workModes: remoteOnly ? [...JOB_WORK_MODES] : ["remote"],
-                workMode: remoteOnly ? "hybrid" : "remote",
-              },
-              remoteOnly ? "Tous les modes" : "Télétravail seulement",
-            )
+            applyQuick({
+              ...prefs,
+              workModes: remoteOnly ? [...JOB_WORK_MODES] : ["remote"],
+              workMode: remoteOnly ? "hybrid" : "remote",
+            })
           }
         >
           Télétravail
@@ -359,13 +358,10 @@ export function JobBoardWorkspace({
           size="sm"
           variant={freelanceOnly ? "primary" : "outline"}
           onClick={() =>
-            applyQuick(
-              {
-                ...prefs,
-                employment: freelanceOnly ? "all" : "freelance",
-              },
-              freelanceOnly ? "Tous les contrats" : "Freelance seulement",
-            )
+            applyQuick({
+              ...prefs,
+              employment: freelanceOnly ? "all" : "freelance",
+            })
           }
         >
           Freelance
@@ -375,13 +371,10 @@ export function JobBoardWorkspace({
           size="sm"
           variant={trendingOnly ? "primary" : "outline"}
           onClick={() =>
-            applyQuick(
-              {
-                ...prefs,
-                postedWithinDays: trendingOnly ? null : 7,
-              },
-              trendingOnly ? "Toutes dates" : "Tendance · 7 jours",
-            )
+            applyQuick({
+              ...prefs,
+              postedWithinDays: trendingOnly ? null : 7,
+            })
           }
         >
           Tendance
@@ -400,7 +393,12 @@ export function JobBoardWorkspace({
 
       {searching ? (
         <Text size="sm" tone="muted">
-          On cherche les offres avec ta config enregistrée…
+          On cherche de nouvelles offres
+          {activeCv ? " selon ton CV" : " avec ta recherche"}…
+        </Text>
+      ) : library.length > 0 ? (
+        <Text size="sm" tone="muted">
+          Tes offres sont enregistrées. Les filtres s’appliquent tout de suite.
         </Text>
       ) : null}
 
@@ -419,7 +417,8 @@ export function JobBoardWorkspace({
       {listings.length > 0 ? (
         <Text size="sm" tone="muted">
           {listings.length} offre{listings.length !== 1 ? "s" : ""}
-          {activeCv ? ", les plus adaptées à ton CV" : ", selon tes filtres"}
+          {activeCv ? " · les plus proches de ton CV" : " · selon tes filtres"}
+          {library.length > listings.length ? ` (${library.length} enregistrées)` : ""}
         </Text>
       ) : null}
 
@@ -502,27 +501,34 @@ export function JobBoardWorkspace({
               searching
                 ? "On cherche les offres"
                 : !savedSearch
-                  ? "Enregistre ta recherche"
-                  : hasFilters
-                    ? "Rien d’assez proche pour l’instant"
-                    : "Dis-nous ce que tu cherches"
+                  ? "Ta recherche"
+                  : library.length > 0
+                    ? "Rien ne correspond dans tes offres"
+                    : "Pas encore d’offres"
             }
             hint={
               searching
-                ? "Recherche en cours avec ta config sauvegardée."
+                ? "On parcourt les sites d’emploi avec ta recherche" +
+                  (activeCv ? " et ton CV." : ".")
                 : !savedSearch
-                  ? "Sans config enregistrée, on ne scrape pas. Choisis un poste et une ville, puis cherche les offres."
-                  : hasFilters
-                    ? "On a cherché avec ta config. Ajuste les filtres et relance la recherche."
-                    : "Poste, ville, années d’expérience : tes filtres se sauvegardent. Le CV est optionnel, tu peux le retirer sans perdre le reste."
+                  ? "Poste, ville, éventuellement un CV : enregistre ta recherche, puis cherche les offres. Ensuite tu filtres sans tout relancer."
+                  : library.length > 0
+                    ? "Élargis les filtres, ou cherche de nouvelles offres."
+                    : "Tes filtres sont prêts. Cherche les offres — elles resteront ici pour filtrer."
             }
             action={
               searching ? undefined : (
                 <Stack gap={3} className="items-center">
                   {boards.length > 0 ? <ApplyBoardLinks boards={boards} /> : null}
-                  <Button type="button" size="sm" variant="outline" onClick={() => setSheetOpen(true)}>
-                    {hasFilters || savedSearch ? "Ajuster" : "Choisir"}
-                  </Button>
+                  {savedSearch ? (
+                    <Button type="button" size="sm" disabled={!canSave} onClick={handleSearch}>
+                      {library.length > 0 ? "Chercher de nouvelles offres" : "Chercher les offres"}
+                    </Button>
+                  ) : (
+                    <Button type="button" size="sm" variant="outline" onClick={() => setSheetOpen(true)}>
+                      Choisir
+                    </Button>
+                  )}
                 </Stack>
               )
             }
@@ -535,7 +541,7 @@ export function JobBoardWorkspace({
         onOpenChange={setSheetOpen}
         desktop="full"
         title="Ta recherche"
-        description="Enregistrer sauvegarde ta config et relance le scrape. Sans config enregistrée, on ne cherche pas."
+        description="Les filtres s’appliquent à tes offres déjà enregistrées. « Nouvelles offres » relance la recherche sur les sites. Le CV, si tu en choisis un, fait partie de ta recherche."
         headerActions={
           <IconButton label="Fermer" size="sm" onClick={() => setSheetOpen(false)}>
             <X className="h-4 w-4" />
@@ -702,7 +708,7 @@ export function JobBoardWorkspace({
             <Field
               label="CV pour matcher les offres"
               htmlFor="board-cv"
-              hint="Optionnel. « Aucun CV » retire le filtre sur tes compétences, sans effacer ville, années ni titre."
+              hint="Optionnel. S’il est choisi, il entre dans ta recherche (poste, ville, compétences). « Aucun CV » retire seulement ce filtre."
             >
               <Select
                 id="board-cv"
@@ -725,10 +731,25 @@ export function JobBoardWorkspace({
               </Select>
             </Field>
           ) : null}
-          <Button type="button" disabled={searching || !canSave} onClick={handleSave}>
-            {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Chercher les offres
-          </Button>
+          <Cluster gap={2} className="flex-wrap">
+            {library.length > 0 ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={saveAction.pending || !canSave}
+                onClick={handleSaveFilters}
+              >
+                {saveAction.pending && !searching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : null}
+                Enregistrer les filtres
+              </Button>
+            ) : null}
+            <Button type="button" disabled={searching || !canSave} onClick={handleSearch}>
+              {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {library.length > 0 ? "Chercher de nouvelles offres" : "Chercher les offres"}
+            </Button>
+          </Cluster>
           {boards.length > 0 ? (
             <Stack gap={2}>
               <Text size="sm" weight="medium">

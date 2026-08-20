@@ -5,7 +5,7 @@ import {
   resolveLocations,
 } from "@/modules/job-board/locations";
 import { placeFitsPrefs, roleMatchesAny } from "@/modules/job-board/match";
-import { resolveRoles } from "@/modules/job-board/roles";
+import { boardSearchQueries } from "@/modules/job-board/scrape-query";
 import type { JobSearchPrefs, JobWorkMode, RawJobHit } from "@/modules/job-board/types";
 
 /** Public search-only key from WTTJ's own frontend. */
@@ -144,13 +144,7 @@ export function wttjHitToRaw(hit: WttjHit): RawJobHit | null {
 }
 
 function searchQueries(prefs: JobSearchPrefs): string[] {
-  const roles = resolveRoles(
-    prefs.roles.length > 0 ? prefs.roles : prefs.roleQuery ? [prefs.roleQuery] : [],
-  );
-  const queries = roles.map((role) => role.label).filter((label) => label.length >= 2);
-  if (queries.length > 0) return queries.slice(0, 2);
-  const fallback = prefs.roleQuery.trim();
-  return fallback ? [fallback] : [];
+  return boardSearchQueries(prefs, 2);
 }
 
 async function searchWttj(query: string, filters: string, hitsPerPage = 40): Promise<WttjHit[]> {

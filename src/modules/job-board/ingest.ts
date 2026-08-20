@@ -1,10 +1,12 @@
 import { createAdminClient } from "@/core/auth/supabase/admin";
 import { buildCanonicalKey, classifyEmployment } from "@/modules/job-board/classify";
 import { collectJobsForPrefs } from "@/modules/job-board/collectors";
+import type { CvJobProfile } from "@/modules/job-board/cv-skills";
 import { shouldScrapeJobSearch } from "@/modules/job-board/filters";
 import { listingTtlCutoffIso } from "@/modules/job-board/listing-ttl";
 import { notifyJobFollowUps } from "@/modules/job-board/notify";
 import { classifyWorkMode, matchesSearchPrefs } from "@/modules/job-board/match";
+import { prefsForScrape } from "@/modules/job-board/scrape-query";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 
 function devRelevant(hit: RawJobHit): boolean {
@@ -14,11 +16,16 @@ function devRelevant(hit: RawJobHit): boolean {
   );
 }
 
-async function upsertHits(hits: RawJobHit[], prefs: JobSearchPrefs | null) {
+async function upsertHits(
+  hits: RawJobHit[],
+  prefs: JobSearchPrefs | null,
+  userId?: string,
+) {
   const admin = createAdminClient();
   let upserted = 0;
   let skipped = 0;
   const sourceStats: Record<string, number> = {};
+  const listingIds: string[] = [];
 
   for (const hit of hits) {
     if (!devRelevant(hit)) {
@@ -47,36 +54,65 @@ async function upsertHits(hits: RawJobHit[], prefs: JobSearchPrefs | null) {
     const { employmentCategory, freelanceSubtype } = classifyEmployment(hit);
     const canonicalKey = buildCanonicalKey(hit);
 
-    const { error } = await admin.from("job_listings").upsert(
-      {
-        canonical_key: canonicalKey,
-        source: hit.source,
-        external_id: hit.externalId,
-        company: hit.company,
-        title: hit.title,
-        description: hit.description.slice(0, 4000) || null,
-        url: hit.url,
-        employment_category: employmentCategory,
-        freelance_subtype: freelanceSubtype,
-        work_mode: workMode,
-        location: hit.location || null,
-        salary_hint: hit.salaryHint || null,
-        tags: hit.tags ?? [],
-        published_at: hit.publishedAt || null,
-        scraped_at: new Date().toISOString(),
-        raw: { tags: hit.tags ?? [], workMode },
-      },
-      { onConflict: "canonical_key" },
-    );
+    const { data, error } = await admin
+      .from("job_listings")
+      .upsert(
+        {
+          canonical_key: canonicalKey,
+          source: hit.source,
+          external_id: hit.externalId,
+          company: hit.company,
+          title: hit.title,
+          description: hit.description.slice(0, 4000) || null,
+          url: hit.url,
+          employment_category: employmentCategory,
+          freelance_subtype: freelanceSubtype,
+          work_mode: workMode,
+          location: hit.location || null,
+          salary_hint: hit.salaryHint || null,
+          tags: hit.tags ?? [],
+          published_at: hit.publishedAt || null,
+          scraped_at: new Date().toISOString(),
+          raw: { tags: hit.tags ?? [], workMode },
+        },
+        { onConflict: "canonical_key" },
+      )
+      .select("id")
+      .maybeSingle();
 
-    if (error) {
+    if (error || !data?.id) {
       skipped += 1;
       continue;
     }
+    listingIds.push(data.id as string);
     upserted += 1;
   }
 
+  if (userId && listingIds.length > 0) {
+    await attachListingsToUser(userId, listingIds);
+  }
+
   return { upserted, skipped, sourceStats };
+}
+
+async function attachListingsToUser(userId: string, listingIds: string[]) {
+  const admin = createAdminClient();
+  const now = new Date().toISOString();
+  const rows = listingIds.map((listingId) => ({
+    user_id: userId,
+    listing_id: listingId,
+    scraped_at: now,
+  }));
+  for (let index = 0; index < rows.length; index += 80) {
+    const chunk = rows.slice(index, index + 80);
+    const { error } = await admin
+      .from("job_user_listings")
+      .upsert(chunk, { onConflict: "user_id,listing_id" });
+    if (error) {
+      console.warn("[jobs] attach user listings", error.message);
+      return;
+    }
+  }
 }
 
 async function purgeStaleListings() {
@@ -93,16 +129,22 @@ async function purgeStaleListings() {
   return count ?? 0;
 }
 
-export async function ingestJobsForPrefs(prefs: JobSearchPrefs) {
+export async function ingestJobsForPrefs(
+  prefs: JobSearchPrefs,
+  options?: { userId?: string; cv?: CvJobProfile | null },
+) {
   if (!shouldScrapeJobSearch(prefs)) {
     console.info("[jobs] ingest skipped — no saved search config");
     return { raw: 0, upserted: 0, skipped: 0, sourceStats: {} };
   }
-  const hits = await collectJobsForPrefs(prefs);
-  const result = await upsertHits(hits, prefs);
+  const queryPrefs = prefsForScrape(prefs, options?.cv);
+  const hits = await collectJobsForPrefs(queryPrefs);
+  const result = await upsertHits(hits, queryPrefs, options?.userId);
   console.info("[jobs] ingest", {
-    roles: prefs.roles,
-    locations: prefs.locations,
+    roles: queryPrefs.roles,
+    locations: queryPrefs.locations,
+    keyword: queryPrefs.keyword,
+    userId: options?.userId ? "yes" : "no",
     raw: hits.length,
     ...result,
   });

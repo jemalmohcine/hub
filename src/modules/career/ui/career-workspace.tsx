@@ -6,10 +6,9 @@ import { Briefcase, FileText, Search } from "lucide-react";
 import { Stack } from "@/design-system";
 import type { CvDocument, CvDocumentSummary } from "@/modules/cv-builder/types";
 import { CvBuilderWorkspace } from "@/modules/cv-builder/ui/cv-builder-workspace";
-import type { RankedJobListing } from "@/modules/job-board/fit";
 import { JobBoardWorkspace } from "@/modules/job-board/ui/job-board-workspace";
 import type { CvJobProfile } from "@/modules/job-board/cv-skills";
-import type { JobSearchPrefs } from "@/modules/job-board/types";
+import type { JobListing, JobSearchPrefs } from "@/modules/job-board/types";
 import type { JobApplication } from "@/modules/job-tracker/types";
 import { JobTrackerWorkspace } from "@/modules/job-tracker/ui/job-tracker-workspace";
 import { cn } from "@/lib/utils";
@@ -35,7 +34,7 @@ export function CareerWorkspace({
   initialDoc,
   initialDocuments,
   initialJobs,
-  initialListings,
+  initialLibrary,
   initialPrefs,
   hasSavedSearch,
   cvProfiles,
@@ -46,7 +45,7 @@ export function CareerWorkspace({
   initialDoc: CvDocument;
   initialDocuments: CvDocumentSummary[];
   initialJobs: JobApplication[];
-  initialListings: RankedJobListing[];
+  initialLibrary: JobListing[];
   initialPrefs: JobSearchPrefs;
   hasSavedSearch: boolean;
   cvProfiles: CvJobProfile[];
@@ -114,10 +113,9 @@ export function CareerWorkspace({
           aria-hidden={activeTab !== "offers"}
         >
           <JobBoardWorkspace
-            initialListings={initialListings}
+            initialLibrary={initialLibrary}
             initialPrefs={initialPrefs}
             hasSavedSearch={hasSavedSearch}
-            offersActive={activeTab === "offers"}
             cvProfiles={cvProfiles}
             cvDocuments={initialDocuments}
             trackedListingIds={trackedListingIds}

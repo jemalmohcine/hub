@@ -59,7 +59,8 @@ function missingColumn(error: { message?: string } | null): boolean {
   return (
     message.includes("schema cache") ||
     message.includes("does not exist") ||
-    message.includes("column")
+    message.includes("column") ||
+    message.includes("relation")
   );
 }
 
@@ -257,11 +258,43 @@ export async function listJobListings(
   return (data as ListingRow[]).map(listingFromRow);
 }
 
+/** Offers collected for this user — filter locally, scrape only to refresh. */
+export async function listUserJobListings(userId: string): Promise<JobListing[]> {
+  const supabase = await createClient();
+  const result = await supabase
+    .from("job_user_listings")
+    .select("scraped_at, listing:job_listings(*)")
+    .eq("user_id", userId)
+    .order("scraped_at", { ascending: false })
+    .limit(400);
+
+  if (result.error || !result.data) {
+    if (result.error && !missingColumn(result.error)) {
+      console.warn("[jobs] list user listings", result.error.message);
+    }
+    return [];
+  }
+
+  const listings: JobListing[] = [];
+  const seen = new Set<string>();
+  for (const row of result.data as Array<{
+    listing?: ListingRow | ListingRow[] | null;
+  }>) {
+    const raw = row.listing;
+    const listing = Array.isArray(raw) ? raw[0] : raw;
+    if (!listing?.id || seen.has(listing.id)) continue;
+    seen.add(listing.id);
+    listings.push(listingFromRow(listing));
+  }
+  return listings;
+}
+
 export async function listJobListingsForPrefs(
+  userId: string,
   prefs: JobSearchPrefs,
   cv: CvFitInput | string[] = [],
 ): Promise<RankedJobListing[]> {
-  const listings = await listJobListings("all");
+  const listings = await listUserJobListings(userId);
   return rankListingsForPrefs(listings, prefs, cv);
 }
 
