@@ -6,6 +6,7 @@ import { defaultCvDocument } from "@/modules/cv-builder/defaults";
 import { listCvDocuments, listCvDocumentsFull } from "@/modules/cv-builder/queries";
 import { CareerWorkspace } from "@/modules/career/ui/career-workspace";
 import { profileFromCv } from "@/modules/job-board/cv-skills";
+import { shouldScrapeJobSearch } from "@/modules/job-board/filters";
 import { listJobListingsForPrefs, getJobSearchPrefs } from "@/modules/job-board/queries";
 import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
 import { listJobApplications } from "@/modules/job-tracker/queries";
@@ -42,9 +43,11 @@ export default async function CareerPage({ searchParams }: PageProps) {
   const cvEntitled = hasEntitlement(user.entitlements, ENTITLEMENTS.cv);
   const jobsEntitled = hasEntitlement(user.entitlements, ENTITLEMENTS.jobs);
 
-  const prefs = jobsEntitled
-    ? await getJobSearchPrefs(user.id).catch(() => ({ ...EMPTY_JOB_SEARCH_PREFS }))
-    : { ...EMPTY_JOB_SEARCH_PREFS };
+  const savedPrefs = jobsEntitled
+    ? await getJobSearchPrefs(user.id).catch(() => null)
+    : null;
+  const prefs = savedPrefs ?? { ...EMPTY_JOB_SEARCH_PREFS };
+  const hasSavedSearch = savedPrefs != null;
 
   const [documents, fullCvs] = cvEntitled
     ? await Promise.all([
@@ -62,7 +65,7 @@ export default async function CareerPage({ searchParams }: PageProps) {
 
   const [jobs, listings] = await Promise.all([
     jobsEntitled ? listJobApplications(user.id).catch(() => []) : Promise.resolve([]),
-    jobsEntitled
+    jobsEntitled && shouldScrapeJobSearch(savedPrefs)
       ? listJobListingsForPrefs(prefs, activeProfile ?? []).catch(() => [])
       : Promise.resolve([]),
   ]);
@@ -79,6 +82,7 @@ export default async function CareerPage({ searchParams }: PageProps) {
           initialJobs={jobs}
           initialListings={listings}
           initialPrefs={prefs}
+          hasSavedSearch={hasSavedSearch}
           cvProfiles={cvProfiles}
         />
       </Suspense>

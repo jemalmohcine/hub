@@ -1,11 +1,9 @@
 import { createAdminClient } from "@/core/auth/supabase/admin";
 import { buildCanonicalKey, classifyEmployment } from "@/modules/job-board/classify";
-import {
-  collectDevJobPool,
-  collectJobsForPrefs,
-} from "@/modules/job-board/collectors";
+import { collectJobsForPrefs } from "@/modules/job-board/collectors";
+import { shouldScrapeJobSearch } from "@/modules/job-board/filters";
 import { listingTtlCutoffIso } from "@/modules/job-board/listing-ttl";
-import { notifyJobBoardUsers } from "@/modules/job-board/notify";
+import { notifyJobFollowUps } from "@/modules/job-board/notify";
 import { classifyWorkMode, matchesSearchPrefs } from "@/modules/job-board/match";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 
@@ -96,6 +94,10 @@ async function purgeStaleListings() {
 }
 
 export async function ingestJobsForPrefs(prefs: JobSearchPrefs) {
+  if (!shouldScrapeJobSearch(prefs)) {
+    console.info("[jobs] ingest skipped — no saved search config");
+    return { raw: 0, upserted: 0, skipped: 0, sourceStats: {} };
+  }
   const hits = await collectJobsForPrefs(prefs);
   const result = await upsertHits(hits, prefs);
   console.info("[jobs] ingest", {
@@ -107,20 +109,15 @@ export async function ingestJobsForPrefs(prefs: JobSearchPrefs) {
   return { raw: hits.length, ...result };
 }
 
-export async function ingestDevJobPool() {
-  const hits = await collectDevJobPool();
-  const result = await upsertHits(hits, null);
+/** Cron: drop stale rows and remind follow-ups. Offers are scraped on demand. */
+export async function runJobBoardIngest() {
   const purged = await purgeStaleListings();
-  let notified = { matches: 0, followUps: 0 };
+  let followUps = 0;
   try {
-    notified = await notifyJobBoardUsers();
+    followUps = await notifyJobFollowUps();
   } catch (err) {
     console.warn("[jobs] notify failed", err instanceof Error ? err.message : err);
   }
-  console.info("[jobs] pool ingest", { raw: hits.length, purged, notified, ...result });
-  return { raw: hits.length, purged, notified, ...result };
-}
-
-export async function runJobBoardIngest() {
-  return ingestDevJobPool();
+  console.info("[jobs] maintenance", { purged, followUps });
+  return { purged, followUps };
 }

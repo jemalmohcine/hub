@@ -152,3 +152,15 @@ export function hasActiveJobFilters(prefs: JobSearchFilters & {
     Boolean(prefs.cvDocumentId)
   );
 }
+
+/** Scrape only when a search config actually exists in the database. */
+export function shouldScrapeJobSearch(
+  prefs: (JobSearchFilters & {
+    roles: string[];
+    roleQuery: string;
+    locations: string[];
+  }) | null | undefined,
+): boolean {
+  if (!prefs) return false;
+  return hasActiveJobFilters(prefs);
+}

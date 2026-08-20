@@ -1,7 +1,8 @@
-name: Job Board Ingest
+name: Job Board Maintenance
 
 # Triggered on every main merge via post-merge-main.yml (workflow_call).
-# Every 3 hours + manual dispatch.
+# Every 3 hours + manual dispatch. Does not scrape a global job pool —
+# listings are collected on demand from each user's saved search config.
 on:
   workflow_call:
   schedule:
@@ -14,7 +15,7 @@ concurrency:
 
 jobs:
   ingest:
-    name: Scrape job offers
+    name: Purge stale listings
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:

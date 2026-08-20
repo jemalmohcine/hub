@@ -85,6 +85,12 @@ describe("roleMatches", () => {
     expect(roleMatches("frontend", "reactive programming job")).toBe(false);
     expect(roleMatches("frontend", "triangular architecture")).toBe(false);
   });
+
+  it("keeps generic développeur titles like Fullstack Engineer", () => {
+    expect(roleMatches("développeur", "Fullstack Engineer (Kotlin / Vue)")).toBe(true);
+    expect(roleMatches("développeur", "Software engineer — Casablanca")).toBe(true);
+    expect(roleMatches("développeur", "Product manager")).toBe(false);
+  });
 });
 
 describe("matchesSearchPrefs", () => {

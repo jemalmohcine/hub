@@ -11,15 +11,18 @@ import { MAX_JOB_LOCATIONS, resolveLocations } from "@/modules/job-board/locatio
 import { MAX_JOB_ROLES, resolveRoles, rolesToQuery } from "@/modules/job-board/roles";
 import { normalizeWorkModes, onsiteOnly } from "@/modules/job-board/work-modes";
 import { ingestJobsForPrefs } from "@/modules/job-board/ingest";
+import { shouldScrapeJobSearch } from "@/modules/job-board/filters";
 import {
   getJobListingById,
   getJobListingByUrl,
+  getJobSearchPrefs,
   listJobListingsForPrefs,
   saveJobSearchPrefs,
 } from "@/modules/job-board/queries";
 import { scrapeJobOfferPage } from "@/modules/job-board/scrape-offer";
 import type { RankedJobListing } from "@/modules/job-board/fit";
 import type { JobSearchPrefs } from "@/modules/job-board/types";
+import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
 import type { JobApplication } from "@/modules/job-tracker/types";
 
 /** Every action in this file requires the jobs module. */
@@ -98,18 +101,51 @@ export async function saveJobSearchConfig(
     cvDocumentId: cvId || null,
     keyword: (prefs.keyword ?? "").trim().slice(0, 80),
   });
+  if (shouldScrapeJobSearch(saved)) {
+    try {
+      await ingestJobsForPrefs(saved);
+    } catch (err) {
+      console.warn(
+        "[jobs] live scrape failed",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+  const cv = saved.cvDocumentId ? await getCvDocumentById(user.id, saved.cvDocumentId) : null;
+  const listings = shouldScrapeJobSearch(saved)
+    ? await listJobListingsForPrefs(saved, profileFromCv(cv) ?? [])
+    : [];
+  revalidatePath("/app/career");
+  return { prefs: saved, listings };
+}
+
+/** Re-scrape with the saved config when the user opens Offres. No row → no scrape. */
+export async function scrapeSavedJobSearch(): Promise<{
+  prefs: JobSearchPrefs;
+  listings: RankedJobListing[];
+  scraped: boolean;
+}> {
+  const user = await requireUser();
+  const saved = await getJobSearchPrefs(user.id);
+  if (!saved || !shouldScrapeJobSearch(saved)) {
+    return {
+      prefs: saved ?? { ...EMPTY_JOB_SEARCH_PREFS },
+      listings: [],
+      scraped: false,
+    };
+  }
   try {
     await ingestJobsForPrefs(saved);
   } catch (err) {
     console.warn(
-      "[jobs] live scrape failed",
+      "[jobs] saved-config scrape failed",
       err instanceof Error ? err.message : err,
     );
   }
   const cv = saved.cvDocumentId ? await getCvDocumentById(user.id, saved.cvDocumentId) : null;
   const listings = await listJobListingsForPrefs(saved, profileFromCv(cv) ?? []);
   revalidatePath("/app/career");
-  return { prefs: saved, listings };
+  return { prefs: saved, listings, scraped: true };
 }
 
 /** Start tracking an offer — no extra scrape, so it stays instant. */

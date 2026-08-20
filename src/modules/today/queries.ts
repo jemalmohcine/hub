@@ -2,6 +2,7 @@ import type { HubUser } from "@/core/auth/types";
 import { hasEntitlement, ENTITLEMENTS } from "@/core/entitlements";
 import { daysBetween } from "@/lib/dates";
 import { plainDash } from "@/lib/text";
+import { shouldScrapeJobSearch } from "@/modules/job-board/filters";
 import { aiIntelInboxHref, aiIntelItemHref } from "@/modules/ai-intel/item-link";
 import {
   currentYearRange,
@@ -60,7 +61,7 @@ async function aiSignals(userId: string): Promise<{
 async function jobSignals(userId: string): Promise<TodaySignal[]> {
   const prefs = await getJobSearchPrefs(userId).catch(() => null);
   const [listings, applications] = await Promise.all([
-    prefs
+    shouldScrapeJobSearch(prefs) && prefs
       ? listJobListingsForPrefs(prefs).catch(() => [])
       : Promise.resolve([]),
     listJobApplications(userId).catch(() => []),

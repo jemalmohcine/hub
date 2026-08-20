@@ -35,6 +35,18 @@ const BY_ID = new Map(ROLES.map((role) => [role.id, role]));
 
 export const JOB_ROLES = ROLES;
 
+/** Generic “dev” words must not collapse onto “Développeur frontend”. */
+const GENERIC_SOFTWARE_QUERIES = new Set([
+  "dev",
+  "developer",
+  "developpeur",
+  "développeur",
+  "engineer",
+  "ingenieur",
+  "ingénieur",
+  "software",
+]);
+
 export function resolveRole(raw: string): JobRole {
   const trimmed = raw.trim();
   const folded = foldCase(trimmed);
@@ -49,6 +61,9 @@ export function resolveRole(raw: string): JobRole {
       role.aliases.some((alias) => foldCase(alias) === folded),
   );
   if (aliased) return aliased;
+  if (GENERIC_SOFTWARE_QUERIES.has(folded)) {
+    return { id: folded, label: trimmed, aliases: [] };
+  }
   const prefix = ROLES.find((role) => {
     const label = foldCase(role.label);
     if (folded.startsWith(label) || label.startsWith(folded)) return true;
