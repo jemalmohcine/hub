@@ -8,7 +8,7 @@ import {
   type JobLocation,
 } from "@/modules/job-board/locations";
 import { classifyWorkMode, placeFitsPrefs, roleMatchesAny } from "@/modules/job-board/match";
-import { resolveRoles } from "@/modules/job-board/roles";
+import { boardSearchQueries } from "@/modules/job-board/scrape-query";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 import { normalizeWorkModes } from "@/modules/job-board/work-modes";
 
@@ -42,11 +42,8 @@ export function linkedinPlaceLabel(place: JobLocation): string {
   return place.indeed || place.label;
 }
 
-function searchKeywords(prefs: JobSearchPrefs): string {
-  if (prefs.roles.length > 0) {
-    return resolveRoles(prefs.roles)[0]?.label || "développeur";
-  }
-  return prefs.roleQuery.trim() || "développeur";
+export function searchKeywords(prefs: JobSearchPrefs): string {
+  return boardSearchQueries(prefs, 1)[0] || "développeur";
 }
 
 export function linkedinGuestSearchUrl(

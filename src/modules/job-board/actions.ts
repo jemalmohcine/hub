@@ -15,14 +15,11 @@ import { shouldScrapeJobSearch } from "@/modules/job-board/filters";
 import {
   getJobListingById,
   getJobListingByUrl,
-  getJobSearchPrefs,
-  listJobListingsForPrefs,
+  listUserJobListings,
   saveJobSearchPrefs,
 } from "@/modules/job-board/queries";
 import { scrapeJobOfferPage } from "@/modules/job-board/scrape-offer";
-import type { RankedJobListing } from "@/modules/job-board/fit";
-import type { JobSearchPrefs } from "@/modules/job-board/types";
-import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
+import type { JobListing, JobSearchPrefs } from "@/modules/job-board/types";
 import type { JobApplication } from "@/modules/job-tracker/types";
 
 /** Every action in this file requires the jobs module. */
@@ -70,10 +67,11 @@ function mapApplication(row: {
 
 export async function saveJobSearchConfig(
   prefs: JobSearchPrefs,
-  cvDocumentId?: string | null,
+  options?: { scrape?: boolean },
 ): Promise<{
   prefs: JobSearchPrefs;
-  listings: RankedJobListing[];
+  library: JobListing[];
+  scraped: boolean;
 }> {
   const user = await requireUser();
   const roleQuery = prefs.roleQuery.trim();
@@ -90,7 +88,6 @@ export async function saveJobSearchConfig(
     throw new Error(`Choisis au plus ${MAX_JOB_LOCATIONS} lieux.`);
   }
 
-  const cvId = cvDocumentId !== undefined ? cvDocumentId : prefs.cvDocumentId;
   const saved = await saveJobSearchPrefs(user.id, {
     ...prefs,
     roles: roles.map((role) => role.id),
@@ -98,12 +95,21 @@ export async function saveJobSearchConfig(
     locations,
     workModes,
     workMode: workModes[0] ?? "hybrid",
-    cvDocumentId: cvId || null,
+    cvDocumentId: prefs.cvDocumentId || null,
     keyword: (prefs.keyword ?? "").trim().slice(0, 80),
   });
-  if (shouldScrapeJobSearch(saved)) {
+
+  let scraped = false;
+  if (options?.scrape && shouldScrapeJobSearch(saved)) {
+    const cv = saved.cvDocumentId
+      ? await getCvDocumentById(user.id, saved.cvDocumentId)
+      : null;
     try {
-      await ingestJobsForPrefs(saved);
+      await ingestJobsForPrefs(saved, {
+        userId: user.id,
+        cv: profileFromCv(cv),
+      });
+      scraped = true;
     } catch (err) {
       console.warn(
         "[jobs] live scrape failed",
@@ -111,41 +117,10 @@ export async function saveJobSearchConfig(
       );
     }
   }
-  const cv = saved.cvDocumentId ? await getCvDocumentById(user.id, saved.cvDocumentId) : null;
-  const listings = shouldScrapeJobSearch(saved)
-    ? await listJobListingsForPrefs(saved, profileFromCv(cv) ?? [])
-    : [];
-  revalidatePath("/app/career");
-  return { prefs: saved, listings };
-}
 
-/** Re-scrape with the saved config when the user opens Offres. No row → no scrape. */
-export async function scrapeSavedJobSearch(): Promise<{
-  prefs: JobSearchPrefs;
-  listings: RankedJobListing[];
-  scraped: boolean;
-}> {
-  const user = await requireUser();
-  const saved = await getJobSearchPrefs(user.id);
-  if (!saved || !shouldScrapeJobSearch(saved)) {
-    return {
-      prefs: saved ?? { ...EMPTY_JOB_SEARCH_PREFS },
-      listings: [],
-      scraped: false,
-    };
-  }
-  try {
-    await ingestJobsForPrefs(saved);
-  } catch (err) {
-    console.warn(
-      "[jobs] saved-config scrape failed",
-      err instanceof Error ? err.message : err,
-    );
-  }
-  const cv = saved.cvDocumentId ? await getCvDocumentById(user.id, saved.cvDocumentId) : null;
-  const listings = await listJobListingsForPrefs(saved, profileFromCv(cv) ?? []);
+  const library = await listUserJobListings(user.id);
   revalidatePath("/app/career");
-  return { prefs: saved, listings, scraped: true };
+  return { prefs: saved, library, scraped };
 }
 
 /** Start tracking an offer — no extra scrape, so it stays instant. */

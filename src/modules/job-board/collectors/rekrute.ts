@@ -6,7 +6,7 @@ import {
   resolveLocations,
 } from "@/modules/job-board/locations";
 import { classifyWorkMode, placeFitsPrefs, roleMatchesAny } from "@/modules/job-board/match";
-import { resolveRoles } from "@/modules/job-board/roles";
+import { boardSearchQueries } from "@/modules/job-board/scrape-query";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 
 export type ParsedRekruteHit = {
@@ -71,14 +71,8 @@ export function parseRekruteSearchHtml(html: string): ParsedRekruteHit[] {
 }
 
 function searchQueries(prefs: JobSearchPrefs): string[] {
-  if (prefs.roles.length > 0) {
-    return resolveRoles(prefs.roles)
-      .map((role) => role.label)
-      .filter((label) => label.length >= 2)
-      .slice(0, 2);
-  }
-  const fallback = prefs.roleQuery.trim();
-  return fallback ? [fallback] : ["développeur"];
+  const queries = boardSearchQueries(prefs, 2);
+  return queries.length > 0 ? queries : ["développeur"];
 }
 
 export function rekruteSearchUrl(query: string): string {

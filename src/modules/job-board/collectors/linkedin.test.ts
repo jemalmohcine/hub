@@ -106,6 +106,20 @@ describe("linkedinGuestSearchUrl", () => {
     expect(url).toContain("Morocco");
     expect(url).toContain("f_WT=1");
   });
+
+  it("adds the keyword to the LinkedIn query", () => {
+    const url = linkedinGuestSearchUrl(
+      withJobSearchPrefs({
+        roles: ["frontend"],
+        keyword: "React",
+        locations: ["casablanca"],
+      }),
+      resolveLocation("casablanca"),
+    );
+    expect(url).toContain("React");
+    expect(url).toContain("frontend");
+    expect(url).toContain("keywords=");
+  });
 });
 
 describe("linkedinPlaceLabel", () => {

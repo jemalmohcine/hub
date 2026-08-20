@@ -279,7 +279,9 @@ export function scoreListingFit(
 
   if (listing.workMode && acceptsWorkMode(prefs, listing.workMode)) score += 8;
 
-  score += Math.min(28, skillOverlap(blob, cv.skills) * 4);
+  const skillsHit = skillOverlap(blob, cv.skills);
+  score += Math.min(cv.skills.length > 0 ? 36 : 28, skillsHit * (cv.skills.length > 0 ? 6 : 4));
+  if (cv.skills.length > 0 && skillsHit === 0) score -= 16;
   score += seniorityDelta(listing, years);
 
   const leadRole = resolveRoles(roles)[0]?.id;

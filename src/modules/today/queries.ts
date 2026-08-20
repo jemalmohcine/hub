@@ -11,7 +11,8 @@ import {
 import { getAiIntelFeed, getLatestAiIntelRun } from "@/modules/ai-intel/queries";
 import { sourceDisplayName } from "@/modules/ai-intel/source-label";
 import { computeMonthlyTotals, listDevExpenseServices } from "@/modules/dev-expenses/queries";
-import { listJobListingsForPrefs, getJobSearchPrefs } from "@/modules/job-board/queries";
+import { rankListingsForPrefs } from "@/modules/job-board/fit";
+import { listUserJobListings, getJobSearchPrefs } from "@/modules/job-board/queries";
 import { listJobApplications } from "@/modules/job-tracker/queries";
 import type { TodayDigest, TodayHighlight, TodaySignal } from "@/modules/today/types";
 import { formatCurrencyCents } from "@/lib/numbers";
@@ -60,12 +61,14 @@ async function aiSignals(userId: string): Promise<{
 
 async function jobSignals(userId: string): Promise<TodaySignal[]> {
   const prefs = await getJobSearchPrefs(userId).catch(() => null);
-  const [listings, applications] = await Promise.all([
+  const [library, applications] = await Promise.all([
     shouldScrapeJobSearch(prefs) && prefs
-      ? listJobListingsForPrefs(prefs).catch(() => [])
+      ? listUserJobListings(userId).catch(() => [])
       : Promise.resolve([]),
     listJobApplications(userId).catch(() => []),
   ]);
+  const listings =
+    prefs && library.length > 0 ? rankListingsForPrefs(library, prefs) : [];
 
   const signals: TodaySignal[] = [];
 
