@@ -1,5 +1,5 @@
 import { detectContentKind } from "@/modules/ai-intel/content-kind";
-import { readRepoMomentum } from "@/modules/ai-intel/repo-momentum";
+import { isRepoExploding, readRepoMomentum } from "@/modules/ai-intel/repo-momentum";
 import type { AiIntelItem, AiUrgency } from "@/modules/ai-intel/types";
 
 export function itemVerdict(item: AiIntelItem): string {
@@ -52,18 +52,49 @@ function asIntelItem(item: AlertItem): AiIntelItem {
 
 /**
  * Phone alerts and the Urgent tab share this rule: only act-now signals.
- * Security / CVE, a price change, or a genuinely revolutionary tool.
- * A changelog, an outage, a breaking change, or a trending GitHub repo is not urgent.
+ * Security / CVE, an LLM price change, or a widely used AI repo that explodes.
+ * A changelog, an outage, or a new model is interesting, not urgent.
  */
 export function isCriticalPushAlert(item: AlertItem): boolean {
   const intel = asIntelItem(item);
-  const meta = (item.metadata ?? {}) as Record<string, unknown>;
   const kind = detectContentKind(intel);
-  const signal = typeof meta.hardSignal === "string" ? meta.hardSignal : "";
+  const signal =
+    typeof intel.metadata?.hardSignal === "string"
+      ? String(intel.metadata.hardSignal)
+      : "";
 
   if (signal === "security" || kind === "security") return true;
-  if (signal === "pricing" || kind === "pricing") return true;
+  if (isLlmPriceChange(intel, signal, kind)) return true;
+  if (isWellUsedExplodingRepo(intel)) return true;
   return isRevolutionaryTool(intel);
+}
+
+const LLM_PRICE_RE =
+  /\b(llm|gpt-?\d|claude|gemini|openai|anthropic|mistral|llama|grok|token(?:s)?|per[- ]token|copilot)\b/i;
+
+function isLlmPriceChange(
+  item: AiIntelItem,
+  signal: string,
+  kind: ReturnType<typeof detectContentKind>,
+): boolean {
+  if (signal !== "pricing" && kind !== "pricing") return false;
+  if (item.pillar === "models" || kind === "model") return true;
+  const text = `${item.title} ${item.summary ?? ""}`;
+  return LLM_PRICE_RE.test(text);
+}
+
+/** Popular enough that an explosion actually matters to a working dev. */
+const WELL_USED_STARS = 2_000;
+
+export function isWellUsedExplodingRepo(item: AiIntelItem): boolean {
+  if (itemKind(item) !== "repo") return false;
+  const { stars, starsToday, rank } = readRepoMomentum(item);
+  const wellUsed = stars >= WELL_USED_STARS || (rank > 0 && rank <= 3 && stars >= 1_000);
+  if (!wellUsed) return false;
+
+  const meta = (item.metadata ?? {}) as Record<string, unknown>;
+  if (meta.exploding === true) return true;
+  return isRepoExploding(item) || starsToday >= 400;
 }
 
 function isRevolutionaryTool(item: AiIntelItem): boolean {
@@ -78,24 +109,28 @@ function isRevolutionaryTool(item: AiIntelItem): boolean {
   return false;
 }
 
-/** Same rule as push: faille / prix / outil révolutionnaire. */
+/** Same rule as push: faille / prix LLM / repo AI très utilisé qui explose. */
 export function isHotAlert(item: AiIntelItem): boolean {
   return isCriticalPushAlert(item);
 }
 
 const TRENDING_SOURCES = new Set(["github-trending", "gittrend"]);
 
-/** Trending = GitHub trending list, or a repo with measurable daily growth. */
+/** GitHub tab: AI repos that are already used and taking off. */
 export function isTrending(item: AiIntelItem): boolean {
   if (itemKind(item) !== "repo") return false;
-  if (TRENDING_SOURCES.has(item.primary_source)) return true;
-
   const { starsToday, starsWeek, stars, rank } = readRepoMomentum(item);
+  const wellUsed = stars >= 1_000;
+  const hotGrowth =
+    starsToday >= 200 ||
+    (starsWeek >= 1_000 && starsToday >= 80) ||
+    (rank > 0 && rank <= 5 && starsToday >= 150);
 
-  if (starsToday >= 200) return true;
-  if (starsWeek >= 1000 && starsToday >= 80) return true;
-  if (rank > 0 && rank <= 5 && starsToday >= 150) return true;
-  if (stars > 0 && starsToday >= 100 && starsToday >= stars * 0.12) return true;
+  if (TRENDING_SOURCES.has(item.primary_source) && (wellUsed || hotGrowth)) {
+    return true;
+  }
+  if (wellUsed && hotGrowth) return true;
+  if (wellUsed && starsToday >= 100 && starsToday >= stars * 0.12) return true;
   return false;
 }
 
@@ -121,11 +156,17 @@ const URGENCY_RANK: Record<AiUrgency, number> = {
   light: 2,
 };
 
-/** Hot alerts, then trending, then score — read state does not reorder. */
+/** Hot alerts, then unread, then trending, then score. */
 export function sortForDeveloper(a: AiIntelItem, b: AiIntelItem): number {
   const ha = isHotAlert(a) ? 1 : 0;
   const hb = isHotAlert(b) ? 1 : 0;
   if (ha !== hb) return hb - ha;
+
+  if (ha && hb) {
+    const ra = a.read ? 1 : 0;
+    const rb = b.read ? 1 : 0;
+    if (ra !== rb) return ra - rb;
+  }
 
   const ta = isTrending(a) ? 1 : 0;
   const tb = isTrending(b) ? 1 : 0;

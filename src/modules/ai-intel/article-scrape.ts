@@ -67,6 +67,8 @@ function cleanText(raw: string): string {
   );
 }
 
+const DIRECT_SUMMARY_CAP = 700;
+
 function takeFirecrawlSlot(url: string): boolean {
   if (!hasFirecrawl()) return false;
   if (isFirecrawlCircuitOpen()) return false;
@@ -75,7 +77,7 @@ function takeFirecrawlSlot(url: string): boolean {
   return true;
 }
 
-/** Fetch and extract readable article content from a URL. */
+/** Fetch a short "what it does" blurb. The source link is the full article. */
 export async function scrapeArticlePage(url: string): Promise<ScrapedArticle | null> {
   try {
     const useFirecrawl = takeFirecrawlSlot(url);
@@ -97,22 +99,29 @@ export async function scrapeArticlePage(url: string): Promise<ScrapedArticle | n
     const title = page.title || og.title;
     const description = page.description || og.description;
     const siteName = page.siteName || og.siteName;
+
+    // Native HTML is noisy. Keep title + OG description; the card only needs
+    // "what it does". Firecrawl markdown is clean enough to feed the LLM.
     const content =
-      (page.markdown && page.markdown.length >= 200
-        ? cleanText(page.markdown)
-        : "") ||
-      extractMainText($, {
-        selectors: CONTENT_SELECTORS,
-        minLength: 200,
-        clean: cleanText,
-      });
+      page.source === "firecrawl" && page.markdown && page.markdown.length >= 120
+        ? cleanText(page.markdown).slice(0, FIELD_LIMITS.body)
+        : (
+            (description && description.length >= 40 ? cleanText(description) : "") ||
+            extractMainText($, {
+              selectors: CONTENT_SELECTORS,
+              minLength: 80,
+              maxParagraphs: 3,
+              minParagraphLength: 40,
+              clean: cleanText,
+            })
+          ).slice(0, DIRECT_SUMMARY_CAP);
 
     if (!title && !description && !content) return null;
 
     return {
       title: title ? clampField(cleanText(title), "title") : null,
-      description: description ? cleanText(description).slice(0, 500) : null,
-      content: content ? content.slice(0, FIELD_LIMITS.body) : null,
+      description: description ? cleanText(description).slice(0, 280) : null,
+      content: content || null,
       siteName: siteName ? clampField(cleanText(siteName), "name") : null,
       scrapedVia: page.source,
     };

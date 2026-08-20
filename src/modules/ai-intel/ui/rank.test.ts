@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AiIntelItem } from "@/modules/ai-intel/types";
-import { isHotAlert, isNoise, isTrending } from "@/modules/ai-intel/ui/rank";
+import { isHotAlert, isNoise, isTrending, sortForDeveloper } from "@/modules/ai-intel/ui/rank";
 
 function item(overrides: Partial<AiIntelItem> = {}): AiIntelItem {
   return {
@@ -31,9 +31,44 @@ describe("isHotAlert", () => {
     ).toBe(true);
   });
 
-  it("marks a price change as urgent", () => {
+  it("marks an LLM price change as urgent", () => {
     expect(
-      isHotAlert(item({ metadata: { hardSignal: "pricing", contentKind: "pricing" } })),
+      isHotAlert(
+        item({
+          pillar: "models",
+          title: "OpenAI raises GPT-4o prices",
+          metadata: { hardSignal: "pricing", contentKind: "pricing" },
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not mark a random SaaS price change as urgent", () => {
+    expect(
+      isHotAlert(
+        item({
+          pillar: "tools",
+          title: "Notion raises the Plus plan",
+          metadata: { hardSignal: "pricing", contentKind: "pricing" },
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("marks a widely used exploding GitHub repo as urgent", () => {
+    expect(
+      isHotAlert(
+        item({
+          pillar: "opensource",
+          metadata: {
+            exploding: true,
+            kind: "repo",
+            contentKind: "repo",
+            stars: 18_000,
+            starsToday: 520,
+          },
+        }),
+      ),
     ).toBe(true);
   });
 
@@ -49,12 +84,12 @@ describe("isHotAlert", () => {
     ).toBe(true);
   });
 
-  it("does not mark an exploding GitHub repo as urgent", () => {
+  it("does not mark an exploding GitHub repo as urgent when it is still small", () => {
     expect(
       isHotAlert(
         item({
           pillar: "opensource",
-          metadata: { exploding: true, kind: "repo", contentKind: "repo" },
+          metadata: { exploding: true, kind: "repo", contentKind: "repo", stars: 400 },
         }),
       ),
     ).toBe(false);
@@ -154,13 +189,13 @@ describe("isTrending", () => {
     ).toBe(false);
   });
 
-  it("flags every repo from the GitHub trending sources", () => {
+  it("flags a well-used repo from GitHub trending", () => {
     expect(
       isTrending(
         item({
           pillar: "opensource",
           primary_source: "github-trending",
-          metadata: { kind: "repo", contentKind: "repo", starsToday: 40, stars: 800 },
+          metadata: { kind: "repo", contentKind: "repo", starsToday: 40, stars: 8_000 },
         }),
       ),
     ).toBe(true);
@@ -169,10 +204,22 @@ describe("isTrending", () => {
         item({
           pillar: "opensource",
           primary_source: "gittrend",
-          metadata: { kind: "repo", contentKind: "repo" },
+          metadata: { kind: "repo", contentKind: "repo", stars: 3_200, starsToday: 90 },
         }),
       ),
     ).toBe(true);
+  });
+
+  it("does not flag a tiny github-trending repo", () => {
+    expect(
+      isTrending(
+        item({
+          pillar: "opensource",
+          primary_source: "github-trending",
+          metadata: { kind: "repo", contentKind: "repo", starsToday: 40, stars: 180 },
+        }),
+      ),
+    ).toBe(false);
   });
 
   it("does not flag a random repo that is not growing", () => {
@@ -193,5 +240,17 @@ describe("isNoise", () => {
     expect(isNoise(item({ metadata: { verdict: "skip", score: 80 } }))).toBe(true);
     expect(isNoise(item({ metadata: { score: 30 } }))).toBe(true);
     expect(isNoise(item({ metadata: { score: 70, verdict: "use_it" } }))).toBe(false);
+  });
+});
+
+describe("sortForDeveloper", () => {
+  it("keeps untreated urgents above treated ones", () => {
+    const hot = { hardSignal: "security", contentKind: "security" };
+    const open = item({ id: "open", metadata: hot, read: false });
+    const treated = item({ id: "treated", metadata: hot, read: true });
+    expect([treated, open].sort(sortForDeveloper).map((row) => row.id)).toEqual([
+      "open",
+      "treated",
+    ]);
   });
 });
