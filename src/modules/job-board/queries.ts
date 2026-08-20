@@ -1,6 +1,8 @@
 import { createClient } from "@/core/auth/supabase/server";
 import { filtersToJson, parseJobSearchFilters } from "@/modules/job-board/filters";
 import { resolveLocations } from "@/modules/job-board/locations";
+import { isExpiredJobOffer, listingTtlCutoffIso } from "@/modules/job-board/listing-ttl";
+import { purgeExpiredUserOffers } from "@/modules/job-board/listing-purge";
 import { resolveRoles, rolesToQuery } from "@/modules/job-board/roles";
 import { normalizeWorkModes } from "@/modules/job-board/work-modes";
 import type {
@@ -286,11 +288,19 @@ export async function listJobListings(
 
 /** Offers collected for this user — filter locally, scrape only to refresh. */
 export async function listUserJobListings(userId: string): Promise<JobListing[]> {
+  try {
+    await purgeExpiredUserOffers(userId);
+  } catch (err) {
+    console.warn("[jobs] purge user offers", err instanceof Error ? err.message : err);
+  }
+
   const supabase = await createClient();
+  const cutoff = listingTtlCutoffIso();
   const result = await supabase
     .from("job_user_listings")
     .select("scraped_at, listing:job_listings(*)")
     .eq("user_id", userId)
+    .gte("scraped_at", cutoff)
     .order("scraped_at", { ascending: false })
     .limit(400);
 
@@ -304,13 +314,16 @@ export async function listUserJobListings(userId: string): Promise<JobListing[]>
   const listings: JobListing[] = [];
   const seen = new Set<string>();
   for (const row of result.data as Array<{
+    scraped_at?: string | null;
     listing?: ListingRow | ListingRow[] | null;
   }>) {
     const raw = row.listing;
     const listing = Array.isArray(raw) ? raw[0] : raw;
     if (!listing?.id || seen.has(listing.id)) continue;
+    const mapped = listingFromRow(listing);
+    if (isExpiredJobOffer(mapped, row.scraped_at)) continue;
     seen.add(listing.id);
-    listings.push(listingFromRow(listing));
+    listings.push(mapped);
   }
   return listings;
 }
