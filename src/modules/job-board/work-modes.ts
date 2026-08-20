@@ -35,9 +35,14 @@ export function onsiteOnly(prefs: Pick<JobSearchPrefs, "workModes" | "workMode">
 
 export function acceptsWorkMode(
   prefs: Pick<JobSearchPrefs, "workModes" | "workMode">,
-  mode: JobWorkMode,
+  mode: JobWorkMode | null,
 ): boolean {
   const selected = normalizeWorkModes(prefs);
+  if (!mode) {
+    // LinkedIn guest cards have no description. Keep them unless the user
+    // only asked for télétravail.
+    return selected.includes("onsite") || selected.includes("hybrid");
+  }
   if (selected.includes(mode)) return true;
   if (mode === "hybrid" && selected.includes("remote") && selected.includes("onsite")) {
     return true;

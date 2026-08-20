@@ -32,6 +32,16 @@ describe("classifyWorkMode", () => {
       }),
     ).toBe("hybrid");
   });
+
+  it("does not guess présentiel when the card has no work-mode signal", () => {
+    expect(
+      classifyWorkMode({
+        title: "Full Stack Developer",
+        description: "",
+        location: "Casablanca, Casablanca-Settat, Maroc",
+      }),
+    ).toBeNull();
+  });
 });
 
 describe("isCredibleRegion", () => {
@@ -76,8 +86,17 @@ describe("roleMatches", () => {
     expect(roleMatches("frontend", "Data engineer Python")).toBe(false);
   });
 
+  it("keeps generic software titles when the saved role is frontend", () => {
+    expect(roleMatches("frontend", "Full Stack Developer")).toBe(true);
+    expect(roleMatches("frontend", "Software Engineer - Casablanca CDI")).toBe(true);
+    expect(roleMatches("frontend", "Développeur (H/F)")).toBe(true);
+    expect(roleMatches("frontend", "Node.JS Developer")).toBe(true);
+    expect(roleMatches("frontend", "Développeur Python")).toBe(false);
+  });
+
   it("does not treat fully remote as full stack", () => {
-    expect(roleMatches("fullstack", "Fully remote Python developer")).toBe(false);
+    expect(roleMatches("fullstack", "Fully remote product manager")).toBe(false);
+    expect(roleMatches("fullstack", "Fully remote Python developer")).toBe(true);
     expect(roleMatches("fullstack", "Développeur full stack")).toBe(true);
   });
 
@@ -158,19 +177,46 @@ describe("matchesSearchPrefs", () => {
     ).toBe(true);
   });
 
-  it("drops an offer that only buries the stack in the description", () => {
+  it("keeps a LinkedIn Casablanca card for a frontend + hybrid search", () => {
     expect(
       matchesSearchPrefs(
         {
-          title: "Software engineer",
-          description: "On touche un peu à React dans un outil interne",
-          location: "Paris",
+          title: "Full Stack Developer",
+          description: "",
+          location: "Casablanca, Casablanca-Settat, Maroc",
           tags: [],
-          workMode: "hybrid",
+          workMode: null,
         },
-        jobPrefs({ roleQuery: "react", roles: ["frontend"], locations: ["paris"], workModes: ["hybrid"], workMode: "hybrid" }),
+        jobPrefs({
+          roleQuery: "frontend",
+          roles: ["frontend"],
+          locations: ["casablanca"],
+          workModes: ["hybrid"],
+          workMode: "hybrid",
+        }),
       ),
-    ).toBe(false);
+    ).toBe(true);
+  });
+
+  it("keeps an unlabeled Software Engineer in Casablanca", () => {
+    expect(
+      matchesSearchPrefs(
+        {
+          title: "Software Engineer - Casablanca CDI",
+          description: "",
+          location: "Casablanca, Maroc",
+          tags: [],
+          workMode: null,
+        },
+        jobPrefs({
+          roleQuery: "frontend",
+          roles: ["frontend"],
+          locations: ["casablanca"],
+          workModes: [],
+          workMode: "hybrid",
+        }),
+      ),
+    ).toBe(true);
   });
 
   it("keeps Belgium when selected", () => {

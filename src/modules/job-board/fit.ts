@@ -199,7 +199,7 @@ export function listingWorthShowing(
   const selected = resolveLocations(prefs.locations);
   const region = wantsRemote(prefs) ? expandWithParentCountries(selected) : selected;
   const mode = listing.workMode;
-  if (mode && !acceptsWorkMode(prefs, mode)) return false;
+  if (!acceptsWorkMode(prefs, mode)) return false;
   const remoteEligible = mode !== "onsite";
   if (!placeFitsPrefs(region, listing.location, listing.title, remoteEligible)) {
     return false;

@@ -104,7 +104,8 @@ describe("linkedinGuestSearchUrl", () => {
     expect(url).toContain("jobs-guest/jobs/api/seeMoreJobPostings/search");
     expect(url).toContain("Casablanca");
     expect(url).toContain("Morocco");
-    expect(url).toContain("f_WT=1");
+    expect(decodeURIComponent(url)).toContain("développeur");
+    expect(url).not.toContain("f_WT=");
   });
 
   it("adds the keyword to the LinkedIn query", () => {
@@ -119,6 +120,19 @@ describe("linkedinGuestSearchUrl", () => {
     expect(url).toContain("React");
     expect(url).toContain("frontend");
     expect(url).toContain("keywords=");
+  });
+
+  it("does not pin LinkedIn to hybrid-only for a Casablanca search", () => {
+    const url = linkedinGuestSearchUrl(
+      withJobSearchPrefs({
+        roles: ["frontend"],
+        locations: ["casablanca"],
+        workModes: ["hybrid"],
+        workMode: "hybrid",
+      }),
+      resolveLocation("casablanca"),
+    );
+    expect(url).not.toContain("f_WT=");
   });
 });
 

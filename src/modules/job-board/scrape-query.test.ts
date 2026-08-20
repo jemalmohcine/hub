@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boardSearchQueries, prefsForScrape } from "@/modules/job-board/scrape-query";
+import { boardSearchQueries, linkedinSearchKeywords, prefsForScrape } from "@/modules/job-board/scrape-query";
 import type { CvJobProfile } from "@/modules/job-board/cv-skills";
 import { withJobSearchPrefs } from "@/modules/job-board/types";
 
@@ -29,12 +29,12 @@ describe("prefsForScrape", () => {
     });
   });
 
-  it("fills empty role, city and keyword from the CV", () => {
+  it("fills empty role and city from the CV, not the skill keywords", () => {
     const prefs = withJobSearchPrefs({ cvDocumentId: cv.id });
     const scrape = prefsForScrape(prefs, cv);
     expect(scrape.roles).toEqual(["frontend"]);
     expect(scrape.locations).toEqual(["casablanca"]);
-    expect(scrape.keyword).toBe("React TypeScript");
+    expect(scrape.keyword).toBe("");
     expect(scrape.yearsMin).toBe(3);
     expect(scrape.cvDocumentId).toBe(cv.id);
   });
@@ -59,5 +59,13 @@ describe("boardSearchQueries", () => {
 
   it("returns nothing when the search is empty", () => {
     expect(boardSearchQueries(withJobSearchPrefs())).toEqual([]);
+  });
+});
+
+describe("linkedinSearchKeywords", () => {
+  it("searches développeur in the city instead of the frontend chip", () => {
+    expect(
+      linkedinSearchKeywords(withJobSearchPrefs({ roles: ["frontend"], locations: ["casablanca"] })),
+    ).toBe("développeur");
   });
 });

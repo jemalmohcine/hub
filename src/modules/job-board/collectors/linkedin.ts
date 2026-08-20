@@ -8,7 +8,7 @@ import {
   type JobLocation,
 } from "@/modules/job-board/locations";
 import { classifyWorkMode, placeFitsPrefs, roleMatchesAny } from "@/modules/job-board/match";
-import { boardSearchQueries } from "@/modules/job-board/scrape-query";
+import { linkedinSearchKeywords } from "@/modules/job-board/scrape-query";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
 import { normalizeWorkModes } from "@/modules/job-board/work-modes";
 
@@ -20,11 +20,7 @@ export type ParsedLinkedInHit = {
   publishedAt: string | null;
 };
 
-const LINKEDIN_WT: Record<string, string> = {
-  onsite: "1",
-  remote: "2",
-  hybrid: "3",
-};
+const LINKEDIN_REMOTE_WT = "2";
 
 export function canonicalLinkedInJobUrl(href: string): string {
   const match = href.match(/\/jobs\/view\/(?:[\w%-]+-)?(\d{5,})/i);
@@ -43,7 +39,7 @@ export function linkedinPlaceLabel(place: JobLocation): string {
 }
 
 export function searchKeywords(prefs: JobSearchPrefs): string {
-  return boardSearchQueries(prefs, 1)[0] || "développeur";
+  return linkedinSearchKeywords(prefs);
 }
 
 export function linkedinGuestSearchUrl(
@@ -56,9 +52,9 @@ export function linkedinGuestSearchUrl(
   params.set("location", linkedinPlaceLabel(place));
   params.set("start", String(start));
   const modes = normalizeWorkModes(prefs);
-  if (modes.length === 1) {
-    const wt = LINKEDIN_WT[modes[0] ?? ""];
-    if (wt) params.set("f_WT", wt);
+  // Guest cards rarely label hybrid/onsite. Restricting f_WT hides Casablanca CDI.
+  if (modes.length === 1 && modes[0] === "remote") {
+    params.set("f_WT", LINKEDIN_REMOTE_WT);
   }
   return `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?${params.toString()}`;
 }

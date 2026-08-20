@@ -7,7 +7,7 @@ import {
   resolveLocations,
   type JobLocation,
 } from "@/modules/job-board/locations";
-import { resolveRole } from "@/modules/job-board/roles";
+import { resolveRole, SOFTWARE_FAMILY_ROLE_IDS } from "@/modules/job-board/roles";
 import { acceptsWorkMode, wantsRemote } from "@/modules/job-board/work-modes";
 import type { JobSearchPrefs, JobWorkMode } from "@/modules/job-board/types";
 
@@ -67,6 +67,14 @@ const CITY_ALIASES: Record<string, string[]> = {
   toulouse: ["haute garonne"],
   nantes: ["loire atlantique"],
   bordeaux: ["gironde"],
+  casablanca: [
+    "casablanca settat",
+    "casa settat",
+    "mechouar",
+    "méchouar",
+    "peripherie",
+    "périphérie",
+  ],
 };
 
 export function classifyWorkMode(hit: {
@@ -75,14 +83,14 @@ export function classifyWorkMode(hit: {
   location?: string;
   tags?: string[];
   workMode?: JobWorkMode | null;
-}): JobWorkMode {
+}): JobWorkMode | null {
   if (hit.workMode) return hit.workMode;
   const blob = `${hit.title} ${hit.description} ${hit.location ?? ""} ${(hit.tags ?? []).join(" ")}`;
   if (HYBRID_RE.test(blob)) return "hybrid";
   if (REMOTE_RE.test(blob) && !ONSITE_RE.test(blob)) return "remote";
   if (ONSITE_RE.test(blob)) return "onsite";
   if (REMOTE_RE.test(blob)) return "remote";
-  return "onsite";
+  return null;
 }
 
 /** City / country only — never the job description (ISO aliases like "ma" leak there). */
@@ -284,6 +292,24 @@ function hayHasNeedle(hay: string, needle: string): boolean {
 const SOFTWARE_TITLE =
   /\b(dev|developer|développeur|developpeur|engineer|ingénieur|ingenieur|software|programmer|fullstack|full[- ]stack|frontend|backend|sde)\b/i;
 
+/** Catalog roles that should keep generic "Software Engineer" / "Développeur" titles. */
+const BROAD_SOFTWARE_ROLE_IDS = new Set(
+  [...SOFTWARE_FAMILY_ROLE_IDS].filter((id) => id !== "mobile"),
+);
+
+const OTHER_CAREER_TITLE =
+  /\b(data engineer|data scientist|machine learning|ml engineer|product manager|product owner|product designer|scrum master|qa engineer|testeur|sdet|cyber|security engineer|customer success|procurement|sales)\b/i;
+
+const FRONTEND_HINT =
+  /\b(front[- ]?end|frontend|react|vue|angular|next\.?js|svelte)\b/i;
+
+const BACKEND_EXCLUSIVE = /\b(back[- ]?end|backend)\b/i;
+
+const BACKEND_STACK_ONLY =
+  /\b(python|django|flask|spring boot|\bphp\b|laravel|ruby on rails|golang)\b/i;
+
+const FULL_STACK_HINT = /\bfull[- ]?stack\b/i;
+
 function isGenericSoftwareQuery(roleQuery: string): boolean {
   const folded = foldCase(roleQuery).trim();
   if (!folded) return false;
@@ -292,11 +318,28 @@ function isGenericSoftwareQuery(roleQuery: string): boolean {
   return specific.length === 0 && generic.length > 0;
 }
 
+function softwareTitleFitsRole(roleId: string, blob: string): boolean {
+  if (!SOFTWARE_TITLE.test(blob) || OTHER_CAREER_TITLE.test(blob)) return false;
+  if (roleId === "frontend") {
+    if (FULL_STACK_HINT.test(blob) || FRONTEND_HINT.test(blob)) return true;
+    if (BACKEND_EXCLUSIVE.test(blob) || BACKEND_STACK_ONLY.test(blob)) return false;
+  }
+  if (roleId === "backend") {
+    if (FULL_STACK_HINT.test(blob) || BACKEND_EXCLUSIVE.test(blob)) return true;
+    if (FRONTEND_HINT.test(blob) && !BACKEND_STACK_ONLY.test(blob)) return false;
+  }
+  return true;
+}
+
 export function roleMatches(roleQuery: string, blob: string): boolean {
   if (foldCase(roleQuery).length < 2) return true;
   const hay = foldCase(blob);
   if (isGenericSoftwareQuery(roleQuery)) {
-    return SOFTWARE_TITLE.test(blob);
+    return SOFTWARE_TITLE.test(blob) && !OTHER_CAREER_TITLE.test(blob);
+  }
+  const roleId = resolveRole(roleQuery).id;
+  if (BROAD_SOFTWARE_ROLE_IDS.has(roleId) && softwareTitleFitsRole(roleId, blob)) {
+    return true;
   }
   const needles = roleNeedles(roleQuery);
   if (needles.length === 0) {
