@@ -8,7 +8,6 @@ import type {
   JobListingFilter,
   JobSearchPrefs,
 } from "@/modules/job-board/types";
-import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
 import {
   rankListingsForPrefs,
   type CvFitInput,
@@ -104,7 +103,8 @@ export function prefsFromDbRow(data: {
   };
 }
 
-export async function getJobSearchPrefs(userId: string): Promise<JobSearchPrefs> {
+/** Saved search config, or `null` when the user has never recorded one. */
+export async function getJobSearchPrefs(userId: string): Promise<JobSearchPrefs | null> {
   const supabase = await createClient();
   const selects = [
     "role_query, city, work_mode, locations, roles, work_modes, filters",
@@ -124,7 +124,7 @@ export async function getJobSearchPrefs(userId: string): Promise<JobSearchPrefs>
     if (result.error && !missingColumn(result.error)) break;
   }
 
-  return { ...EMPTY_JOB_SEARCH_PREFS };
+  return null;
 }
 
 export async function saveJobSearchPrefs(

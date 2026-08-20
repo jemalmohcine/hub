@@ -5,7 +5,7 @@ import { collectJobicy } from "@/modules/job-board/collectors/jobicy";
 import { collectLinkedIn } from "@/modules/job-board/collectors/linkedin";
 import { collectRekrute } from "@/modules/job-board/collectors/rekrute";
 import { collectRemotive } from "@/modules/job-board/collectors/remotive";
-import { collectWttj, collectWttjPool } from "@/modules/job-board/collectors/wttj";
+import { collectWttj } from "@/modules/job-board/collectors/wttj";
 import { collectWwr } from "@/modules/job-board/collectors/wwr";
 import {
   expandWithParentCountries,
@@ -13,17 +13,7 @@ import {
 } from "@/modules/job-board/locations";
 import { placeFitsPrefs, roleMatchesAny } from "@/modules/job-board/match";
 import type { JobSearchPrefs, RawJobHit } from "@/modules/job-board/types";
-import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
 import { wantsRemote } from "@/modules/job-board/work-modes";
-
-export const DEV_POOL_PREFS: JobSearchPrefs = {
-  ...EMPTY_JOB_SEARCH_PREFS,
-  roles: [],
-  roleQuery: "",
-  locations: ["france", "maroc", "europe"],
-  workModes: ["remote", "hybrid", "onsite"],
-  workMode: "hybrid",
-};
 
 async function collectRemotiveForPrefs(prefs: JobSearchPrefs): Promise<RawJobHit[]> {
   if (!wantsRemote(prefs)) return [];
@@ -65,23 +55,6 @@ export async function collectJobsForPrefs(prefs: JobSearchPrefs): Promise<RawJob
   return dedupeHits(batches);
 }
 
-/** Cron scrape: every software job we can get, not one user's search. */
-export async function collectDevJobPool(): Promise<RawJobHit[]> {
-  const prefs = DEV_POOL_PREFS;
-  const batches = await Promise.all([
-    settled("wttj", collectWttjPool()),
-    settled("rekrute", collectRekrute({ ...prefs, roleQuery: "développeur" })),
-    settled("linkedin", collectLinkedIn({ ...prefs, roleQuery: "développeur" })),
-    settled("jobicy", collectJobicy(prefs)),
-    settled("remotive", collectRemotive()),
-    settled("wwr", collectWwr(prefs)),
-    settled("himalayas", collectHimalayas(prefs)),
-    settled("arbeitnow", collectArbeitnow(prefs)),
-    settled("indeed", collectIndeedFr({ ...prefs, roleQuery: "développeur" })),
-  ]);
-  return dedupeHits(batches);
-}
-
 function dedupeHits(batches: RawJobHit[][]): RawJobHit[] {
   const hits: RawJobHit[] = [];
   const seen = new Set<string>();
@@ -95,8 +68,4 @@ function dedupeHits(batches: RawJobHit[][]): RawJobHit[] {
   }
   console.info("[jobs] collected", hits.length);
   return hits;
-}
-
-export async function collectAllJobSources(): Promise<RawJobHit[]> {
-  return collectDevJobPool();
 }

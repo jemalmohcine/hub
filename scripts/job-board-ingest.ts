@@ -1,6 +1,7 @@
 /**
- * Scrape a shared pool of developer jobs into job_listings.
- * User searches only filter that pool (by CV / city). Cron every 3 hours.
+ * Maintenance only: purge stale listings and send follow-up reminders.
+ * Offers are scraped when a user has a saved search config and opens Offres
+ * (or clicks Chercher). There is no hourly/morning global job pool.
  *
  * Usage:
  *   npm run job-board:ingest
@@ -8,7 +9,7 @@
 import { runJobBoardIngest } from "../src/modules/job-board/ingest";
 
 async function main() {
-  console.log("[job-board] starting ingest");
+  console.log("[job-board] starting maintenance");
   const result = await runJobBoardIngest();
   console.log("[job-board] done", JSON.stringify(result));
 }

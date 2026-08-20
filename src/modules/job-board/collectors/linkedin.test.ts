@@ -31,7 +31,24 @@ describe("canonicalLinkedInJobUrl", () => {
       ),
     ).toBe("https://www.linkedin.com/jobs/view/4299001001");
   });
+
+  it("reads the id at the end of a slug URL", () => {
+    expect(
+      canonicalLinkedInJobUrl(
+        "https://ma.linkedin.com/jobs/view/fullstack-engineer-kotlin-vue-4413987826?trk=public_jobs",
+      ),
+    ).toBe("https://www.linkedin.com/jobs/view/4413987826");
+  });
 });
+
+const SLUG_HTML = `
+<div class="base-search-card">
+  <a class="base-card__full-link" href="https://ma.linkedin.com/jobs/view/fullstack-engineer-kotlin-vue-4413987826?trk=public_jobs"></a>
+  <h3 class="base-search-card__title">Fullstack Engineer (Kotlin / Vue)</h3>
+  <h4 class="base-search-card__subtitle">Acme</h4>
+  <span class="job-search-card__location">Casablanca, Morocco</span>
+</div>
+`;
 
 describe("parseLinkedInGuestHtml", () => {
   it("reads the public job card", () => {
@@ -42,6 +59,18 @@ describe("parseLinkedInGuestHtml", () => {
         url: "https://www.linkedin.com/jobs/view/4299001001",
         location: "Casablanca, Casablanca-Settat, Morocco",
         publishedAt: "2026-08-12",
+      },
+    ]);
+  });
+
+  it("reads a slug URL on a card without wrapping li", () => {
+    expect(parseLinkedInGuestHtml(SLUG_HTML)).toEqual([
+      {
+        title: "Fullstack Engineer (Kotlin / Vue)",
+        company: "Acme",
+        url: "https://www.linkedin.com/jobs/view/4413987826",
+        location: "Casablanca, Morocco",
+        publishedAt: null,
       },
     ]);
   });
@@ -74,12 +103,13 @@ describe("linkedinGuestSearchUrl", () => {
     );
     expect(url).toContain("jobs-guest/jobs/api/seeMoreJobPostings/search");
     expect(url).toContain("Casablanca");
+    expect(url).toContain("Morocco");
     expect(url).toContain("f_WT=1");
   });
 });
 
 describe("linkedinPlaceLabel", () => {
-  it("adds the country next to the city", () => {
-    expect(linkedinPlaceLabel(resolveLocation("casablanca"))).toBe("Casablanca, Maroc");
+  it("uses the English country name LinkedIn’s guest search expects", () => {
+    expect(linkedinPlaceLabel(resolveLocation("casablanca"))).toBe("Casablanca, Morocco");
   });
 });

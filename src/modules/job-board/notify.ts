@@ -113,6 +113,10 @@ async function notifyFollowUps(day: string) {
   return sent;
 }
 
+export async function notifyJobFollowUps(now = Date.now()) {
+  return notifyFollowUps(toDayKey(now));
+}
+
 export async function notifyJobBoardUsers(now = Date.now()) {
   const admin = createAdminClient();
   const { data, error } = await admin

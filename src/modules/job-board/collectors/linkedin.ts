@@ -27,17 +27,19 @@ const LINKEDIN_WT: Record<string, string> = {
 };
 
 export function canonicalLinkedInJobUrl(href: string): string {
-  const match = href.match(/linkedin\.com\/jobs\/view\/(\d+)/i);
+  const match = href.match(/\/jobs\/view\/(?:[\w%-]+-)?(\d{5,})/i);
   if (match) return `https://www.linkedin.com/jobs/view/${match[1]}`;
   return href.split("?")[0];
 }
 
 export function linkedinPlaceLabel(place: JobLocation): string {
   if (place.kind === "city") {
-    const country = resolveLocation(place.countryId).label;
-    return `${place.label}, ${country}`;
+    const country = resolveLocation(place.countryId);
+    const city = place.indeed || place.label;
+    const countryLabel = country.indeed || country.label;
+    return `${city}, ${countryLabel}`;
   }
-  return place.label;
+  return place.indeed || place.label;
 }
 
 function searchKeywords(prefs: JobSearchPrefs): string {
@@ -64,31 +66,38 @@ export function linkedinGuestSearchUrl(
   return `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?${params.toString()}`;
 }
 
+function readLinkedInCard(
+  card: ReturnType<ReturnType<typeof cheerio.load>>,
+  seen: Set<string>,
+): ParsedLinkedInHit | null {
+  const href =
+    card.find("a.base-card__full-link").attr("href") ||
+    card.find("a[href*='/jobs/view/']").first().attr("href") ||
+    "";
+  if (!href.includes("/jobs/view/")) return null;
+  const url = canonicalLinkedInJobUrl(href);
+  if (seen.has(url)) return null;
+  const title = card.find(".base-search-card__title").first().text().trim();
+  const company = card.find(".base-search-card__subtitle").first().text().trim();
+  if (!title || !company) return null;
+  const location =
+    card.find(".job-search-card__location").first().text().trim() || "Remote";
+  const publishedAt =
+    card.find("time").attr("datetime")?.trim() ||
+    card.find(".job-search-card__listdate").attr("datetime")?.trim() ||
+    null;
+  seen.add(url);
+  return { title, company, url, location, publishedAt };
+}
+
 export function parseLinkedInGuestHtml(html: string): ParsedLinkedInHit[] {
   const $ = cheerio.load(html);
   const hits: ParsedLinkedInHit[] = [];
   const seen = new Set<string>();
 
-  $("li").each((_, el) => {
-    const card = $(el);
-    const href =
-      card.find("a.base-card__full-link").attr("href") ||
-      card.find("a[href*='/jobs/view/']").first().attr("href") ||
-      "";
-    if (!href.includes("/jobs/view/")) return;
-    const url = canonicalLinkedInJobUrl(href);
-    if (seen.has(url)) return;
-    const title = card.find(".base-search-card__title").first().text().trim();
-    const company = card.find(".base-search-card__subtitle").first().text().trim();
-    if (!title || !company) return;
-    const location =
-      card.find(".job-search-card__location").first().text().trim() || "Remote";
-    const publishedAt =
-      card.find("time").attr("datetime")?.trim() ||
-      card.find(".job-search-card__listdate").attr("datetime")?.trim() ||
-      null;
-    seen.add(url);
-    hits.push({ title, company, url, location, publishedAt });
+  $("li, .base-search-card, .base-card").each((_, el) => {
+    const parsed = readLinkedInCard($(el), seen);
+    if (parsed) hits.push(parsed);
   });
 
   return hits;
@@ -106,39 +115,60 @@ export function linkedinSearchPlaces(prefs: JobSearchPrefs): JobLocation[] {
   return selected.slice(0, 1);
 }
 
+const LINKEDIN_GUEST_PAGES = 3;
+const LINKEDIN_GUEST_PAGE_SIZE = 25;
+
+function rawHitFromParsed(
+  parsed: ParsedLinkedInHit,
+  prefs: JobSearchPrefs,
+  selected: ReturnType<typeof resolveLocations>,
+  seen: Set<string>,
+): RawJobHit | null {
+  if (seen.has(parsed.url)) return null;
+  if (!placeFitsPrefs(selected, parsed.location, parsed.title, true)) return null;
+  if (!roleMatchesAny(prefs, parsed.title)) return null;
+  seen.add(parsed.url);
+  return {
+    source: "linkedin",
+    externalId: parsed.url,
+    company: parsed.company,
+    title: parsed.title,
+    description: "",
+    url: parsed.url,
+    location: parsed.location,
+    publishedAt: parsed.publishedAt,
+    workMode: classifyWorkMode({
+      title: parsed.title,
+      description: "",
+      location: parsed.location,
+    }),
+  };
+}
+
 async function collectLinkedInPlace(
   prefs: JobSearchPrefs,
   place: JobLocation,
 ): Promise<RawJobHit[]> {
-  const html = await tryFetchText(linkedinGuestSearchUrl(prefs, place), {
-    timeoutMs: HTTP_TIMEOUTS.page,
-    headers: JOB_BOARD_HEADERS,
-  });
-  if (!html || !html.includes("/jobs/view/")) return [];
   const selected = resolveLocations(prefs.locations);
   const hits: RawJobHit[] = [];
   const seen = new Set<string>();
 
-  for (const parsed of parseLinkedInGuestHtml(html)) {
-    if (seen.has(parsed.url)) continue;
-    if (!placeFitsPrefs(selected, parsed.location, parsed.title, true)) continue;
-    if (!roleMatchesAny(prefs, parsed.title)) continue;
-    seen.add(parsed.url);
-    hits.push({
-      source: "linkedin",
-      externalId: parsed.url,
-      company: parsed.company,
-      title: parsed.title,
-      description: "",
-      url: parsed.url,
-      location: parsed.location,
-      publishedAt: parsed.publishedAt,
-      workMode: classifyWorkMode({
-        title: parsed.title,
-        description: "",
-        location: parsed.location,
-      }),
-    });
+  for (let page = 0; page < LINKEDIN_GUEST_PAGES; page += 1) {
+    const html = await tryFetchText(
+      linkedinGuestSearchUrl(prefs, place, page * LINKEDIN_GUEST_PAGE_SIZE),
+      {
+        timeoutMs: HTTP_TIMEOUTS.page,
+        headers: JOB_BOARD_HEADERS,
+      },
+    );
+    if (!html || !html.includes("/jobs/view/")) break;
+    const parsed = parseLinkedInGuestHtml(html);
+    if (parsed.length === 0) break;
+    for (const item of parsed) {
+      const hit = rawHitFromParsed(item, prefs, selected, seen);
+      if (hit) hits.push(hit);
+    }
+    if (parsed.length < 8) break;
   }
   return hits;
 }

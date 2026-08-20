@@ -3,6 +3,7 @@ import {
   EMPTY_JOB_SEARCH_FILTERS,
   hasActiveJobFilters,
   parseJobSearchFilters,
+  shouldScrapeJobSearch,
   yearsMinFromExperience,
 } from "@/modules/job-board/filters";
 import { EMPTY_JOB_SEARCH_PREFS } from "@/modules/job-board/types";
@@ -58,6 +59,25 @@ describe("hasActiveJobFilters", () => {
       hasActiveJobFilters({
         ...EMPTY_JOB_SEARCH_PREFS,
         cvDocumentId: "11111111-1111-4111-8111-111111111111",
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("shouldScrapeJobSearch", () => {
+  it("does not scrape when no config is saved", () => {
+    expect(shouldScrapeJobSearch(null)).toBe(false);
+    expect(shouldScrapeJobSearch(undefined)).toBe(false);
+    expect(shouldScrapeJobSearch(EMPTY_JOB_SEARCH_PREFS)).toBe(false);
+  });
+
+  it("scrapes when a real search config exists", () => {
+    expect(
+      shouldScrapeJobSearch({
+        ...EMPTY_JOB_SEARCH_PREFS,
+        locations: ["casablanca"],
+        roles: ["frontend"],
+        roleQuery: "Développeur frontend",
       }),
     ).toBe(true);
   });

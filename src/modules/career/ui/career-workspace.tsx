@@ -37,6 +37,7 @@ export function CareerWorkspace({
   initialJobs,
   initialListings,
   initialPrefs,
+  hasSavedSearch,
   cvProfiles,
 }: {
   initialTab: CareerTab;
@@ -47,6 +48,7 @@ export function CareerWorkspace({
   initialJobs: JobApplication[];
   initialListings: RankedJobListing[];
   initialPrefs: JobSearchPrefs;
+  hasSavedSearch: boolean;
   cvProfiles: CvJobProfile[];
 }) {
   const searchParams = useSearchParams();
@@ -114,6 +116,8 @@ export function CareerWorkspace({
           <JobBoardWorkspace
             initialListings={initialListings}
             initialPrefs={initialPrefs}
+            hasSavedSearch={hasSavedSearch}
+            offersActive={activeTab === "offers"}
             cvProfiles={cvProfiles}
             cvDocuments={initialDocuments}
             trackedListingIds={trackedListingIds}

@@ -281,9 +281,23 @@ function hayHasNeedle(hay: string, needle: string): boolean {
   return new RegExp(`(?:^|[^a-z0-9+])${escapeRe(token)}(?:$|[^a-z0-9+])`).test(spacedHay);
 }
 
+const SOFTWARE_TITLE =
+  /\b(dev|developer|développeur|developpeur|engineer|ingénieur|ingenieur|software|programmer|fullstack|full[- ]stack|frontend|backend|sde)\b/i;
+
+function isGenericSoftwareQuery(roleQuery: string): boolean {
+  const folded = foldCase(roleQuery).trim();
+  if (!folded) return false;
+  if (ROLE_STOPWORDS.has(folded)) return true;
+  const { specific, generic } = roleTokens(roleQuery);
+  return specific.length === 0 && generic.length > 0;
+}
+
 export function roleMatches(roleQuery: string, blob: string): boolean {
   if (foldCase(roleQuery).length < 2) return true;
   const hay = foldCase(blob);
+  if (isGenericSoftwareQuery(roleQuery)) {
+    return SOFTWARE_TITLE.test(blob);
+  }
   const needles = roleNeedles(roleQuery);
   if (needles.length === 0) {
     const { specific, generic } = roleTokens(roleQuery);

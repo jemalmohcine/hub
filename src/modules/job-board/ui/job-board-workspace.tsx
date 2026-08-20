@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Briefcase,
   ExternalLink,
@@ -28,6 +28,7 @@ import {
   applyToJobListing,
   importJobFromUrl,
   saveJobSearchConfig,
+  scrapeSavedJobSearch,
 } from "@/modules/job-board/actions";
 import { applyBoardsForPrefs } from "@/modules/job-board/apply-boards";
 import type { CvJobProfile } from "@/modules/job-board/cv-skills";
@@ -89,6 +90,8 @@ function modeTone(mode: RankedJobListing["workMode"]): "info" | "brand" | "neutr
 export function JobBoardWorkspace({
   initialListings,
   initialPrefs,
+  hasSavedSearch,
+  offersActive,
   cvProfiles,
   cvDocuments,
   trackedListingIds,
@@ -96,6 +99,8 @@ export function JobBoardWorkspace({
 }: {
   initialListings: RankedJobListing[];
   initialPrefs: JobSearchPrefs;
+  hasSavedSearch: boolean;
+  offersActive: boolean;
   cvProfiles: CvJobProfile[];
   cvDocuments: CvDocumentSummary[];
   trackedListingIds: string[];
@@ -103,13 +108,36 @@ export function JobBoardWorkspace({
 }) {
   const [listings, setListings] = useState(initialListings);
   const [prefs, setPrefs] = useState(() => withJobSearchPrefs(initialPrefs));
+  const [savedSearch, setSavedSearch] = useState(hasSavedSearch);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [importUrl, setImportUrl] = useState("");
   const [tracked, setTracked] = useState(() => new Set(trackedListingIds));
   const [followingId, setFollowingId] = useState<string | null>(null);
   const saveAction = useAsyncAction();
+  const scrapeAction = useAsyncAction();
   const importAction = useAsyncAction();
   const followAction = useAsyncAction();
+  const searching = saveAction.pending || scrapeAction.pending;
+
+  useEffect(() => {
+    if (!offersActive || !savedSearch) return;
+    let cancelled = false;
+    void scrapeAction.run(() => scrapeSavedJobSearch(), {
+      silent: true,
+      error: (err) =>
+        err instanceof Error ? err.message : "Impossible de chercher les offres",
+      onSuccess: (result) => {
+        if (cancelled) return;
+        setPrefs(withJobSearchPrefs(result.prefs));
+        setListings(result.listings);
+      },
+    });
+    return () => {
+      cancelled = true;
+    };
+    // Re-scrape each time the Offres tab is opened, using the saved config.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offersActive]);
 
   const cvId = prefs.cvDocumentId ?? "";
   const canSave = !onsiteOnly(prefs) || prefs.locations.length > 0;
@@ -157,6 +185,7 @@ export function JobBoardWorkspace({
       onSuccess: (result) => {
         setPrefs(withJobSearchPrefs(result.prefs));
         setListings(result.listings);
+        setSavedSearch(true);
         setSheetOpen(false);
       },
     });
@@ -276,6 +305,15 @@ export function JobBoardWorkspace({
             <Pencil className="h-4 w-4" />
             Modifier
           </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={searching || !canSave}
+            onClick={handleSave}
+          >
+            {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Chercher
+          </Button>
         </Cluster>
       </Cluster>
 
@@ -357,6 +395,12 @@ export function JobBoardWorkspace({
           {activeCv.skills.length > 0
             ? ` · ${truncateAtWord(activeCv.skills.join(", "), 120)}`
             : ""}
+        </Text>
+      ) : null}
+
+      {searching ? (
+        <Text size="sm" tone="muted">
+          On cherche les offres avec ta config enregistrée…
         </Text>
       ) : null}
 
@@ -453,20 +497,34 @@ export function JobBoardWorkspace({
 
         {listings.length === 0 ? (
           <EmptyState
-            icon={hasFilters ? MapPin : Briefcase}
-            title={hasFilters ? "Rien d’assez proche pour l’instant" : "Dis-nous ce que tu cherches"}
+            icon={savedSearch && hasFilters ? MapPin : Briefcase}
+            title={
+              searching
+                ? "On cherche les offres"
+                : !savedSearch
+                  ? "Enregistre ta recherche"
+                  : hasFilters
+                    ? "Rien d’assez proche pour l’instant"
+                    : "Dis-nous ce que tu cherches"
+            }
             hint={
-              hasFilters
-                ? "Enregistre ta recherche : on va chercher sur Rekrute, LinkedIn et WTTJ avec ta ville. Les liens ci-dessous ouvrent les mêmes sites."
-                : "Poste, ville, années d’expérience : tes filtres se sauvegardent. Le CV est optionnel, tu peux le retirer sans perdre le reste."
+              searching
+                ? "Recherche en cours avec ta config sauvegardée."
+                : !savedSearch
+                  ? "Sans config enregistrée, on ne scrape pas. Choisis un poste et une ville, puis cherche les offres."
+                  : hasFilters
+                    ? "On a cherché avec ta config. Ajuste les filtres et relance la recherche."
+                    : "Poste, ville, années d’expérience : tes filtres se sauvegardent. Le CV est optionnel, tu peux le retirer sans perdre le reste."
             }
             action={
-              <Stack gap={3} className="items-center">
-                {boards.length > 0 ? <ApplyBoardLinks boards={boards} /> : null}
-                <Button type="button" size="sm" variant="outline" onClick={() => setSheetOpen(true)}>
-                  {hasFilters ? "Ajuster" : "Choisir"}
-                </Button>
-              </Stack>
+              searching ? undefined : (
+                <Stack gap={3} className="items-center">
+                  {boards.length > 0 ? <ApplyBoardLinks boards={boards} /> : null}
+                  <Button type="button" size="sm" variant="outline" onClick={() => setSheetOpen(true)}>
+                    {hasFilters || savedSearch ? "Ajuster" : "Choisir"}
+                  </Button>
+                </Stack>
+              )
             }
           />
         ) : null}
@@ -477,7 +535,7 @@ export function JobBoardWorkspace({
         onOpenChange={setSheetOpen}
         desktop="full"
         title="Ta recherche"
-        description="Enregistrer lance la recherche sur Rekrute, LinkedIn et WTTJ. Tes filtres (poste, ville, années) restent. Le CV est un filtre en plus, tu peux le retirer."
+        description="Enregistrer sauvegarde ta config et relance le scrape. Sans config enregistrée, on ne cherche pas."
         headerActions={
           <IconButton label="Fermer" size="sm" onClick={() => setSheetOpen(false)}>
             <X className="h-4 w-4" />
@@ -667,8 +725,8 @@ export function JobBoardWorkspace({
               </Select>
             </Field>
           ) : null}
-          <Button type="button" disabled={saveAction.pending || !canSave} onClick={handleSave}>
-            {saveAction.pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          <Button type="button" disabled={searching || !canSave} onClick={handleSave}>
+            {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Chercher les offres
           </Button>
           {boards.length > 0 ? (
