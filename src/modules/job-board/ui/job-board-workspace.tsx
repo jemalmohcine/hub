@@ -32,8 +32,7 @@ import {
 } from "@/modules/job-board/actions";
 import { applyBoardsForPrefs } from "@/modules/job-board/apply-boards";
 import type { CvJobProfile } from "@/modules/job-board/cv-skills";
-import type { RankedJobListing } from "@/modules/job-board/fit";
-import { rankListingsForPrefs } from "@/modules/job-board/fit";
+import { fitChanceCopy, rankListingsForPrefs, type RankedJobListing } from "@/modules/job-board/fit";
 import {
   EMPLOYMENT_FILTER_LABELS,
   POSTED_WITHIN_LABELS,
@@ -78,10 +77,6 @@ const SOURCE_LABEL: Record<string, string> = {
   "indeed-fr": "Indeed",
 };
 
-const FIT_COPY = {
-  excellent: { label: "Bon match", tone: "success" as const },
-  good: { label: "Proche", tone: "brand" as const },
-};
 
 function modeTone(mode: RankedJobListing["workMode"]): "info" | "brand" | "neutral" {
   if (mode === "remote") return "info";
@@ -416,19 +411,25 @@ export function JobBoardWorkspace({
 
       {listings.length > 0 ? (
         <Text size="sm" tone="muted">
-          {listings.length} offre{listings.length !== 1 ? "s" : ""}
-          {activeCv ? " · les plus proches de ton CV" : " · selon tes filtres"}
-          {library.length > listings.length ? ` (${library.length} enregistrées)` : ""}
+          {listings.length} offre{listings.length !== 1 ? "s" : ""} · classées par chance
+          d’être pris
+          {activeCv ? " (poste, skills, années, ville)" : " (poste et ville)"}
+          {library.length > listings.length ? ` · ${library.length} enregistrées` : ""}
         </Text>
       ) : null}
 
       <Stack gap={2}>
-        {listings.map((listing) => {
+        {listings.map((listing, index) => {
           const isTracked = tracked.has(listing.id);
           const followingThis = followAction.pending && followingId === listing.id;
-          const fit = listing.fitLabel === "ok" ? null : FIT_COPY[listing.fitLabel];
+          const isBest = index === 0 || listing.fitScore === listings[0]?.fitScore;
+          const chance = fitChanceCopy(listing.fitScore);
           return (
-            <Card key={listing.id} className="p-4">
+            <Card
+              key={listing.id}
+              variant={isBest ? "accent" : "default"}
+              className="p-4"
+            >
               <Stack gap={2}>
                 <Cluster gap={2} className="flex-wrap items-start justify-between">
                   <div className="min-w-0">
@@ -450,8 +451,11 @@ export function JobBoardWorkspace({
                     </Cluster>
                   </div>
                   <Cluster gap={1} className="flex-wrap">
+                    <Badge tone={isBest ? "success" : chance.tone}>
+                      {isBest ? "Meilleure chance" : chance.label}
+                      {` · ${listing.fitScore} %`}
+                    </Badge>
                     {listing.trending ? <Badge tone="warning">Tendance</Badge> : null}
-                    {fit ? <Badge tone={fit.tone}>{fit.label}</Badge> : null}
                     {SOURCE_LABEL[listing.source] ? (
                       <Badge tone="neutral">{SOURCE_LABEL[listing.source]}</Badge>
                     ) : null}

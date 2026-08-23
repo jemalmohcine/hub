@@ -10,7 +10,7 @@ import {
   roleMatches,
 } from "@/modules/job-board/match";
 import { resolveRoles } from "@/modules/job-board/roles";
-import { listingHeatScore, isTrendingListing } from "@/modules/job-board/trending";
+import { isTrendingListing } from "@/modules/job-board/trending";
 import type { JobListing, JobSearchPrefs } from "@/modules/job-board/types";
 import { acceptsWorkMode } from "@/modules/job-board/work-modes";
 
@@ -91,20 +91,36 @@ export function listingAskedYears(listing: {
   return null;
 }
 
-function seniorityDelta(listing: { title: string; description: string | null; tags: string[] }, years: number): number {
-  if (years <= 0) return 0;
+function isLeadSearch(roles: string[], years: number): boolean {
+  const leadRole = resolveRoles(roles)[0]?.id;
+  return (
+    leadRole === "tech-lead" ||
+    leadRole === "engineering-manager" ||
+    leadRole === "cto" ||
+    years >= 8
+  );
+}
+
+/** How realistic the seniority ask is — the main “will they take you” lever. */
+function seniorityChancePoints(
+  listing: { title: string; description: string | null; tags: string[] },
+  years: number,
+): number {
+  if (years <= 0) return 12;
   const asked = listingAskedYears(listing);
   const blob = `${listing.title} ${listing.description ?? ""}`;
-  let delta = 0;
+  let points = 12;
   if (asked != null) {
-    if (years + 1 < asked) delta -= 30;
-    else if (years >= asked) delta += 12;
+    if (years + 1 < asked) points = 0;
+    else if (years >= asked && years <= asked + 3) points = 18;
+    else if (years >= asked) points = 14;
+    else points = 8;
   }
-  if (HARD_SENIOR.test(blob) && years < 6) delta -= 32;
-  else if (SENIOR_HINT.test(blob) && years < 3) delta -= 20;
-  else if (JUNIOR_HINT.test(blob) && years >= 7) delta -= 22;
-  else if (JUNIOR_HINT.test(blob) && years <= 3) delta += 10;
-  return delta;
+  if (HARD_SENIOR.test(blob) && years < 6) return Math.min(points, 2);
+  if (SENIOR_HINT.test(blob) && years < 3) return Math.min(points, 4);
+  if (JUNIOR_HINT.test(blob) && years >= 7) return Math.min(points, 6);
+  if (JUNIOR_HINT.test(blob) && years <= 3) return Math.max(points, 16);
+  return points;
 }
 
 function effectiveYears(prefs: JobSearchPrefs, cv: CvFitInput): number | null {
@@ -225,8 +241,8 @@ export function listingWorthShowing(
 }
 
 /**
- * How close this offer is to the CV and search — and how realistic it is to land.
- * Higher = show first.
+ * Chance of being taken on this offer, 0–100.
+ * Role + stack + years + city — not recency, not “the board is trendy”.
  */
 export function scoreListingFit(
   listing: {
@@ -245,69 +261,77 @@ export function scoreListingFit(
 ): number {
   const cv = asFit(cvInput);
   const extra = parseJobSearchFilters(prefs);
-  let score = 0;
   const blob = hay(listing);
-  const title = listing.title;
+  const titleHay = foldCase(listing.title);
   const selected = resolveLocations(prefs.locations);
   const roles = searchRoles(prefs, cv);
   const years = effectiveYears(prefs, cv) ?? 0;
+  const asked = listingAskedYears(listing);
+  const skillsHit = skillOverlap(blob, cv.skills);
+  const titleSkillHits = skillOverlap(titleHay, cv.skills);
 
-  if (roleHitsTitle(roles, title)) score += 48;
-  else if (roles[0] && roleMatches(roles[0], blob)) score += 16;
-
-  const extraRoles = roles.slice(1);
-  if (extraRoles.some((role) => roleMatches(role, title))) score += 8;
-
-  if (listingMatchesKeyword(listing, extra.keyword) && keywordTokens(extra.keyword).length > 0) {
-    score += 18;
+  let rolePts = 0;
+  if (roleHitsTitle(roles, listing.title)) rolePts = 30;
+  else if (roles[0] && roleMatches(roles[0], blob)) rolePts = 10;
+  if (roles.slice(1).some((role) => roleMatches(role, listing.title))) {
+    rolePts = Math.min(34, rolePts + 4);
   }
 
+  let skillPts = 0;
+  if (cv.skills.length > 0) {
+    skillPts = Math.min(28, skillsHit * 8) + Math.min(8, titleSkillHits * 6);
+  }
+
+  let keywordPts = 0;
+  if (keywordTokens(extra.keyword).length > 0 && listingMatchesKeyword(listing, extra.keyword)) {
+    keywordPts = 10;
+  }
+
+  let placePts = 8;
   if (selected.length > 0) {
     const cities = selected.filter((entry) => entry.kind === "city");
     const countries = selected.filter((entry) => entry.kind !== "city");
-    if (cities.some((entry) => locationMatches(entry, listing.location, title))) {
-      score += 28;
-    } else if (
-      countries.some((entry) => locationMatches(entry, listing.location, title))
-    ) {
-      score += 12;
+    if (cities.some((entry) => locationMatches(entry, listing.location, listing.title))) {
+      placePts = 14;
+    } else if (countries.some((entry) => locationMatches(entry, listing.location, listing.title))) {
+      placePts = 6;
+    } else {
+      placePts = 2;
     }
   }
 
-  if (listing.workMode && acceptsWorkMode(prefs, listing.workMode)) score += 8;
+  const seniorPts = seniorityChancePoints(listing, years);
+  let score = rolePts + skillPts + keywordPts + placePts + seniorPts;
 
-  const skillsHit = skillOverlap(blob, cv.skills);
-  score += Math.min(cv.skills.length > 0 ? 36 : 28, skillsHit * (cv.skills.length > 0 ? 6 : 4));
-  if (cv.skills.length > 0 && skillsHit === 0) score -= 16;
-  score += seniorityDelta(listing, years);
-
-  const leadRole = resolveRoles(roles)[0]?.id;
-  const isLeadSearch =
-    leadRole === "tech-lead" ||
-    leadRole === "engineering-manager" ||
-    leadRole === "cto" ||
-    years >= 8;
-  if (HARD_SENIOR.test(title) && !isLeadSearch) score -= 28;
-
-  if (roles.length > 0 && !roleHitsTitle(roles, title) && skillOverlap(blob, cv.skills) === 0) {
-    score = Math.min(score, 45);
+  if (HARD_SENIOR.test(listing.title) && !isLeadSearch(roles, years)) {
+    score = Math.min(score, 38);
   }
-
-  if (listing.source && (listing.publishedAt || listing.scrapedAt)) {
-    score += listingHeatScore({
-      source: listing.source,
-      publishedAt: listing.publishedAt ?? null,
-      scrapedAt: listing.scrapedAt ?? listing.publishedAt ?? "",
-    });
+  if (asked != null && years > 0 && years + 1 < asked) {
+    score = Math.min(score, 34);
+  }
+  if (cv.skills.length > 0 && skillsHit === 0) {
+    score = Math.min(score, roleHitsTitle(roles, listing.title) ? 58 : 40);
+  }
+  if (roles.length > 0 && !roleHitsTitle(roles, listing.title) && skillsHit === 0) {
+    score = Math.min(score, 42);
   }
 
   return Math.max(0, Math.min(100, score));
 }
 
 export function fitLabel(score: number): JobFitLabel {
-  if (score >= 72) return "excellent";
-  if (score >= 52) return "good";
+  if (score >= 70) return "excellent";
+  if (score >= 50) return "good";
   return "ok";
+}
+
+export function fitChanceCopy(score: number): {
+  label: string;
+  tone: "success" | "brand" | "neutral";
+} {
+  if (score >= 70) return { label: "Forte chance", tone: "success" };
+  if (score >= 50) return { label: "Bonne chance", tone: "brand" };
+  return { label: "Plus faible", tone: "neutral" };
 }
 
 export function rankListingsForPrefs(

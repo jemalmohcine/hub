@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  fitChanceCopy,
   fitLabel,
   listingWorthShowing,
   rankListingsForPrefs,
@@ -140,6 +141,22 @@ describe("scoreListingFit", () => {
       cv,
     );
     expect(senior).toBeLessThan(mid);
+    expect(senior).toBeLessThanOrEqual(34);
+  });
+
+  it("keeps the score between 0 and 100", () => {
+    const score = scoreListingFit(
+      listing({
+        title: "Développeur React TypeScript Next.js",
+        description: "React, TypeScript, Next.js",
+        location: "Paris",
+      }),
+      PREFS,
+      ["React", "TypeScript", "Next.js", "CSS"],
+    );
+    expect(score).toBeGreaterThanOrEqual(0);
+    expect(score).toBeLessThanOrEqual(100);
+    expect(fitChanceCopy(score).label).toBe("Forte chance");
   });
 });
 
