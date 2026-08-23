@@ -11,6 +11,7 @@ import {
 } from "@/modules/job-board/match";
 import { resolveRoles } from "@/modules/job-board/roles";
 import { listingHeatScore, isTrendingListing } from "@/modules/job-board/trending";
+import { isExpiredJobOffer } from "@/modules/job-board/listing-ttl";
 import type { JobListing, JobSearchPrefs } from "@/modules/job-board/types";
 import { acceptsWorkMode } from "@/modules/job-board/work-modes";
 
@@ -188,6 +189,7 @@ export function listingWorthShowing(
     workMode: JobListing["workMode"];
     employmentCategory?: JobListing["employmentCategory"];
     publishedAt?: string | null;
+    scrapedAt?: string;
   },
   prefs: JobSearchPrefs,
   cvInput?: string[] | CvFitInput,
@@ -195,6 +197,7 @@ export function listingWorthShowing(
   const cv = asFit(cvInput);
   const extra = parseJobSearchFilters(prefs);
   const region = regionForPrefs(prefs);
+  if (isExpiredJobOffer(listing)) return false;
   const mode = listing.workMode;
   if (!acceptsWorkMode(prefs, mode)) return false;
   const remoteEligible = mode !== "onsite";
