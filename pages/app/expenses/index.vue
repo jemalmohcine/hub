@@ -109,8 +109,7 @@ async function toggleSave(tool: DevTool) {
   <div>
     <DsPageHeader
       title="Dépenses dev"
-      description="Budget outils et catalogue d’alternatives."
-      description="Crédits offerts, essais gratuits et programmes étudiants ou open source."
+      description="Budget outils, crédits gratuits et catalogue d’alternatives."
       :pending="pending && !data"
       :error="error?.message ?? null"
     />
