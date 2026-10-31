@@ -7,6 +7,10 @@ export default defineNuxtConfig({
   modules: ["@nuxtjs/supabase", "@vueuse/nuxt"],
   supabase: {
     redirect: false,
+    redirectOptions: {
+      login: "/auth/login",
+      callback: "/auth/confirm",
+    },
   },
   runtimeConfig: {
     veilleIngestSecret: process.env.VEILLE_INGEST_SECRET || "",
@@ -21,7 +25,9 @@ export default defineNuxtConfig({
     preset: "vercel",
     routeRules: {
       "/sign-in": { redirect: { to: "/auth/login", statusCode: 301 } },
-      "/sign-up": { redirect: { to: "/auth/login", statusCode: 301 } },
+      "/sign-up": { redirect: { to: "/auth/sign-up", statusCode: 301 } },
+      "/auth/confirm": { ssr: false },
+      "/auth/update-password": { ssr: false },
       "/**": {
         headers: {
           "X-Frame-Options": "DENY",

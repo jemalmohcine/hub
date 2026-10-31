@@ -32,6 +32,19 @@ export function userFacingAuthError(raw?: unknown): string {
   if (message.includes("email") && (message.includes("invalid") || message.includes("valid"))) {
     return "Adresse e-mail invalide ou refusée.";
   }
+  if (message.includes("email not confirmed") || message.includes("not confirmed")) {
+    return "Confirmez votre adresse e-mail avant de vous connecter.";
+  }
+  if (
+    message.includes("invalid login") ||
+    message.includes("invalid credentials") ||
+    message.includes("wrong password")
+  ) {
+    return "E-mail ou mot de passe incorrect.";
+  }
+  if (message.includes("password") && message.includes("weak")) {
+    return "Choisissez un mot de passe plus long ou plus complexe.";
+  }
   if (BACKEND_LEAK.test(message)) return DEFAULT_AUTH;
   if (message.length > 120) return DEFAULT_AUTH;
   return DEFAULT_AUTH;

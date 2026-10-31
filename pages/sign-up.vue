@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const route = useRoute();
 await navigateTo({
-  path: "/auth/login",
+  path: "/auth/sign-up",
   query: route.query,
   replace: true,
 });
