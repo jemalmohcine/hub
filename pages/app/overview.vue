@@ -3,12 +3,13 @@ const { modules } = useHubModules();
 const tiles = computed(() => modules.filter((m) => m.id !== "overview"));
 
 const client = useSupabaseClient();
-const user = useSupabaseUser();
+const authUserId = useAuthUserId();
 
 const { data: stats } = await useAsyncData(
-  () => `overview-${user.value?.id ?? "anon"}`,
+  () => `overview-${authUserId.value ?? "anon"}`,
   async () => {
-    const uid = user.value?.id;
+    await waitForAuthUserId();
+    const uid = authUserId.value;
     if (!uid) return null;
 
     const [snippets, veille, saves, tools] = await Promise.all([
@@ -25,7 +26,7 @@ const { data: stats } = await useAsyncData(
       applications: tools.count ?? 0,
     };
   },
-  { watch: [() => user.value?.id], server: false },
+  { watch: [authUserId], server: false },
 );
 </script>
 

@@ -4,16 +4,17 @@ import { PRICING_LABELS } from "~/shared/dev-tools/types";
 import { userFacingDataError } from "~/shared/lib/user-error";
 
 const client = useSupabaseClient();
-const user = useSupabaseUser();
+const authUserId = useAuthUserId();
 
 const q = ref("");
 const freeOnly = ref(true);
 const savedOnly = ref(false);
 
 const { data, pending, error, refresh } = await useAsyncData(
-  () => `offres-${user.value?.id ?? "anon"}`,
+  () => `offres-${authUserId.value ?? "anon"}`,
   async () => {
-  const uid = user.value?.id;
+    await waitForAuthUserId();
+  const uid = authUserId.value;
   const { data: tools, error: toolsErr } = await client
     .from("dev_tools")
     .select("*")
@@ -75,7 +76,7 @@ const { data, pending, error, refresh } = await useAsyncData(
 
   return mapped.map((t) => ({ ...t, saved: savedIds.has(t.id) }));
   },
-  { watch: [() => user.value?.id], server: false },
+  { watch: [authUserId], server: false },
 );
 
 const filtered = computed(() => {
@@ -92,7 +93,7 @@ const filtered = computed(() => {
 });
 
 async function toggleSave(tool: DevTool) {
-  const uid = user.value?.id;
+  const uid = authUserId.value;
   if (!uid) return;
   if (tool.saved) {
     await client.from("dev_tool_saves").delete().eq("user_id", uid).eq("tool_id", tool.id);

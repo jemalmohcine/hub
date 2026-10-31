@@ -82,7 +82,12 @@ body {
 
 .dh-page-title {
   font-size: var(--dh-text-2xl);
-  @apply font-semibold tracking-tight text-foreground;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--dh-fg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .dh-muted {

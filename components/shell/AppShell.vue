@@ -16,7 +16,8 @@ import {
 const { modules } = useHubModules();
 const route = useRoute();
 const router = useRouter();
-const user = useSupabaseUser();
+const authUserId = useAuthUserId();
+const authEmail = useAuthUserEmail();
 const colorMode = useColorMode();
 const { open, query, filtered, toggle, close, run } = useCommandPalette();
 
@@ -110,8 +111,8 @@ function closeMenus() {
         </NuxtLink>
       </nav>
       <div class="border-t border-border/80 p-3">
-        <p class="truncate text-[length:var(--dh-text-xs)] text-muted-foreground" :title="user?.email ?? undefined">
-          {{ user?.email }}
+        <p class="truncate text-[length:var(--dh-text-xs)] text-muted-foreground" :title="authEmail ?? undefined">
+          {{ authEmail }}
         </p>
       </div>
     </aside>

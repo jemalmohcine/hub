@@ -74,13 +74,13 @@ function shiftDay(delta: number) {
 }
 
 async function toggleSave(item: VeilleItem) {
-  const user = useSupabaseUser();
-  if (!user.value) return;
+  const authUserId = useAuthUserId();
+  if (!authUserId.value) return;
   if (item.saved) {
-    await client.from("veille_ia_saves").delete().eq("user_id", user.value.id).eq("item_id", item.id);
+    await client.from("veille_ia_saves").delete().eq("user_id", authUserId.value).eq("item_id", item.id);
     item.saved = false;
   } else {
-    await client.from("veille_ia_saves").insert({ user_id: user.value.id, item_id: item.id });
+    await client.from("veille_ia_saves").insert({ user_id: authUserId.value, item_id: item.id });
     item.saved = true;
   }
 }

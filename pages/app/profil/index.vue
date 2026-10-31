@@ -7,12 +7,13 @@ import { userFacingDataError } from "~/shared/lib/user-error";
 
 const tab = ref<"cv" | "candidatures">("cv");
 const client = useSupabaseClient();
-const user = useSupabaseUser();
+const authUserId = useAuthUserId();
 
 const { data, pending, error, refresh } = await useAsyncData(
-  () => `profil-${user.value?.id ?? "anon"}`,
+  () => `profil-${authUserId.value ?? "anon"}`,
   async () => {
-    const uid = user.value?.id;
+    await waitForAuthUserId();
+    const uid = authUserId.value;
     if (!uid) return null;
 
   const { data: cvRows, error: cvErr } = await client
@@ -70,7 +71,7 @@ const { data, pending, error, refresh } = await useAsyncData(
 
   return { doc, documents, jobs };
   },
-  { watch: [() => user.value?.id], server: false },
+  { watch: [authUserId], server: false },
 );
 
 const cvForm = reactive(JSON.parse(JSON.stringify(data.value?.doc ?? defaultCvDocument())));
@@ -83,7 +84,7 @@ watch(
 );
 
 async function saveCv() {
-  const uid = user.value?.id;
+  const uid = authUserId.value;
   if (!uid) return;
   const payload = { ...cvForm };
   const id = payload.id;
@@ -124,7 +125,7 @@ const jobForm = reactive<JobApplicationInput>({
 });
 
 async function addJob() {
-  const uid = user.value?.id;
+  const uid = authUserId.value;
   if (!uid || !jobForm.company.trim() || !jobForm.role.trim()) return;
   await client.from("job_applications").insert({
     user_id: uid,

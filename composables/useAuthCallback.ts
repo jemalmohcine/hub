@@ -46,12 +46,12 @@ export async function completeAuthFromUrl(client: SupabaseClient): Promise<{ ok:
 }
 
 export async function waitForAuthUser(timeoutMs = 8000): Promise<boolean> {
-  const user = useSupabaseUser();
-  if (user.value) return true;
+  const authUserId = useAuthUserId();
+  if (authUserId.value) return true;
 
   return new Promise((resolve) => {
-    const stop = watch(user, (value) => {
-      if (value) {
+    const stop = watch(authUserId, (id) => {
+      if (id) {
         stop();
         clearTimeout(timer);
         resolve(true);
@@ -59,7 +59,7 @@ export async function waitForAuthUser(timeoutMs = 8000): Promise<boolean> {
     });
     const timer = window.setTimeout(() => {
       stop();
-      resolve(!!user.value);
+      resolve(Boolean(authUserId.value));
     }, timeoutMs);
   });
 }

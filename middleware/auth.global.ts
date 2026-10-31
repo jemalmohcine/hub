@@ -12,8 +12,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
     await restoreClientSession();
   }
 
-  const user = useSupabaseUser();
-  if (!user.value) {
+  const authUserId = useAuthUserId();
+  if (!authUserId.value) {
     return navigateTo(`/auth/login?next=${encodeURIComponent(to.fullPath)}`);
   }
 });

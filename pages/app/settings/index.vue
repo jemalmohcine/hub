@@ -2,7 +2,8 @@
 import { userFacingAuthError, userFacingDataError } from "~/shared/lib/user-error";
 
 const client = useSupabaseClient();
-const user = useSupabaseUser();
+const authUserId = useAuthUserId();
+const authEmail = useAuthUserEmail();
 const colorMode = useColorMode();
 const router = useRouter();
 
@@ -14,9 +15,10 @@ const error = ref("");
 const loading = ref(false);
 
 const { data: profile, refresh } = await useAsyncData(
-  () => `settings-${user.value?.id ?? "anon"}`,
+  () => `settings-${authUserId.value ?? "anon"}`,
   async () => {
-    const uid = user.value?.id;
+    await waitForAuthUserId();
+    const uid = authUserId.value;
     if (!uid) return null;
     const { data: row, error: pErr } = await client
       .from("profiles")
@@ -34,11 +36,11 @@ const { data: profile, refresh } = await useAsyncData(
     return {
       displayName: (row?.display_name as string) ?? "",
       avatarUrl: (row?.avatar_url as string) ?? "",
-      email: (row?.email as string) ?? user.value?.email ?? "",
+      email: (row?.email as string) ?? authEmail.value ?? "",
       locale: (prefs?.locale as string) ?? "fr",
     };
   },
-  { watch: [() => user.value?.id], server: false },
+  { watch: [authUserId], server: false },
 );
 
 watch(
@@ -53,7 +55,7 @@ watch(
 );
 
 async function saveProfile() {
-  const uid = user.value?.id;
+  const uid = authUserId.value;
   if (!uid) return;
   loading.value = true;
   error.value = "";
@@ -99,7 +101,7 @@ async function deleteAccount() {
     <DsPageHeader
       title="Paramètres"
       description="Compte, sécurité et apparence."
-      :pending="!profile && Boolean(user)"
+      :pending="!profile && Boolean(authUserId)"
     />
 
     <DsCard v-if="profile" class="space-y-4 p-5">

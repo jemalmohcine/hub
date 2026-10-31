@@ -1,19 +1,22 @@
 <script setup lang="ts">
 import type { VeilleItem } from "~/shared/veille/types";
-import { sortVeilleItems } from "~/shared/veille/sort";
 import { toDayKey } from "~/shared/lib/dates";
 import { userFacingDataError } from "~/shared/lib/user-error";
 import { filterClientVeilleItems } from "~/shared/veille/client-filter";
 import { collectVeilleDays, latestVeilleFeedDay } from "~/shared/veille/days";
 
 const client = useSupabaseClient();
-const user = useSupabaseUser();
+const authUserId = useAuthUserId();
+
+const loadError = ref<string | null>(null);
 
 const { data, pending, error, refresh } = await useAsyncData(
-  () => `veille-${user.value?.id ?? "anon"}`,
+  () => `veille-${authUserId.value ?? "anon"}`,
   async () => {
-    const uid = user.value?.id;
-    if (!uid) return null;
+    loadError.value = null;
+    await waitForAuthUserId();
+
+    const uid = authUserId.value;
 
     const { data: rows, error: qErr } = await client
       .from("veille_ia_items")
@@ -21,10 +24,24 @@ const { data, pending, error, refresh } = await useAsyncData(
       .order("feed_date", { ascending: false })
       .limit(800);
 
-    if (qErr) throw new Error(userFacingDataError(qErr));
+    if (qErr) {
+      loadError.value = userFacingDataError(qErr);
+      throw new Error(loadError.value);
+    }
 
-    const { data: saves } = await client.from("veille_ia_saves").select("item_id").eq("user_id", uid);
-    const saved = new Set((saves ?? []).map((s) => s.item_id as string));
+    let saved = new Set<string>();
+    if (uid) {
+      const { data: saves, error: sErr } = await client
+        .from("veille_ia_saves")
+        .select("item_id")
+        .eq("user_id", uid);
+      if (sErr) {
+        loadError.value = userFacingDataError(sErr);
+        throw new Error(loadError.value);
+      }
+      saved = new Set((saves ?? []).map((s) => s.item_id as string));
+    }
+
     const rowsClient = filterClientVeilleItems(rows ?? []);
     const items = rowsClient.map((row) => ({
       ...(row as VeilleItem),
@@ -35,12 +52,14 @@ const { data, pending, error, refresh } = await useAsyncData(
     const day = latestVeilleFeedDay(items) ?? days[0] ?? toDayKey(new Date());
     return { items, days, day };
   },
-  { watch: [() => user.value?.id], server: false },
+  { watch: [authUserId], server: false },
 );
 
 const feed = computed(
   () => data.value ?? { items: [] as VeilleItem[], days: [] as string[], day: toDayKey(new Date()) },
 );
+
+const displayError = computed(() => error.value?.message ?? loadError.value);
 </script>
 
 <template>
@@ -49,16 +68,16 @@ const feed = computed(
       title="Veille IA"
       description="Actualités sélectionnées. Filtrez par date, catégorie ou éditeur."
       :pending="pending && !data"
-      :error="error?.message ?? null"
+      :error="displayError"
     />
     <VeilleWorkspace
-      v-if="!error && data"
+      v-if="!displayError && data && feed.items.length > 0"
       :initial-items="feed.items"
       :initial-day="feed.day"
       :days="feed.days"
     />
     <DsEmptyState
-      v-else-if="!error && !pending && user && feed.items.length === 0"
+      v-else-if="!displayError && !pending && data && feed.items.length === 0"
       class="mt-8"
       title="Aucune actualité"
       description="Le fil sera alimenté prochainement."

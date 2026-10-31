@@ -20,7 +20,7 @@ defineProps<{
     >
       {{ error }}
     </div>
-    <h1 class="dh-page-title">{{ title }}</h1>
+    <h1 class="dh-page-title text-foreground">{{ title }}</h1>
     <p v-if="description" class="mt-1 text-[length:var(--dh-text-sm)] text-muted-foreground">
       {{ description }}
     </p>
