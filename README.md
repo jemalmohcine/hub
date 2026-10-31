@@ -76,9 +76,46 @@ update public.profiles set role = 'admin' where email = 'toi@example.com';
 4. `NEXT_PUBLIC_APP_URL` = URL Vercel
 5. Ajoute l'URL de callback OAuth Supabase
 
-## Phase 2 — AI Intelligence
+## Veille IA (`/app/ai`)
 
-Module Pro `/app/ai` : digest multi-sources (4 piliers), merge cross-sites, saves + filtres.
+Fil quotidien dev & IA alimenté chaque matin par l’agent **Info Ai** via l’API d’ingest (plus le scrape RSS historique, conservé en cron séparé).
+
+1. Applique `supabase/migrations/026_veille_ia.sql` (ou `supabase db push`)
+2. Ajoute dans `.env.local` / Vercel :
+
+```bash
+VEILLE_INGEST_SECRET=   # openssl rand -hex 32
+```
+
+3. **Ingest** (un objet ou un tableau `items`) :
+
+```bash
+curl -X POST "$NEXT_PUBLIC_APP_URL/api/veille/ingest" \
+  -H "Content-Type: application/json" \
+  -H "x-ingest-secret: $VEILLE_INGEST_SECRET" \
+  -d '{
+    "date": "2026-10-31",
+    "category": "securite",
+    "provider": "node-npm",
+    "severity": "critique",
+    "title": "Advisory npm exemple",
+    "summary": "Une ligne de contexte.",
+    "quoi": "• Détail 1\n• Détail 2",
+    "impact": "• Action recommandée",
+    "link": "https://example.com/advisory",
+    "affected_versions": ["1.0.0"],
+    "fixed_versions": ["1.0.1"],
+    "tags": ["info-ai"]
+  }'
+```
+
+Réponse : `{ "ok": true, "upserted": 1, "ids": ["…"] }`. Dédoublonnage sur `(link, title)`.
+
+4. Données de démo : la migration insère ~10 lignes taguées `exemple-dev` (supprimables en prod).
+
+## Phase 2 — AI Intelligence (cron legacy)
+
+Module Pro `/app/ai` affichait auparavant un digest multi-sources RSS + LLM. L’UI est désormais la **Veille IA** ci-dessus ; le pipeline cron ci-dessous reste disponible pour compatibilité / push, mais n’alimente plus l’écran principal.
 
 1. Applique `supabase/migrations/003_ai_intelligence.sql` (SQL Editor ou `supabase db push`)
 2. Ajoute dans `.env.local` / Vercel / GitHub Actions secrets :

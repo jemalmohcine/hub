@@ -36,10 +36,11 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
   },
   {
     id: "ai",
-    label: "AI",
-    description: "Veille modèles, prix, repos et changements",
-    pageDescription: "",
-    upsell: "Accède au fil d’actualités, aux favoris et aux alertes urgentes.",
+    label: "Veille IA",
+    description: "Fil quotidien dev & IA, scannable en quelques secondes",
+    pageDescription:
+      "Sécurité, versions, modèles, outils et repos — l’essentiel du jour.",
+    upsell: "Accède au fil quotidien, aux filtres et aux éléments sauvegardés.",
     href: "/app/ai",
     order: 10,
     requiredEntitlement: ENTITLEMENTS.ai,
