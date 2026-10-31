@@ -1,12 +1,13 @@
 {
-  "name": "DevHub",
-  "short_name": "DevHub",
-  "description": "Le hub développeur pour tout gérer en un seul endroit.",
+  "name": "hub",
+  "short_name": "hub",
+  "description": "Veille, snippets, CV et budget outils pour développeurs.",
   "start_url": "/app/overview",
   "display": "standalone",
-  "background_color": "#1a2030",
-  "theme_color": "#1a2030",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
   "orientation": "portrait-primary",
+  "lang": "fr",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",

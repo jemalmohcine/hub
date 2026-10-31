@@ -1,11 +1,19 @@
-/* DevHub PWA — shell cache + Web Push */
-const CACHE = "devhub-shell-v3";
+/* hub PWA — static shell only; never cache auth or API */
+const CACHE = "hub-shell-v4";
 const PRECACHE = [
-  "/",
   "/manifest.webmanifest",
   "/icons/icon-192x192.png",
   "/icons/icon-512x512.png",
 ];
+
+function isNetworkOnly(url) {
+  return (
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/auth/") ||
+    url.pathname.startsWith("/sign-in") ||
+    url.pathname.startsWith("/sign-up")
+  );
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -33,18 +41,13 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  if (isNetworkOnly(url)) return;
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(request, copy));
-          return response;
-        })
-        .catch(() =>
-          caches.match(request).then((r) => r || caches.match("/")),
-        ),
+      fetch(request).catch(() =>
+        caches.match(request).then((r) => r || caches.match("/app/overview")),
+      ),
     );
     return;
   }
@@ -69,7 +72,7 @@ self.addEventListener("fetch", (event) => {
 
 self.addEventListener("push", (event) => {
   let data = {
-    title: "DevHub",
+    title: "hub",
     body: "",
     href: "/app/ai",
     tag: "devhub",
@@ -91,7 +94,7 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     (async () => {
       if (data.severity && data.severity !== "urgent") return;
-      await self.registration.showNotification(data.title || "DevHub", {
+      await self.registration.showNotification(data.title || "hub", {
         body: data.body || "",
         icon: "/icons/icon-192x192.png",
         badge: "/icons/icon-192x192.png",

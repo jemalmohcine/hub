@@ -1,16 +1,19 @@
-export const SITE_NAME = "DevHub";
+export const SITE_NAME = "hub";
 
 export const SITE_TAGLINE =
-  "Le hub développeur : veille IA, CV, candidatures, snippets et budget outils.";
+  "Veille IA, snippets, CV et budget outils pour développeurs.";
 
 export const SITE_DESCRIPTION =
-  "DevHub rassemble tes outils de développeur : actualités IA, CV, offres d’emploi, snippets et budget des services. Connexion Google, GitHub ou email.";
+  "hub regroupe votre quotidien technique : actualités IA, bibliothèque de code, CV exportable et suivi des dépenses outils.";
 
 const FALLBACK_ORIGIN = "http://localhost:3000";
 
 /** Canonical public origin, without a trailing slash. */
 export function siteOrigin(): string {
-  const raw = process.env.NEXT_PUBLIC_APP_URL?.trim() || FALLBACK_ORIGIN;
+  const raw =
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    process.env.NUXT_PUBLIC_APP_URL?.trim() ||
+    FALLBACK_ORIGIN;
   try {
     return new URL(raw).origin;
   } catch {

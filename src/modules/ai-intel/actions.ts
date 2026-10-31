@@ -12,8 +12,9 @@ export async function toggleAiIntelSave(itemId: string): Promise<{ saved: boolea
   const user = await requireUser();
 
   const supabase = await createClient();
+  const savesTable = "veille_ia_saves";
   const { data: existing, error: readError } = await supabase
-    .from("ai_intel_saves")
+    .from(savesTable)
     .select("item_id")
     .eq("user_id", user.id)
     .eq("item_id", itemId)
@@ -23,7 +24,7 @@ export async function toggleAiIntelSave(itemId: string): Promise<{ saved: boolea
 
   if (existing) {
     const { error } = await supabase
-      .from("ai_intel_saves")
+      .from(savesTable)
       .delete()
       .eq("user_id", user.id)
       .eq("item_id", itemId);
@@ -32,7 +33,7 @@ export async function toggleAiIntelSave(itemId: string): Promise<{ saved: boolea
     return { saved: false };
   }
 
-  const { error } = await supabase.from("ai_intel_saves").insert({
+  const { error } = await supabase.from(savesTable).insert({
     user_id: user.id,
     item_id: itemId,
   });

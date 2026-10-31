@@ -6,6 +6,7 @@ import type {
   AiUrgency,
   FeedFilters,
 } from "@/modules/ai-intel/types";
+import { getVeilleIntelFeed } from "@/modules/veille/queries";
 
 export async function getLatestAiIntelRun(): Promise<AiIntelRun | null> {
   const supabase = await createClient();
@@ -23,6 +24,9 @@ export async function getAiIntelFeed(
   userId: string,
   filters: FeedFilters = {},
 ): Promise<AiIntelItem[]> {
+  const veille = await getVeilleIntelFeed(userId, filters).catch(() => [] as AiIntelItem[]);
+  if (veille.length > 0) return veille;
+
   const supabase = await createClient();
 
   let query = supabase

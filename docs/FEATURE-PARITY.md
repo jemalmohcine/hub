@@ -1,37 +1,32 @@
-# Parité fonctionnelle (Next → Nuxt)
+# Restauration Next.js (après #73)
 
-Référence : commit `0ba91f23` (dernier Next avant migration `#73`).
+Référence fonctionnelle : commit `0ba91f23`.
 
-## Restauré dans cette PR
+## Fait dans cette PR
 
-| Domaine | Statut |
-|---------|--------|
-| Veille : fil, filtres, détail Quoi/Impact, enregistrements | OK |
-| Veille : vue **Récent** (plus de jour vide par défaut) | OK (cette PR) |
-| Snippets : dossiers, recherche, CRUD, copie | OK |
-| Snippets : épinglage, tags (champ texte) | OK (cette PR) |
-| CV + candidatures manuelles | OK (base) |
-| Catalogue offres gratuites + suivis | OK |
-| Auth e-mail / mot de passe + paramètres | OK (cette PR) |
-| Navigation mobile (onglets + retour accueil) | OK (cette PR) |
-| Session persistée (cookies longue durée + restore client) | OK (cette PR) |
+| Zone | Statut |
+|------|--------|
+| Stack Next 16 + App Router (`src/app`) | OK |
+| Routes app : overview, ai, career, snippets, expenses, settings (+ sous-pages) | OK |
+| Auth e-mail / mot de passe (+ confirmation) | OK (OAuth retiré) |
+| Veille UI (module ai-intel) | OK, données **`veille_ia_items`** + saves **`veille_ia_saves`** |
+| `POST /api/veille/ingest` + `x-ingest-secret` | OK |
+| Snippets, CV builder + export PDF, dépenses dev, catalogue outils | OK (code Next d’origine) |
+| PWA (`manifest.webmanifest`, icônes, SW via Serwist si activé) | OK |
+| Offres scrapées (job-board ingest / onglet Offres) | **Retiré** (demande Mohcine) |
+| Candidatures manuelles (job-tracker) | OK |
 
-## Partiel ou simplifié
+## Écarts connus / non repris
 
-| Fonctionnalité Next | Nuxt actuel | Raison |
-|---------------------|-------------|--------|
-| Snippets : import / export | Absent | Hors scope PR ; à planifier |
-| Snippets : image upload + compression | Absent | UI image non portée |
-| Snippets : classification LLM dossiers | Absent | Dépendance LLM + actions serveur |
-| Snippets : recherche sémantique LLM | Absent | Idem |
-| Snippets : langages avec liste `SNIPPET_LANGUAGES` | Liste libre | Simplifié |
-| Veille : push / notifications | Absent | Module notifications Next retiré |
-| CV : export PDF riche / thèmes multiples | Export HTML minimal | À enrichir |
-| CV : sections complètes (formations détaillées, etc.) | Partiel | Édition guidée réduite |
-| Overview : widgets stats / raccourcis dynamiques | Cartes modules + compteurs basiques | Cette PR ajoute compteurs |
-| Paramètres : suppression compte auto | Message + déconnexion | Pas de RPC `delete_user` |
-| Billing / entitlements Pro | App gratuite volontairement | Décision produit |
+| Next `0ba91f23` | Cette PR | Note |
+|-----------------|----------|------|
+| Pipeline `ai_intel_*` + cron GitHub | Non | Ingest externe veille uniquement |
+| Onglet Carrière « Offres » (scraping) | Retiré | Volontaire |
+| OAuth Google / GitHub | Retiré | E-mail + mot de passe |
+| Billing Stripe actif | Pages présentes, flux selon clés PSP | Comme avant si non configuré |
+| Admin `/admin` | Inchangé | Rôle admin requis |
+| Notifications push veille | Code présent, VAPID optionnel | Non activé sans clés |
 
-## Données snippets (prod)
+## Nuxt (#73–#78)
 
-Les snippets existants restent liés à l’**ancien `user_id`**. Réassignation documentée : [`docs/ops/reassign-snippets.sql`](ops/reassign-snippets.sql).
+Abandonné. PR #78 considérée comme remplacée par cette branche.
