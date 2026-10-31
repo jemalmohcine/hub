@@ -30,7 +30,7 @@ export default async function AccountSettingsPage() {
         <span className="font-medium text-foreground">
           {profileFullName(user.profile) || "Non renseigné"}
         </span>
-        . L’email est géré par Supabase Auth.
+        . L’email est géré par le service d’authentification du hub.
       </Text>
     </>
   );

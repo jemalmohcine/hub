@@ -73,7 +73,7 @@ export function defaultCvDocument(): CvDocument {
           "Architecture modulaire et tests automatisés",
           "Déploiement continu sur Vercel",
         ],
-        techStack: ["Next.js", "Supabase", "Tailwind CSS"],
+        techStack: ["Next.js", "PostgreSQL", "Tailwind CSS"],
       },
     ],
     education: [

@@ -2,28 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Briefcase, FileText, Search } from "lucide-react";
+import { Briefcase, FileText } from "lucide-react";
 import { Stack } from "@/design-system";
 import type { CvDocument, CvDocumentSummary } from "@/modules/cv-builder/types";
 import { CvBuilderWorkspace } from "@/modules/cv-builder/ui/cv-builder-workspace";
-import { JobBoardWorkspace } from "@/modules/job-board/ui/job-board-workspace";
-import type { CvJobProfile } from "@/modules/job-board/cv-skills";
-import type { JobListing, JobSearchPrefs } from "@/modules/job-board/types";
 import type { JobApplication } from "@/modules/job-tracker/types";
 import { JobTrackerWorkspace } from "@/modules/job-tracker/ui/job-tracker-workspace";
 import { cn } from "@/lib/utils";
 
-export type CareerTab = "cv" | "offers" | "jobs";
+export type CareerTab = "cv" | "jobs";
 
 const TABS: Array<{ id: CareerTab; label: string; icon: typeof FileText }> = [
   { id: "cv", label: "CV Builder", icon: FileText },
-  { id: "offers", label: "Offres", icon: Search },
   { id: "jobs", label: "Candidatures", icon: Briefcase },
 ];
 
 function tabFromParams(params: URLSearchParams, fallback: CareerTab): CareerTab {
   const param = params.get("tab");
-  if (param === "jobs" || param === "offers" || param === "cv") return param;
+  if (param === "jobs" || param === "cv") return param;
   return fallback;
 }
 
@@ -34,10 +30,6 @@ export function CareerWorkspace({
   initialDoc,
   initialDocuments,
   initialJobs,
-  initialLibrary,
-  initialPrefs,
-  hasSavedSearch,
-  cvProfiles,
 }: {
   initialTab: CareerTab;
   cvEntitled: boolean;
@@ -45,17 +37,11 @@ export function CareerWorkspace({
   initialDoc: CvDocument;
   initialDocuments: CvDocumentSummary[];
   initialJobs: JobApplication[];
-  initialLibrary: JobListing[];
-  initialPrefs: JobSearchPrefs;
-  hasSavedSearch: boolean;
-  cvProfiles: CvJobProfile[];
 }) {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<CareerTab>(() =>
     tabFromParams(searchParams, initialTab),
   );
-  const [jobs, setJobs] = useState(initialJobs);
-
   useEffect(() => {
     setActiveTab(tabFromParams(searchParams, initialTab));
   }, [searchParams, initialTab]);
@@ -67,10 +53,6 @@ export function CareerWorkspace({
     window.history.replaceState(window.history.state, "", url);
   }
 
-  const trackedListingIds = jobs
-    .map((j) => j.listingId)
-    .filter((id): id is string => Boolean(id));
-
   return (
     <Stack gap={4}>
       <div className="flex gap-1 rounded-2xl bg-muted/50 p-1">
@@ -78,7 +60,7 @@ export function CareerWorkspace({
           const Icon = tab.icon;
           const disabled =
             (tab.id === "cv" && !cvEntitled) ||
-            ((tab.id === "jobs" || tab.id === "offers") && !jobsEntitled);
+            (tab.id === "jobs" && !jobsEntitled);
           const active = activeTab === tab.id;
           return (
             <button
@@ -108,28 +90,8 @@ export function CareerWorkspace({
       ) : null}
 
       {jobsEntitled ? (
-        <div
-          className={activeTab === "offers" ? undefined : "hidden"}
-          aria-hidden={activeTab !== "offers"}
-        >
-          <JobBoardWorkspace
-            initialLibrary={initialLibrary}
-            initialPrefs={initialPrefs}
-            hasSavedSearch={hasSavedSearch}
-            cvProfiles={cvProfiles}
-            cvDocuments={initialDocuments}
-            trackedListingIds={trackedListingIds}
-            onApplicationCreated={(application) => {
-              setJobs((prev) => [application, ...prev]);
-              setTab("jobs");
-            }}
-          />
-        </div>
-      ) : null}
-
-      {jobsEntitled ? (
         <div className={activeTab === "jobs" ? undefined : "hidden"} aria-hidden={activeTab !== "jobs"}>
-          <JobTrackerWorkspace initialJobs={jobs} cvDocuments={initialDocuments} />
+          <JobTrackerWorkspace initialJobs={initialJobs} cvDocuments={initialDocuments} />
         </div>
       ) : null}
     </Stack>

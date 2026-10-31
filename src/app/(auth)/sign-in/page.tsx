@@ -3,7 +3,7 @@ import { Alert, AuthShell, Card } from "@/design-system";
 
 export const metadata = {
   title: "Connexion",
-  description: "Accède à ton hub développeur. Google, GitHub ou email.",
+  description: "Accède à ton hub développeur avec ton email et ton mot de passe.",
   alternates: { canonical: "/sign-in" },
   robots: { index: false, follow: true },
 };

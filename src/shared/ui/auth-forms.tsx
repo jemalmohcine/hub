@@ -11,11 +11,9 @@ import {
   signUpWithPassword,
   type ActionResult,
 } from "@/core/auth/actions";
-import { createClient } from "@/core/auth/supabase/client";
 import {
   Alert,
   Button,
-  Divider,
   Field,
   Form,
   Grid,
@@ -39,16 +37,6 @@ import {
 function AuthAlert({ state }: { state: ActionResult | null }) {
   if (!state || state.ok) return null;
   return <Alert tone="danger">{state.error}</Alert>;
-}
-
-async function oauth(provider: "github" | "google") {
-  const supabase = createClient();
-  await supabase.auth.signInWithOAuth({
-    provider,
-    options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
-    },
-  });
 }
 
 function clearField(
@@ -114,25 +102,6 @@ export function SignInForm({ next }: { next?: string }) {
           </Button>
         </Stack>
       </Form>
-
-      <Divider label="ou" />
-
-      <div className="grid grid-cols-2 gap-[var(--dh-space-2)]">
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => oauth("github")}
-        >
-          GitHub
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => oauth("google")}
-        >
-          Google
-        </Button>
-      </div>
 
       <Text size="sm" tone="muted" className="text-center">
         Pas de compte ? <InlineLink href="/sign-up">Créer un compte</InlineLink>
@@ -209,23 +178,6 @@ export function SignUpForm() {
           </Button>
         </Stack>
       </Form>
-
-      <div className="grid grid-cols-2 gap-[var(--dh-space-2)]">
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => oauth("github")}
-        >
-          GitHub
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => oauth("google")}
-        >
-          Google
-        </Button>
-      </div>
 
       <Text size="sm" tone="muted" className="text-center">
         Déjà un compte ? <InlineLink href="/sign-in">Se connecter</InlineLink>
@@ -381,8 +333,8 @@ export function SetPasswordForm({ email }: { email: string }) {
   if (state?.ok) {
     return (
       <Alert tone="success">
-        Mot de passe ajouté. Tu peux maintenant te connecter avec Google ou
-        avec email + mot de passe.
+        Mot de passe ajouté. Tu peux maintenant te connecter avec ton email et
+        ton mot de passe.
       </Alert>
     );
   }

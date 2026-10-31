@@ -93,7 +93,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     pageDescription:
       "Services payants, budget mensuel et diagnostic d’alternatives moins chères.",
     upsell:
-      "Centralise Vercel, OpenAI, Supabase… et compare des alternatives moins chères avec avantages et inconvénients.",
+      "Centralise Vercel, OpenAI, Postgres managé… et compare des alternatives moins chères avec avantages et inconvénients.",
     href: "/app/expenses",
     order: 35,
     requiredEntitlement: ENTITLEMENTS.expenses,
