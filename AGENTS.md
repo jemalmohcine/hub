@@ -43,7 +43,7 @@ promoting it to `design-system` or `shared/ui`.
 - **Empty states**: `<EmptyState>` only. Use `dense` in narrow columns.
 - **Modals**: `<Dialog>` for forms, `<Sheet>` for the bottom-sheet pattern.
   Never import Radix or `@/components/ui` outside `design-system`.
-- **Font sizes**: `text-[length:var(--dh-text-*)]`, never `text-[11px]`.
+- **Font sizes**: `text-[length:var(--dh-text-sm)]` (and other `--dh-text-*` tokens), never `text-[11px]`.
 
 ## AI intel pipeline
 
