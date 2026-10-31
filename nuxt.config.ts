@@ -11,6 +11,11 @@ export default defineNuxtConfig({
       login: "/auth/login",
       callback: "/auth/confirm",
     },
+    cookieOptions: {
+      maxAge: 60 * 60 * 24 * 400,
+      sameSite: "lax",
+      secure: true,
+    },
   },
   runtimeConfig: {
     veilleIngestSecret: process.env.VEILLE_INGEST_SECRET || "",

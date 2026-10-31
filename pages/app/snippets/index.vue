@@ -10,9 +10,11 @@ const q = ref("");
 const categoryId = ref<string | null>(null);
 const selectedId = ref<string | null>(null);
 
-const { data, pending, error, refresh } = await useAsyncData("snippets", async () => {
-  const uid = user.value?.id;
-  if (!uid) return { snippets: [] as DevSnippet[], categories: [] as DevSnippetCategory[] };
+const { data, pending, error, refresh } = await useAsyncData(
+  () => `snippets-${user.value?.id ?? "anon"}`,
+  async () => {
+    const uid = user.value?.id;
+    if (!uid) return null;
 
   const { data: cats, error: cErr } = await client
     .from("dev_snippet_categories")
@@ -57,7 +59,9 @@ const { data, pending, error, refresh } = await useAsyncData("snippets", async (
   }));
 
   return { snippets, categories };
-});
+  },
+  { watch: [() => user.value?.id], server: false },
+);
 
 const filtered = computed(() => {
   let list = data.value?.snippets ?? [];
@@ -97,11 +101,11 @@ const editorSnippet = computed(() =>
     <DsPageHeader
       title="Snippets"
       description="Retrouvez, étiquetez et copiez vos extraits de code."
-      :pending="pending"
+      :pending="pending && !data"
       :error="error?.message ?? null"
     />
-    <DsInput v-if="!error" v-model="q" placeholder="Rechercher…" class="mb-4 max-w-md" aria-label="Rechercher snippets" />
-    <div v-if="!error" class="grid gap-6 lg:grid-cols-[220px_1fr_1fr]">
+    <DsInput v-if="!error && data" v-model="q" placeholder="Rechercher…" class="mb-4 max-w-md" aria-label="Rechercher snippets" />
+    <div v-if="!error && data" class="grid gap-6 lg:grid-cols-[220px_1fr_1fr]">
       <SnippetSidebar
         :categories="data?.categories ?? []"
         :active-id="categoryId"
