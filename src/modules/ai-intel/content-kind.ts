@@ -120,6 +120,22 @@ export function detectContentKind(item: ItemLike): ContentKind {
   const text = `${item.title} ${item.summary ?? ""}`;
   const category = String(item.category || "");
 
+  if (
+    category === "securite" ||
+    category === "security" ||
+    category === "cve"
+  ) {
+    return "security";
+  }
+  if (category === "modeles-prix" || category === "pricing") {
+    return "pricing";
+  }
+  if (category === "repos-github") return "repo";
+  if (category === "outils-agents") return "tool";
+  if (category === "versions" || category === "deprecation") {
+    return "breaking";
+  }
+
   // Decided while reading the scraped content — more reliable than any regex.
   const analysed = meta.contentKind;
   if (typeof analysed === "string" && CONTENT_KINDS.has(analysed as ContentKind)) {

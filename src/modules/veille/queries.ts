@@ -8,13 +8,41 @@ const SEVERITY_TO_URGENCY: Record<string, AiUrgency> = {
   info: "light",
 };
 
+const VEILLE_CATEGORY_TO_PILLAR: Record<string, AiIntelItem["pillar"]> = {
+  "repos-github": "opensource",
+  "modeles-prix": "models",
+};
+
+function veilleContentKind(category: string): string {
+  switch (category) {
+    case "securite":
+      return "security";
+    case "versions":
+      return "breaking";
+    case "modeles-prix":
+      return "pricing";
+    case "outils-agents":
+      return "tool";
+    case "repos-github":
+      return "repo";
+    default:
+      return "news";
+  }
+}
+
 function mapVeilleRow(row: Record<string, unknown>): AiIntelItem {
   const severity = String(row.severity ?? "info");
+  const category = String(row.category ?? "general");
+  const feedDate =
+    typeof row.feed_date === "string" ? row.feed_date : null;
+  const starsWeek =
+    typeof row.stars_week === "number" ? row.stars_week : null;
+
   return {
     id: row.id as string,
     canonical_key: (row.link as string) ?? (row.id as string),
-    pillar: "tools",
-    category: String(row.category ?? "general"),
+    pillar: VEILLE_CATEGORY_TO_PILLAR[category] ?? "tools",
+    category,
     urgency: SEVERITY_TO_URGENCY[severity] ?? "light",
     title: row.title as string,
     summary: row.summary as string,
@@ -22,14 +50,25 @@ function mapVeilleRow(row: Record<string, unknown>): AiIntelItem {
     primary_source: String(row.provider ?? "other"),
     source_refs: [],
     metadata: {
+      source: "veille",
       quoi: row.quoi ?? "",
       impact: row.impact ?? "",
-      feed_date: row.feed_date,
+      feed_date: feedDate,
       provider: row.provider,
       severity: row.severity,
       tags: row.tags ?? [],
+      contentKind: veilleContentKind(category),
+      kind: category === "repos-github" ? "repo" : category === "outils-agents" ? "tool" : undefined,
+      starsWeek: starsWeek ?? undefined,
+      stars: typeof row.stars_month === "number" ? row.stars_month : undefined,
+      hardSignal:
+        category === "securite"
+          ? "security"
+          : category === "modeles-prix"
+            ? "pricing"
+            : undefined,
     },
-    published_at: row.feed_date ? `${row.feed_date}T12:00:00.000Z` : null,
+    published_at: feedDate ? `${feedDate}T12:00:00.000Z` : null,
     ingested_at: (row.created_at as string) ?? new Date().toISOString(),
     updated_at: (row.updated_at as string) ?? new Date().toISOString(),
   };

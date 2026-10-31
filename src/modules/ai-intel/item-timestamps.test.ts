@@ -84,12 +84,13 @@ describe("itemFeedDay", () => {
     ).toBe("2026-08-17");
   });
 
-  it("falls back to ingested_at when the source has no date", () => {
+  it("prefers veille feed_date metadata without timezone drift", () => {
     expect(
       itemFeedDay({
-        published_at: null,
-        ingested_at: "2026-08-19T12:00:00.000Z",
+        published_at: "2026-10-28T12:00:00.000Z",
+        ingested_at: "2026-10-31T08:00:00.000Z",
+        metadata: { feed_date: "2026-10-31" },
       }),
-    ).toBe("2026-08-19");
+    ).toBe("2026-10-31");
   });
 });

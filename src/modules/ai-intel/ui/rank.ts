@@ -118,6 +118,12 @@ const TRENDING_SOURCES = new Set(["github-trending", "gittrend"]);
 
 /** GitHub tab: AI repos that are already used and taking off. */
 export function isTrending(item: AiIntelItem): boolean {
+  const meta = (item.metadata ?? {}) as Record<string, unknown>;
+  if (meta.source === "veille" && itemKind(item) === "repo") {
+    const week = Number(meta.starsWeek) || 0;
+    if (week >= 400) return true;
+  }
+
   if (itemKind(item) !== "repo") return false;
   const { starsToday, starsWeek, stars, rank } = readRepoMomentum(item);
   const wellUsed = stars >= 1_000;

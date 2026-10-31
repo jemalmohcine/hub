@@ -27,8 +27,8 @@ describe("parseAiFeedPeriod", () => {
     expect(parseAiFeedPeriod("year")).toBe("year");
   });
 
-  it("falls back to today", () => {
-    expect(parseAiFeedPeriod("nope")).toBe("today");
-    expect(parseAiFeedPeriod(undefined)).toBe("today");
+  it("falls back to 7d", () => {
+    expect(parseAiFeedPeriod("nope")).toBe("7d");
+    expect(parseAiFeedPeriod(undefined)).toBe("7d");
   });
 });

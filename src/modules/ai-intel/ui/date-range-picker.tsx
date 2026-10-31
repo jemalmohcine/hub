@@ -70,8 +70,8 @@ export function rangeForPreset(preset: Exclude<DatePreset, "range">): {
 }
 
 export function defaultDateRange(): DateRangeValue {
-  const { from, to } = rangeForPreset("today");
-  return { preset: "today", from, to };
+  const { from, to } = rangeForPreset("7d");
+  return { preset: "7d", from, to };
 }
 
 function fmtShort(iso: string, locale: HubLocale) {

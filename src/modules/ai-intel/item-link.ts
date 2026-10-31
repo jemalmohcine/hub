@@ -17,7 +17,7 @@ export function parseAiFeedTab(raw: string | null | undefined): AiFeedTab {
 }
 
 export function parseAiFeedPeriod(raw: string | null | undefined): AiFeedPeriod {
-  return FEED_PERIODS.includes(raw as AiFeedPeriod) ? (raw as AiFeedPeriod) : "today";
+  return FEED_PERIODS.includes(raw as AiFeedPeriod) ? (raw as AiFeedPeriod) : "7d";
 }
 
 /** Home « À traiter »: unread urgents for the year, not just today. */

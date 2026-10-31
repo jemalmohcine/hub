@@ -63,6 +63,11 @@ export function isFreshPushAlert(
 export function itemFeedDay(item: {
   published_at: string | null;
   ingested_at: string;
+  metadata?: Record<string, unknown> | null;
 }): string {
+  const feedDate = item.metadata?.feed_date;
+  if (typeof feedDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(feedDate)) {
+    return feedDate;
+  }
   return toDayKey(item.published_at) || toDayKey(item.ingested_at);
 }

@@ -24,8 +24,15 @@ export async function getAiIntelFeed(
   userId: string,
   filters: FeedFilters = {},
 ): Promise<AiIntelItem[]> {
-  const veille = await getVeilleIntelFeed(userId, filters).catch(() => [] as AiIntelItem[]);
-  if (veille.length > 0) return veille;
+  try {
+    const veille = await getVeilleIntelFeed(userId, filters);
+    if (veille.length > 0) return veille;
+  } catch (err) {
+    console.error(
+      "[ai-intel] veille_ia_items feed failed, falling back to ai_intel_items",
+      err instanceof Error ? err.message : err,
+    );
+  }
 
   const supabase = await createClient();
 
