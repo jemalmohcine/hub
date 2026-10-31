@@ -1,13 +1,23 @@
 {
-  "name": "DevHub",
-  "short_name": "DevHub",
-  "description": "Le hub développeur pour tout gérer en un seul endroit.",
+  "name": "hub",
+  "short_name": "hub",
+  "description": "Veille, snippets, CV et budget outils pour développeurs.",
   "start_url": "/app/overview",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#1a2030",
-  "theme_color": "#1a2030",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#0c0a1f",
+  "theme_color": "#0c0a1f",
   "orientation": "portrait-primary",
+  "lang": "fr",
+  "categories": ["productivity", "developer"],
   "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",

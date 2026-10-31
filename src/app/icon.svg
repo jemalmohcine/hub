@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none" role="img" aria-label="hub">
+  <defs>
+    <linearGradient id="hub-bg" x1="96" y1="64" x2="416" y2="448" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1e1b4b"/>
+      <stop offset="1" stop-color="#0c0a1f"/>
+    </linearGradient>
+    <linearGradient id="hub-accent" x1="140" y1="120" x2="372" y2="392" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#c4b5fd"/>
+      <stop offset="0.45" stop-color="#818cf8"/>
+      <stop offset="1" stop-color="#6366f1"/>
+    </linearGradient>
+    <filter id="hub-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="118" fill="url(#hub-bg)"/>
+  <circle cx="256" cy="256" r="180" fill="#6366f1" opacity="0.14"/>
+  <g filter="url(#hub-glow)">
+    <path
+      d="M176 148c0-12 8-20 20-20h120c12 0 20 8 20 20v216c0 12-8 20-20 20H196c-12 0-20-8-20-20V148z"
+      fill="url(#hub-accent)"
+      opacity="0.35"
+    />
+    <path
+      d="M196 148h120v48H196v-48zm0 88h72v176h-72V236z"
+      fill="url(#hub-accent)"
+    />
+    <circle cx="316" cy="196" r="14" fill="#e0e7ff"/>
+  </g>
+</svg>
