@@ -19,24 +19,24 @@ const colorMode = useColorMode();
     <div class="mx-auto max-w-5xl px-4 pb-20 pt-8 sm:pt-16">
       <div class="mx-auto max-w-2xl text-center">
         <p class="text-[length:var(--dh-text-xs)] font-medium uppercase tracking-widest text-primary">
-          Hub dev personnel
+          Plateforme pour développeurs
         </p>
         <h1 class="mt-3 text-[length:var(--dh-text-2xl)] font-semibold tracking-tight sm:text-4xl sm:leading-tight">
-          Veille, snippets, CV et offres gratuites — sans bruit
+          Veille, snippets, CV et avantages gratuits
         </h1>
         <p class="mx-auto mt-4 max-w-lg text-[length:var(--dh-text-base)] text-muted-foreground">
-          Un seul espace rapide pour le quotidien de dev. Gratuit, hébergé sur Supabase, pensé clavier d’abord.
+          Un espace unique pour votre quotidien technique. Gratuit, synchronisé en ligne, pensé pour le clavier.
         </p>
         <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
           <NuxtLink to="/auth/login">
             <DsButton>Se connecter</DsButton>
           </NuxtLink>
           <NuxtLink to="/auth/login?next=/app/overview">
-            <DsButton variant="secondary">Entrer dans l’app</DsButton>
+            <DsButton variant="secondary">Ouvrir l’application</DsButton>
           </NuxtLink>
         </div>
         <p class="mt-4 text-[length:var(--dh-text-xs)] text-muted-foreground">
-          GitHub ou lien magique · <kbd class="rounded border border-border px-1 font-mono">⌘K</kbd> dans l’app
+          GitHub ou lien par e-mail · raccourci <kbd class="rounded border border-border px-1 font-mono">⌘K</kbd> dans l’app
         </p>
       </div>
 

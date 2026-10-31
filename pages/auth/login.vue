@@ -1,6 +1,8 @@
 <script setup lang="ts">
 definePageMeta({ layout: "auth" });
 
+import { userFacingAuthError } from "~/shared/lib/user-error";
+
 const client = useSupabaseClient();
 const route = useRoute();
 const config = useRuntimeConfig();
@@ -20,8 +22,8 @@ async function signInEmail() {
     options: { emailRedirectTo: redirectTo },
   });
   loading.value = false;
-  if (err) error.value = err.message;
-  else message.value = "Lien envoyé — vérifie ta boîte mail.";
+  if (err) error.value = userFacingAuthError(err);
+  else message.value = "Lien envoyé. Consultez votre boîte mail.";
 }
 
 async function signInGithub() {
@@ -33,7 +35,7 @@ async function signInGithub() {
       redirectTo: `${config.public.appUrl}/auth/confirm?next=${encodeURIComponent(next)}`,
     },
   });
-  if (err) error.value = err.message;
+  if (err) error.value = userFacingAuthError(err);
 }
 </script>
 
@@ -52,16 +54,16 @@ async function signInGithub() {
     <div class="dh-surface p-6">
       <h1 class="text-[length:var(--dh-text-xl)] font-semibold">Connexion</h1>
       <p class="mt-1 text-[length:var(--dh-text-sm)] text-muted-foreground">
-        Accès gratuit à ton hub — données sur ton projet Supabase.
+        Accès gratuit. Vos données restent sur votre espace personnel.
       </p>
       <form class="mt-6 space-y-3" @submit.prevent="signInEmail">
         <label class="block text-[length:var(--dh-text-xs)] font-medium text-muted-foreground">
           Email
-          <DsInput v-model="email" type="email" placeholder="toi@exemple.com" class="mt-1" />
+          <DsInput v-model="email" type="email" placeholder="vous@entreprise.com" class="mt-1" />
         </label>
         <DsButton type="submit" class="w-full" :disabled="loading || !email.trim()">
           <DsSpinner v-if="loading" />
-          <span v-else>Recevoir un lien magique</span>
+          <span v-else>Recevoir un lien par e-mail</span>
         </DsButton>
       </form>
       <div class="my-4 flex items-center gap-3 text-[length:var(--dh-text-xs)] text-muted-foreground">

@@ -51,7 +51,7 @@ async function signOut() {
           >
             {{ colorMode.value === 'dark' ? 'Clair' : 'Sombre' }}
           </DsButton>
-          <DsButton variant="ghost" size="sm" @click="signOut">Sortir</DsButton>
+          <DsButton variant="ghost" size="sm" @click="signOut">Déconnexion</DsButton>
         </div>
       </div>
     </aside>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DevSnippet, DevSnippetCategory } from "~/shared/snippets/types";
 import { rankSnippets } from "~/shared/snippets/match";
+import { userFacingDataError } from "~/shared/lib/user-error";
 
 const client = useSupabaseClient();
 const user = useSupabaseUser();
@@ -19,7 +20,7 @@ const { data, pending, error, refresh } = await useAsyncData("snippets", async (
     .eq("user_id", uid)
     .order("name");
 
-  if (cErr) throw new Error(cErr.message);
+  if (cErr) throw new Error(userFacingDataError(cErr));
 
   const { data: rows, error: rErr } = await client
     .from("dev_snippets")
@@ -30,7 +31,7 @@ const { data, pending, error, refresh } = await useAsyncData("snippets", async (
     .order("is_pinned", { ascending: false })
     .order("updated_at", { ascending: false });
 
-  if (rErr) throw new Error(rErr.message);
+  if (rErr) throw new Error(userFacingDataError(rErr));
 
   const names = new Map((cats ?? []).map((c) => [c.id, c.name as string]));
   const snippets: DevSnippet[] = (rows ?? []).map((row) => ({
@@ -93,7 +94,12 @@ const editorSnippet = computed(() =>
 
 <template>
   <div>
-    <DsPageHeader title="Snippets" description="Recherche, tags et copie en un geste." :pending="pending" :error="error?.message ?? null" />
+    <DsPageHeader
+      title="Snippets"
+      description="Retrouvez, étiquetez et copiez vos extraits de code."
+      :pending="pending"
+      :error="error?.message ?? null"
+    />
     <DsInput v-if="!error" v-model="q" placeholder="Rechercher…" class="mb-4 max-w-md" aria-label="Rechercher snippets" />
     <div v-if="!error" class="grid gap-6 lg:grid-cols-[220px_1fr_1fr]">
       <SnippetSidebar

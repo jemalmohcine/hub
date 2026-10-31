@@ -3,6 +3,7 @@ import type { CvDocument, CvDocumentSummary } from "~/shared/cv/types";
 import { defaultCvDocument } from "~/shared/cv/defaults";
 import type { JobApplication, JobApplicationInput } from "~/shared/job-tracker/types";
 import { JOB_STATUS_LABELS } from "~/shared/job-tracker/types";
+import { userFacingDataError } from "~/shared/lib/user-error";
 
 const tab = ref<"cv" | "candidatures">("cv");
 const client = useSupabaseClient();
@@ -24,7 +25,7 @@ const { data, pending, error, refresh } = await useAsyncData("profil", async () 
     .eq("user_id", uid)
     .order("updated_at", { ascending: false });
 
-  if (cvErr) throw new Error(cvErr.message);
+  if (cvErr) throw new Error(userFacingDataError(cvErr));
 
   const documents: CvDocumentSummary[] = (cvRows ?? []).map((r) => ({
     id: r.id as string,
@@ -49,7 +50,7 @@ const { data, pending, error, refresh } = await useAsyncData("profil", async () 
     .eq("user_id", uid)
     .order("updated_at", { ascending: false });
 
-  if (jobsErr) throw new Error(jobsErr.message);
+  if (jobsErr) throw new Error(userFacingDataError(jobsErr));
 
   const jobs: JobApplication[] = (jobsRows ?? []).map((row) => ({
     id: row.id as string,
@@ -145,7 +146,7 @@ async function addJob() {
   <div>
     <DsPageHeader
       title="Profil"
-      description="CV guidé et candidatures saisies à la main — sans scraping."
+      description="Rédigez votre CV et suivez vos candidatures au même endroit."
       :pending="pending"
       :error="error?.message ?? null"
     />
@@ -171,7 +172,7 @@ async function addJob() {
         <h2 class="font-medium">Édition guidée</h2>
         <DsInput v-model="cvForm.title" placeholder="Titre du CV" />
         <DsInput v-model="cvForm.profile.fullName" placeholder="Nom complet" />
-        <DsInput v-model="cvForm.profile.headline" placeholder="Headline" />
+        <DsInput v-model="cvForm.profile.headline" placeholder="Accroche" />
         <DsTextarea v-model="cvForm.profile.summary" placeholder="Résumé" :rows="5" />
         <div class="flex gap-2">
           <DsButton @click="saveCv">Enregistrer</DsButton>
@@ -208,7 +209,7 @@ async function addJob() {
           v-if="!(data?.jobs?.length)"
           class="border-0"
           title="Aucune candidature"
-          description="Saisis les offres auxquelles tu postules — sans scraping auto."
+          description="Ajoutez une candidature dès que vous postulez."
         />
       </DsCard>
     </div>
