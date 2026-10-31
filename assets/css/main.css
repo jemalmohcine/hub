@@ -23,7 +23,7 @@
   --dh-bg: #f4f6fb;
   --dh-fg: #0c1222;
   --dh-muted: #eef1f8;
-  --dh-muted-fg: #5c6578;
+  --dh-muted-fg: #475569;
   --dh-card: #ffffff;
   --dh-border: #dfe4ef;
   --dh-primary: #1d4ed8;
@@ -82,7 +82,7 @@ body {
 
 .dh-page-title {
   font-size: var(--dh-text-2xl);
-  @apply font-semibold tracking-tight;
+  @apply font-semibold tracking-tight text-foreground;
 }
 
 .dh-muted {

@@ -18,6 +18,9 @@ const form = reactive<DevSnippetInput>({
   tags: [],
 });
 
+const tagsInput = ref("");
+const pinned = ref(false);
+
 watch(
   () => props.snippet,
   (s) => {
@@ -29,6 +32,8 @@ watch(
         content: "",
         tags: [],
       });
+      tagsInput.value = "";
+      pinned.value = false;
       return;
     }
     Object.assign(form, {
@@ -38,10 +43,20 @@ watch(
       content: s.content,
       tags: s.tags,
       categoryId: s.categoryId,
+      referenceUrl: s.referenceUrl,
     });
+    tagsInput.value = s.tags.join(", ");
+    pinned.value = s.isPinned;
   },
   { immediate: true },
 );
+
+function parseTags(raw: string): string[] {
+  return raw
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
 
 async function save() {
   const uid = user.value?.id;
@@ -52,10 +67,10 @@ async function save() {
     kind: form.kind,
     language: form.language,
     content: form.content,
-    tags: form.tags,
+    tags: parseTags(tagsInput.value),
     category_id: form.categoryId ?? null,
     reference_url: form.referenceUrl ?? null,
-    is_pinned: form.isPinned ?? false,
+    is_pinned: pinned.value,
   };
   if (props.snippet?.id) {
     await client.from("dev_snippets").update(row).eq("id", props.snippet.id);
@@ -83,7 +98,13 @@ async function copyContent() {
       <DsInput v-model="form.title" placeholder="Titre" />
       <DsInput v-model="form.language" placeholder="Langage" class="max-w-[140px]" />
     </div>
-    <DsTextarea v-model="form.content" class="mt-3" placeholder="Contenu" :rows="12" />
+    <DsTextarea v-model="form.content" class="mt-3 font-mono text-xs" placeholder="Contenu" :rows="12" />
+    <DsInput v-model="tagsInput" class="mt-3" placeholder="Tags séparés par des virgules" />
+    <DsInput v-model="form.referenceUrl" class="mt-2" placeholder="Lien de référence (https)" />
+    <label class="mt-3 flex items-center gap-2 text-sm text-foreground">
+      <input v-model="pinned" type="checkbox" class="rounded border-border" />
+      Épingler en tête de liste
+    </label>
     <div class="mt-3 flex flex-wrap gap-2">
       <DsButton @click="save">Enregistrer</DsButton>
       <DsButton variant="secondary" @click="copyContent">Copier</DsButton>

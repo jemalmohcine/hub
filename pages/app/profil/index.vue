@@ -9,15 +9,11 @@ const tab = ref<"cv" | "candidatures">("cv");
 const client = useSupabaseClient();
 const user = useSupabaseUser();
 
-const { data, pending, error, refresh } = await useAsyncData("profil", async () => {
-  const uid = user.value?.id;
-  if (!uid) {
-    return {
-      doc: defaultCvDocument(),
-      documents: [] as CvDocumentSummary[],
-      jobs: [] as JobApplication[],
-    };
-  }
+const { data, pending, error, refresh } = await useAsyncData(
+  () => `profil-${user.value?.id ?? "anon"}`,
+  async () => {
+    const uid = user.value?.id;
+    if (!uid) return null;
 
   const { data: cvRows, error: cvErr } = await client
     .from("cv_documents")
@@ -73,7 +69,9 @@ const { data, pending, error, refresh } = await useAsyncData("profil", async () 
   }));
 
   return { doc, documents, jobs };
-});
+  },
+  { watch: [() => user.value?.id], server: false },
+);
 
 const cvForm = reactive(JSON.parse(JSON.stringify(data.value?.doc ?? defaultCvDocument())));
 
@@ -147,10 +145,10 @@ async function addJob() {
     <DsPageHeader
       title="Profil"
       description="Rédigez votre CV et suivez vos candidatures au même endroit."
-      :pending="pending"
+      :pending="pending && !data"
       :error="error?.message ?? null"
     />
-    <div v-if="!error" class="flex flex-wrap gap-2">
+    <div v-if="!error && data" class="flex flex-wrap gap-2">
       <DsButton
         :variant="tab === 'cv' ? 'primary' : 'secondary'"
         size="sm"

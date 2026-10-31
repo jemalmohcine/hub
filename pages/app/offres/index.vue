@@ -10,7 +10,9 @@ const q = ref("");
 const freeOnly = ref(true);
 const savedOnly = ref(false);
 
-const { data, pending, error, refresh } = await useAsyncData("offres", async () => {
+const { data, pending, error, refresh } = await useAsyncData(
+  () => `offres-${user.value?.id ?? "anon"}`,
+  async () => {
   const uid = user.value?.id;
   const { data: tools, error: toolsErr } = await client
     .from("dev_tools")
@@ -72,7 +74,9 @@ const { data, pending, error, refresh } = await useAsyncData("offres", async () 
   }
 
   return mapped.map((t) => ({ ...t, saved: savedIds.has(t.id) }));
-});
+  },
+  { watch: [() => user.value?.id], server: false },
+);
 
 const filtered = computed(() => {
   let list = data.value ?? [];
@@ -105,7 +109,7 @@ async function toggleSave(tool: DevTool) {
     <DsPageHeader
       title="Offres gratuites"
       description="Crédits offerts, essais gratuits et programmes étudiants ou open source."
-      :pending="pending"
+      :pending="pending && !data"
       :error="error?.message ?? null"
     />
     <div v-if="!error" class="flex flex-wrap gap-2">

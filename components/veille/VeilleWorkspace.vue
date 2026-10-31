@@ -3,6 +3,7 @@ import type { VeilleItem, VeilleCategory, VeilleProvider } from "~/shared/veille
 import { VEILLE_FILTER_CHIPS, VEILLE_PROVIDER_LABELS } from "~/shared/veille/labels";
 import { sortVeilleItems } from "~/shared/veille/sort";
 import { formatDate, addDaysIso } from "~/shared/lib/dates";
+import { latestVeilleFeedDay } from "~/shared/veille/days";
 
 const props = defineProps<{
   initialItems: VeilleItem[];
@@ -10,6 +11,9 @@ const props = defineProps<{
   days: string[];
 }>();
 
+type FeedScope = "recent" | "day";
+
+const feedScope = ref<FeedScope>("recent");
 const day = ref(props.initialDay);
 const category = ref<"all" | VeilleCategory>("all");
 const provider = ref<VeilleProvider | "all">("all");
@@ -17,11 +21,35 @@ const savedOnly = ref(false);
 const q = ref("");
 const selectedId = ref<string | null>(null);
 
+watch(
+  () => props.initialDay,
+  (value) => {
+    day.value = value;
+  },
+);
+
+watch(
+  () => props.days,
+  (days) => {
+    if (feedScope.value === "day" && days.length > 0) {
+      const hasRows = props.initialItems.some((i) => i.feed_date === day.value);
+      if (!hasRows) {
+        day.value = latestVeilleFeedDay(props.initialItems) ?? days[0]!;
+      }
+    }
+  },
+  { immediate: true },
+);
+
 const client = useSupabaseClient();
 
 const filtered = computed(() => {
   const query = q.value.trim().toLowerCase();
-  let list = props.initialItems.filter((i) => i.feed_date === day.value);
+  let list =
+    feedScope.value === "recent"
+      ? [...props.initialItems]
+      : props.initialItems.filter((i) => i.feed_date === day.value);
+
   if (category.value !== "all") list = list.filter((i) => i.category === category.value);
   if (provider.value !== "all") list = list.filter((i) => i.provider === provider.value);
   if (savedOnly.value) list = list.filter((i) => i.saved);
@@ -33,13 +61,15 @@ const filtered = computed(() => {
   return sortVeilleItems(list);
 });
 
-const selected = computed(() =>
-  filtered.value.find((i) => i.id === selectedId.value) ??
-  props.initialItems.find((i) => i.id === selectedId.value) ??
-  null,
+const selected = computed(
+  () =>
+    filtered.value.find((i) => i.id === selectedId.value) ??
+    props.initialItems.find((i) => i.id === selectedId.value) ??
+    null,
 );
 
 function shiftDay(delta: number) {
+  feedScope.value = "day";
   day.value = addDaysIso(day.value, delta);
 }
 
@@ -59,9 +89,31 @@ async function toggleSave(item: VeilleItem) {
 <template>
   <div class="mx-auto flex max-w-3xl flex-col gap-4">
     <div class="flex flex-wrap items-center gap-2">
-      <DsButton variant="ghost" size="sm" @click="shiftDay(-1)">←</DsButton>
-      <span class="text-sm font-medium">{{ formatDate(day, "fr", "dayMonthYear") }}</span>
-      <DsButton variant="ghost" size="sm" @click="shiftDay(1)">→</DsButton>
+      <div class="flex rounded-full border border-border bg-muted/60 p-0.5 text-xs">
+        <button
+          type="button"
+          class="rounded-full px-3 py-1.5 font-medium transition-colors"
+          :class="feedScope === 'recent' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'"
+          @click="feedScope = 'recent'"
+        >
+          Récent
+        </button>
+        <button
+          type="button"
+          class="rounded-full px-3 py-1.5 font-medium transition-colors"
+          :class="feedScope === 'day' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'"
+          @click="feedScope = 'day'"
+        >
+          Par jour
+        </button>
+      </div>
+      <template v-if="feedScope === 'day'">
+        <DsButton variant="ghost" size="sm" aria-label="Jour précédent" @click="shiftDay(-1)">←</DsButton>
+        <span class="text-sm font-medium text-foreground">{{
+          formatDate(day, "fr", "dayMonthYear")
+        }}</span>
+        <DsButton variant="ghost" size="sm" aria-label="Jour suivant" @click="shiftDay(1)">→</DsButton>
+      </template>
       <DsInput v-model="q" class="ml-auto max-w-xs flex-1" placeholder="Rechercher…" />
     </div>
 
@@ -70,11 +122,11 @@ async function toggleSave(item: VeilleItem) {
         v-for="chip in VEILLE_FILTER_CHIPS"
         :key="chip.id"
         type="button"
-        class="rounded-full px-3 py-1 text-xs transition-colors"
+        class="rounded-full border px-3 py-1 text-xs transition-colors"
         :class="
           category === chip.id
-            ? 'bg-primary text-primary-foreground'
-            : 'bg-muted text-muted-foreground hover:text-foreground'
+            ? 'border-primary/30 bg-primary text-primary-foreground'
+            : 'border-border bg-card text-muted-foreground hover:text-foreground'
         "
         @click="category = chip.id"
       >
@@ -82,8 +134,12 @@ async function toggleSave(item: VeilleItem) {
       </button>
       <button
         type="button"
-        class="rounded-full px-3 py-1 text-xs"
-        :class="savedOnly ? 'bg-primary text-primary-foreground' : 'bg-muted'"
+        class="rounded-full border px-3 py-1 text-xs"
+        :class="
+          savedOnly
+            ? 'border-primary/30 bg-primary text-primary-foreground'
+            : 'border-border bg-card text-muted-foreground'
+        "
         @click="savedOnly = !savedOnly"
       >
         Enregistrés
@@ -92,7 +148,7 @@ async function toggleSave(item: VeilleItem) {
 
     <select
       v-model="provider"
-      class="max-w-xs rounded-[var(--dh-radius)] border border-border bg-card px-3 py-2 text-sm"
+      class="max-w-xs rounded-[var(--dh-radius)] border border-border bg-card px-3 py-2 text-sm text-foreground"
     >
       <option value="all">Tous les éditeurs</option>
       <option v-for="(label, id) in VEILLE_PROVIDER_LABELS" :key="id" :value="id">
@@ -102,8 +158,8 @@ async function toggleSave(item: VeilleItem) {
 
     <DsEmptyState
       v-if="filtered.length === 0"
-      title="Rien pour ce jour"
-      description="Essayez une autre date ou assouplissez les filtres."
+      title="Aucun résultat"
+      description="Assouplissez les filtres ou passez en vue Récent."
     />
 
     <VeilleFeedRow
@@ -116,12 +172,14 @@ async function toggleSave(item: VeilleItem) {
     <DsModal :open="Boolean(selected)" :title="selected?.title" @close="selectedId = null">
       <template v-if="selected">
         <div class="flex items-start justify-between gap-3">
-          <h2 class="text-[length:var(--dh-text-lg)] font-semibold leading-snug">{{ selected.title }}</h2>
+          <h2 class="text-[length:var(--dh-text-lg)] font-semibold leading-snug text-foreground">
+            {{ selected.title }}
+          </h2>
           <DsButton variant="ghost" size="sm" @click="selectedId = null">Fermer</DsButton>
         </div>
         <p class="mt-2 text-[length:var(--dh-text-sm)] text-muted-foreground">{{ selected.summary }}</p>
         <section v-if="selected.quoi" class="mt-4">
-          <h3 class="text-[length:var(--dh-text-sm)] font-medium">Quoi</h3>
+          <h3 class="text-[length:var(--dh-text-sm)] font-medium text-foreground">Quoi</h3>
           <ul class="mt-1 list-disc pl-5 text-[length:var(--dh-text-sm)] text-muted-foreground">
             <li v-for="(line, idx) in selected.quoi.split('\n').filter(Boolean)" :key="idx">
               {{ line.replace(/^•\s*/, "") }}
@@ -129,7 +187,7 @@ async function toggleSave(item: VeilleItem) {
           </ul>
         </section>
         <section v-if="selected.impact" class="mt-4">
-          <h3 class="text-[length:var(--dh-text-sm)] font-medium">Impact</h3>
+          <h3 class="text-[length:var(--dh-text-sm)] font-medium text-foreground">Impact</h3>
           <ul class="mt-1 list-disc pl-5 text-[length:var(--dh-text-sm)] text-muted-foreground">
             <li v-for="(line, idx) in selected.impact.split('\n').filter(Boolean)" :key="idx">
               {{ line.replace(/^•\s*/, "") }}
