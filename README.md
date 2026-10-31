@@ -24,6 +24,6 @@ npm run dev
 
 ## CI
 
-Push `main` → `.github/workflows/deploy-main.yml` (migrations Supabase) + déploiement Vercel.
+Déploiement **Vercel** via l’intégration Git (push sur `main`). Les migrations Supabase sont appliquées **hors GitHub Actions** (assistant / CLI).
 
-Catalogue outils : workflow manuel `dev-tools-ingest.yml`.
+Catalogue outils : workflow manuel **`dev-tools-ingest.yml`** (`workflow_dispatch`).

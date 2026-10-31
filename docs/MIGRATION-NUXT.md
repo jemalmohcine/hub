@@ -70,17 +70,15 @@ Supabase Auth → URL de redirection : `https://hub-onedev.vercel.app/auth/confi
 
 ## CI GitHub Actions
 
-### Workflow `Deploy main` (push sur `main`)
+### Migrations Supabase
 
-Secrets **obligatoires** (Settings → Secrets → Actions) :
+Appliquées **en dehors** de GitHub Actions (assistant Mohcine / `supabase db push` local). Aucun secret `SUPABASE_DB_PASSWORD` requis dans le dépôt.
 
-| Secret | Description |
-|--------|-------------|
-| `SUPABASE_ACCESS_TOKEN` | Token CLI Supabase (Dashboard → Account → Access Tokens) |
-| `SUPABASE_DB_PASSWORD` | Mot de passe DB du projet |
-| `SUPABASE_PROJECT_REF` | `lfxiyrcfiieyxeziuglv` |
+### Workflow **Dev tools catalogue** (manuel)
 
-Secrets **optionnels** (ingest catalogue manuel, Vercel les utilise aussi pour l’app) :
+Déclenché via **Actions → Dev tools catalogue → Run workflow**.
+
+Secrets **requis** pour l’ingest :
 
 | Secret | Description |
 |--------|-------------|

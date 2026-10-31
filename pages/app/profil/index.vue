@@ -8,7 +8,7 @@ const tab = ref<"cv" | "candidatures">("cv");
 const client = useSupabaseClient();
 const user = useSupabaseUser();
 
-const { data, refresh } = await useAsyncData("profil", async () => {
+const { data, pending, error, refresh } = await useAsyncData("profil", async () => {
   const uid = user.value?.id;
   if (!uid) {
     return {
@@ -18,11 +18,13 @@ const { data, refresh } = await useAsyncData("profil", async () => {
     };
   }
 
-  const { data: cvRows } = await client
+  const { data: cvRows, error: cvErr } = await client
     .from("cv_documents")
     .select("id, title, theme_id, updated_at, content")
     .eq("user_id", uid)
     .order("updated_at", { ascending: false });
+
+  if (cvErr) throw new Error(cvErr.message);
 
   const documents: CvDocumentSummary[] = (cvRows ?? []).map((r) => ({
     id: r.id as string,
@@ -41,11 +43,13 @@ const { data, refresh } = await useAsyncData("profil", async () => {
       })
     : defaultCvDocument();
 
-  const { data: jobsRows } = await client
+  const { data: jobsRows, error: jobsErr } = await client
     .from("job_applications")
     .select("*")
     .eq("user_id", uid)
     .order("updated_at", { ascending: false });
+
+  if (jobsErr) throw new Error(jobsErr.message);
 
   const jobs: JobApplication[] = (jobsRows ?? []).map((row) => ({
     id: row.id as string,
@@ -139,8 +143,13 @@ async function addJob() {
 
 <template>
   <div>
-    <h1 class="text-2xl font-semibold">Profil</h1>
-    <div class="mt-4 flex gap-2">
+    <DsPageHeader
+      title="Profil"
+      description="CV guidé et candidatures saisies à la main — sans scraping."
+      :pending="pending"
+      :error="error?.message ?? null"
+    />
+    <div v-if="!error" class="flex flex-wrap gap-2">
       <DsButton
         :variant="tab === 'cv' ? 'primary' : 'secondary'"
         size="sm"
@@ -157,7 +166,7 @@ async function addJob() {
       </DsButton>
     </div>
 
-    <div v-if="tab === 'cv'" class="mt-6 grid gap-6 lg:grid-cols-2">
+    <div v-if="!error && tab === 'cv'" class="mt-6 grid gap-6 lg:grid-cols-2">
       <DsCard class="space-y-3 p-4">
         <h2 class="font-medium">Édition guidée</h2>
         <DsInput v-model="cvForm.title" placeholder="Titre du CV" />
@@ -177,7 +186,7 @@ async function addJob() {
       </DsCard>
     </div>
 
-    <div v-else class="mt-6 space-y-4">
+    <div v-else-if="!error" class="mt-6 space-y-4">
       <DsCard class="grid gap-2 p-4 sm:grid-cols-3">
         <DsInput v-model="jobForm.company" placeholder="Entreprise" />
         <DsInput v-model="jobForm.role" placeholder="Poste" />

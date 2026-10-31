@@ -9,13 +9,15 @@ const q = ref("");
 const freeOnly = ref(true);
 const savedOnly = ref(false);
 
-const { data, refresh } = await useAsyncData("offres", async () => {
+const { data, pending, error, refresh } = await useAsyncData("offres", async () => {
   const uid = user.value?.id;
-  const { data: tools } = await client
+  const { data: tools, error: toolsErr } = await client
     .from("dev_tools")
     .select("*")
     .order("overall_score", { ascending: false })
     .limit(400);
+
+  if (toolsErr) throw new Error(toolsErr.message);
 
   const mapped: DevTool[] = (tools ?? []).map((row) => ({
     id: row.id as string,
@@ -60,10 +62,11 @@ const { data, refresh } = await useAsyncData("offres", async () => {
 
   let savedIds = new Set<string>();
   if (uid) {
-    const { data: saves } = await client
+    const { data: saves, error: savesErr } = await client
       .from("dev_tool_saves")
       .select("tool_id")
       .eq("user_id", uid);
+    if (savesErr) throw new Error(savesErr.message);
     savedIds = new Set((saves ?? []).map((s) => s.tool_id as string));
   }
 
@@ -98,11 +101,13 @@ async function toggleSave(tool: DevTool) {
 
 <template>
   <div>
-    <h1 class="text-2xl font-semibold">Offres gratuites</h1>
-    <p class="mt-1 text-sm text-muted-foreground">
-      Tiers free, crédits IA, programmes étudiants/OSS — à parcourir et suivre.
-    </p>
-    <div class="mt-4 flex flex-wrap gap-2">
+    <DsPageHeader
+      title="Offres gratuites"
+      description="Tiers free, crédits IA, programmes étudiants/OSS — à parcourir et suivre."
+      :pending="pending"
+      :error="error?.message ?? null"
+    />
+    <div v-if="!error" class="flex flex-wrap gap-2">
       <DsInput v-model="q" placeholder="Filtrer…" class="max-w-sm flex-1" />
       <DsButton :variant="freeOnly ? 'primary' : 'secondary'" size="sm" @click="freeOnly = !freeOnly">
         Free tier
@@ -112,7 +117,7 @@ async function toggleSave(tool: DevTool) {
       </DsButton>
     </div>
 
-    <div class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <div v-if="!error" class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       <DsCard v-for="tool in filtered" :key="tool.id" class="flex flex-col p-4">
         <div class="flex items-start justify-between gap-2">
           <h2 class="font-semibold">{{ tool.name }}</h2>
@@ -137,7 +142,7 @@ async function toggleSave(tool: DevTool) {
       </DsCard>
     </div>
     <DsEmptyState
-      v-if="filtered.length === 0"
+      v-if="!error && filtered.length === 0"
       class="mt-8"
       title="Aucun outil"
       description="Assouplis les filtres ou lance l’ingest catalogue (GitHub Actions)."

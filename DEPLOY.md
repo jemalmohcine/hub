@@ -19,13 +19,9 @@ Anciennes URLs Next : `/sign-in` et `/sign-up` redirigent vers `/auth/login` (qu
 
 ## CI (push `main`)
 
-Workflow **Deploy main** (`.github/workflows/deploy-main.yml`) :
+Aucun job GitHub ne pousse les migrations Supabase. Vercel déploie via l’intégration Git.
 
-1. Vérifie les secrets GitHub (voir ci-dessous)
-2. `supabase db push --include-all --yes`
-3. Vercel déploie via l’intégration Git
-
-Catalogue outils : workflow manuel **Dev tools catalogue** (`workflow_dispatch`).
+Catalogue outils : workflow manuel **Dev tools catalogue** (`.github/workflows/dev-tools-ingest.yml`, `workflow_dispatch`).
 
 ## Build local
 
