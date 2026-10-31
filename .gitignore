@@ -14,7 +14,6 @@
 /coverage
 
 # next.js
-/.next/
 /out/
 
 # production
@@ -46,7 +45,9 @@ public/swe-worker-*.js.map
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
 # graphify — local knowledge graph (kept on disk, not in git)
 graphify-out/
+
+.nuxt
+.output

@@ -1,0 +1,34 @@
+{
+  "modules": {
+    "overview": {
+      "label": "Aperçu",
+      "description": "Tableau de bord du hub",
+      "href": "/app/overview",
+      "icon": "layout-dashboard"
+    },
+    "ai": {
+      "label": "Veille IA",
+      "description": "Fil quotidien dev et IA",
+      "href": "/app/ai",
+      "icon": "bot"
+    },
+    "snippets": {
+      "label": "Snippets",
+      "description": "Code et notes",
+      "href": "/app/snippets",
+      "icon": "code"
+    },
+    "profil": {
+      "label": "Profil",
+      "description": "CV et candidatures",
+      "href": "/app/profil",
+      "icon": "user"
+    },
+    "offres": {
+      "label": "Offres gratuites",
+      "description": "Crédits, tiers free et programmes dev",
+      "href": "/app/offres",
+      "icon": "gift"
+    }
+  }
+}

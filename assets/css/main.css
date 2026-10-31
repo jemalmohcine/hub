@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-background: var(--dh-bg);
+  --color-foreground: var(--dh-fg);
+  --color-muted: var(--dh-muted);
+  --color-muted-foreground: var(--dh-muted-fg);
+  --color-card: var(--dh-card);
+  --color-border: var(--dh-border);
+  --color-primary: var(--dh-primary);
+  --color-primary-foreground: var(--dh-primary-fg);
+  --color-accent: var(--dh-accent);
+  --color-destructive: var(--dh-destructive);
+  --color-success: var(--dh-success);
+  --color-warning: var(--dh-warning);
+}
+
+:root {
+  color-scheme: light dark;
+  --dh-bg: #f8fafc;
+  --dh-fg: #0f172a;
+  --dh-muted: #f1f5f9;
+  --dh-muted-fg: #64748b;
+  --dh-card: #ffffff;
+  --dh-border: #e2e8f0;
+  --dh-primary: #2563eb;
+  --dh-primary-fg: #ffffff;
+  --dh-accent: #eff6ff;
+  --dh-destructive: #dc2626;
+  --dh-success: #16a34a;
+  --dh-warning: #d97706;
+  --dh-sidebar-w: 16rem;
+  --dh-radius: 0.75rem;
+}
+
+.dark {
+  --dh-bg: #0b1120;
+  --dh-fg: #e2e8f0;
+  --dh-muted: #111827;
+  --dh-muted-fg: #94a3b8;
+  --dh-card: #111827;
+  --dh-border: #1f2937;
+  --dh-primary: #3b82f6;
+  --dh-accent: #172554;
+}
+
+html,
+body,
+#__nuxt {
+  min-height: 100%;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+}
+
+.app-shell {
+  min-height: 100dvh;
+}
