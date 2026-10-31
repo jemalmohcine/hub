@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DevTool } from "~/shared/dev-tools/types";
 import { PRICING_LABELS } from "~/shared/dev-tools/types";
+import { userFacingDataError } from "~/shared/lib/user-error";
 
 const client = useSupabaseClient();
 const user = useSupabaseUser();
@@ -17,7 +18,7 @@ const { data, pending, error, refresh } = await useAsyncData("offres", async () 
     .order("overall_score", { ascending: false })
     .limit(400);
 
-  if (toolsErr) throw new Error(toolsErr.message);
+  if (toolsErr) throw new Error(userFacingDataError(toolsErr));
 
   const mapped: DevTool[] = (tools ?? []).map((row) => ({
     id: row.id as string,
@@ -66,7 +67,7 @@ const { data, pending, error, refresh } = await useAsyncData("offres", async () 
       .from("dev_tool_saves")
       .select("tool_id")
       .eq("user_id", uid);
-    if (savesErr) throw new Error(savesErr.message);
+    if (savesErr) throw new Error(userFacingDataError(savesErr));
     savedIds = new Set((saves ?? []).map((s) => s.tool_id as string));
   }
 
@@ -103,14 +104,14 @@ async function toggleSave(tool: DevTool) {
   <div>
     <DsPageHeader
       title="Offres gratuites"
-      description="Tiers free, crédits IA, programmes étudiants/OSS — à parcourir et suivre."
+      description="Crédits offerts, essais gratuits et programmes étudiants ou open source."
       :pending="pending"
       :error="error?.message ?? null"
     />
     <div v-if="!error" class="flex flex-wrap gap-2">
       <DsInput v-model="q" placeholder="Filtrer…" class="max-w-sm flex-1" />
       <DsButton :variant="freeOnly ? 'primary' : 'secondary'" size="sm" @click="freeOnly = !freeOnly">
-        Free tier
+        Offre gratuite
       </DsButton>
       <DsButton :variant="savedOnly ? 'primary' : 'secondary'" size="sm" @click="savedOnly = !savedOnly">
         Mes suivis
@@ -145,7 +146,7 @@ async function toggleSave(tool: DevTool) {
       v-if="!error && filtered.length === 0"
       class="mt-8"
       title="Aucun outil"
-      description="Assouplis les filtres ou lance l’ingest catalogue (GitHub Actions)."
+      description="Aucun résultat avec ces filtres. Élargissez la recherche ou revenez plus tard."
     />
   </div>
 </template>

@@ -2,6 +2,8 @@
 import type { VeilleItem } from "~/shared/veille/types";
 import { sortVeilleItems } from "~/shared/veille/sort";
 import { toDayKey } from "~/shared/lib/dates";
+import { userFacingDataError } from "~/shared/lib/user-error";
+import { filterClientVeilleItems } from "~/shared/veille/client-filter";
 
 const client = useSupabaseClient();
 const user = useSupabaseUser();
@@ -16,11 +18,12 @@ const { data, pending, error, refresh } = await useAsyncData("veille", async () 
     .order("feed_date", { ascending: false })
     .limit(800);
 
-  if (qErr) throw new Error(qErr.message);
+  if (qErr) throw new Error(userFacingDataError(qErr));
 
   const { data: saves } = await client.from("veille_ia_saves").select("item_id").eq("user_id", uid);
   const saved = new Set((saves ?? []).map((s) => s.item_id as string));
-  const items = (rows ?? []).map((row) => ({
+  const rowsClient = filterClientVeilleItems(rows ?? []);
+  const items = rowsClient.map((row) => ({
     ...(row as VeilleItem),
     saved: saved.has(row.id as string),
   }));
@@ -43,7 +46,7 @@ const feed = computed(() => data.value ?? { items: [], days: [], day: toDayKey(n
   <div>
     <DsPageHeader
       title="Veille IA"
-      description="Fil quotidien — titres scannables, détail Quoi / Impact en un clic."
+      description="Actualités sélectionnées chaque jour. Ouvrez une entrée pour le détail."
       :pending="pending"
       :error="error?.message ?? null"
     />

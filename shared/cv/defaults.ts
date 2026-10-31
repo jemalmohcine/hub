@@ -58,7 +58,7 @@ export function defaultCvDocument(): CvDocument {
         current: true,
         highlights: [
           "Livraison de features produit en React et Next.js pour 50k+ utilisateurs",
-          "Réduction du temps de build CI/CD de 40% via pipelines optimisés",
+          "Réduction du temps de build de 40 % grâce à l’automatisation CI",
         ],
         techStack: ["TypeScript", "Next.js", "PostgreSQL", "Vercel"],
       },
@@ -73,7 +73,7 @@ export function defaultCvDocument(): CvDocument {
           "Architecture modulaire et tests automatisés",
           "Déploiement continu sur Vercel",
         ],
-        techStack: ["Next.js", "Supabase", "Tailwind CSS"],
+        techStack: ["Nuxt", "PostgreSQL", "Tailwind CSS"],
       },
     ],
     education: [

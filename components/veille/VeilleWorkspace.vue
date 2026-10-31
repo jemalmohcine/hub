@@ -103,7 +103,7 @@ async function toggleSave(item: VeilleItem) {
     <DsEmptyState
       v-if="filtered.length === 0"
       title="Rien pour ce jour"
-      description="Change de date ou élargis les filtres."
+      description="Essayez une autre date ou assouplissez les filtres."
     />
 
     <VeilleFeedRow

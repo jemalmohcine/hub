@@ -90,5 +90,5 @@ async function copyContent() {
       <DsButton v-if="snippet" variant="danger" @click="remove">Supprimer</DsButton>
     </div>
   </DsCard>
-  <DsEmptyState v-else title="Sélectionne ou crée un snippet" />
+  <DsEmptyState v-else title="Sélectionnez un snippet ou créez-en un." />
 </template>

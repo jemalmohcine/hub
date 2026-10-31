@@ -5,7 +5,7 @@ const tiles = computed(() => modules.filter((m) => m.id !== "overview"));
 
 <template>
   <div>
-    <DsPageHeader title="Bonjour" description="Accès rapide à tes modules." />
+    <DsPageHeader title="Tableau de bord" description="Accédez rapidement à chaque module." />
     <div class="grid gap-3 sm:grid-cols-2">
       <NuxtLink v-for="mod in tiles" :key="mod.id" :to="mod.href">
         <DsCard class="p-4 transition-colors hover:border-primary/40">

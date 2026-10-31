@@ -4,7 +4,7 @@ export const VEILLE_CATEGORY_LABELS: Record<VeilleCategory, string> = {
   securite: "Sécurité",
   versions: "Versions",
   "modeles-prix": "Modèles et prix",
-  "outils-agents": "Outils et agents",
+  "outils-agents": "Outils de développement",
   "repos-github": "Repos GitHub",
 };
 
@@ -34,6 +34,6 @@ export const VEILLE_FILTER_CHIPS: { id: "all" | VeilleCategory; label: string }[
   { id: "securite", label: "Sécurité" },
   { id: "versions", label: "Versions" },
   { id: "modeles-prix", label: "Modèles et prix" },
-  { id: "outils-agents", label: "Outils et agents" },
+  { id: "outils-agents", label: "Outils de développement" },
   { id: "repos-github", label: "Repos GitHub" },
 ];
