@@ -69,9 +69,9 @@ export const UI = {
     published: "Publié",
     added: "Ajouté",
     score: "Score",
-    pageTitle: "Intelligence AI",
+    pageTitle: "Veille IA",
     pageDesc:
-      "La veille AI : faille, prix LLM, repos qui explosent, nouveaux modèles et outils.",
+      "Le fil du jour : sécurité en tête, puis versions, modèles, outils et repos GitHub.",
     digestPrefix: "Dernière mise à jour",
     digestEmpty: "Aucune mise à jour pour le moment",
     detail: "En savoir plus",
@@ -138,7 +138,7 @@ export const UI = {
     published: "Published",
     added: "Added",
     score: "Score",
-    pageTitle: "AI Intelligence",
+    pageTitle: "Veille IA",
     pageDesc:
       "AI intel here: security, LLM pricing, exploding repos, new models and tools.",
     digestPrefix: "Last update",

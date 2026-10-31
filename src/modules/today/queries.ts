@@ -1,15 +1,16 @@
 import type { HubUser } from "@/core/auth/types";
 import { hasEntitlement, ENTITLEMENTS } from "@/core/entitlements";
-import { daysBetween } from "@/lib/dates";
+import { daysBetween, toDayKey } from "@/lib/dates";
 import { plainDash } from "@/lib/text";
 import { shouldScrapeJobSearch } from "@/modules/job-board/filters";
 import { aiIntelInboxHref, aiIntelItemHref } from "@/modules/ai-intel/item-link";
 import {
-  currentYearRange,
-  unreadUrgentsInRange,
-} from "@/modules/ai-intel/unread-urgents";
-import { getAiIntelFeed, getLatestAiIntelRun } from "@/modules/ai-intel/queries";
-import { sourceDisplayName } from "@/modules/ai-intel/source-label";
+  VEILLE_PROVIDER_LABELS,
+} from "@/modules/ai-intel/veille/labels";
+import {
+  getVeilleFeed,
+  resolveDefaultVeilleDay,
+} from "@/modules/ai-intel/veille/queries";
 import { computeMonthlyTotals, listDevExpenseServices } from "@/modules/dev-expenses/queries";
 import { rankListingsForPrefs } from "@/modules/job-board/fit";
 import { listUserJobListings, getJobSearchPrefs } from "@/modules/job-board/queries";
@@ -31,18 +32,20 @@ async function aiSignals(userId: string): Promise<{
   signal: TodaySignal | null;
   highlights: TodayHighlight[];
 }> {
-  const items = await getAiIntelFeed(userId, {}).catch(() => []);
-  const { from, to } = currentYearRange();
-  const openAlerts = unreadUrgentsInRange(items, from, to);
+  const day = await resolveDefaultVeilleDay().catch(() => toDayKey(new Date()));
+  const items = await getVeilleFeed(userId, day).catch(() => []);
+  const critical = items.filter(
+    (item) => item.severity === "critique" || item.category === "securite",
+  );
 
-  const highlights = openAlerts.slice(0, MAX_HIGHLIGHTS).map((item) => ({
+  const highlights = critical.slice(0, MAX_HIGHLIGHTS).map((item) => ({
     id: item.id,
     title: plainDash(item.title),
-    source: sourceDisplayName(item.primary_source),
+    source: VEILLE_PROVIDER_LABELS[item.provider],
     href: aiIntelItemHref(item.id),
   }));
 
-  if (openAlerts.length === 0) {
+  if (critical.length === 0) {
     return { signal: null, highlights };
   }
 
@@ -51,8 +54,8 @@ async function aiSignals(userId: string): Promise<{
       id: "ai-alerts",
       module: "ai",
       tone: "urgent",
-      label: `${openAlerts.length} ${plural(openAlerts.length, "alerte urgente", "alertes urgentes")}`,
-      detail: "Sécurité, prix, fin de support ou projet qui décolle.",
+      label: `${critical.length} ${plural(critical.length, "alerte", "alertes")} sécurité / critique`,
+      detail: "Consulte la Veille IA du jour.",
       href: aiIntelInboxHref(),
     },
     highlights,
@@ -131,11 +134,10 @@ export async function getTodayDigest(user: HubUser): Promise<TodayDigest> {
   const canJobs = hasEntitlement(user.entitlements, ENTITLEMENTS.jobs);
   const canExpenses = hasEntitlement(user.entitlements, ENTITLEMENTS.expenses);
 
-  const [ai, jobs, expenses, lastRun] = await Promise.all([
+  const [ai, jobs, expenses] = await Promise.all([
     canAi ? aiSignals(user.id) : Promise.resolve({ signal: null, highlights: [] }),
     canJobs ? jobSignals(user.id) : Promise.resolve([]),
     canExpenses ? expenseSignal(user.id) : Promise.resolve(null),
-    canAi ? getLatestAiIntelRun().catch(() => null) : Promise.resolve(null),
   ]);
 
   const signals = [ai.signal, ...jobs, expenses]
@@ -145,7 +147,7 @@ export async function getTodayDigest(user: HubUser): Promise<TodayDigest> {
   return {
     signals,
     highlights: ai.highlights,
-    lastRunAt: lastRun?.finished_at ?? null,
+    lastRunAt: null,
     allClear: signals.every((signal) => signal.tone === "neutral"),
   };
 }

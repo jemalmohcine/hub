@@ -20,9 +20,9 @@ export function parseAiFeedPeriod(raw: string | null | undefined): AiFeedPeriod 
   return FEED_PERIODS.includes(raw as AiFeedPeriod) ? (raw as AiFeedPeriod) : "today";
 }
 
-/** Home « À traiter »: unread urgents for the year, not just today. */
+/** Overview link: security filter on today’s Veille IA feed. */
 export function aiIntelInboxHref(): string {
-  return "/app/ai?tab=urgent&period=year";
+  return "/app/ai";
 }
 
 export function resolveAiIntelDeepLink(metadata: Record<string, unknown> | null | undefined): string | null {

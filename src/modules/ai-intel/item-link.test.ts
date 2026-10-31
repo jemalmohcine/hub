@@ -6,8 +6,8 @@ import {
 } from "@/modules/ai-intel/item-link";
 
 describe("aiIntelInboxHref", () => {
-  it("opens the AI feed on Urgent for the whole year", () => {
-    expect(aiIntelInboxHref()).toBe("/app/ai?tab=urgent&period=year");
+  it("opens the Veille IA feed", () => {
+    expect(aiIntelInboxHref()).toBe("/app/ai");
   });
 });
 
