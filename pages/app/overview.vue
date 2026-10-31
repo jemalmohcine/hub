@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Code2, Sparkles } from "lucide-vue-next";
+import { Code2, Sparkles, Wrench } from "lucide-vue-next";
 
 const client = useSupabaseClient();
 const user = useSupabaseUser();
@@ -21,7 +21,7 @@ const { data: stats, pending } = await useAsyncData(
 
 <template>
   <div>
-    <DsPageHeader compact title="Accueil" description="Deux raccourcis, le reste en un geste.">
+    <DsPageHeader compact title="Accueil" description="Veille, snippets, outils du quotidien. ⌘K pour naviguer.">
       <template #actions>
         <NuxtLink to="/app/ai">
           <DsButton>Ouvrir la veille</DsButton>
@@ -47,6 +47,12 @@ const { data: stats, pending } = await useAsyncData(
         title="Snippets"
         :hint="stats ? `${stats.snippets} enregistrés` : 'Copie en 1 tap'"
         :icon="Code2"
+      />
+      <DsQuickTile
+        to="/app/outils"
+        title="Outils"
+        hint="JSON, JWT, regex, couleurs…"
+        :icon="Wrench"
       />
     </div>
 

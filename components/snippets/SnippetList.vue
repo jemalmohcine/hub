@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { DevSnippet } from "~/shared/snippets/types";
-import { Check, Pin } from "lucide-vue-next";
+import { Check, Pin, Pencil } from "lucide-vue-next";
 
 defineProps<{ snippets: DevSnippet[]; selectedId: string | null; copiedId?: string | null }>();
-const emit = defineEmits<{ select: [id: string]; copy: [id: string] }>();
+const emit = defineEmits<{ select: [id: string]; copy: [id: string]; edit: [id: string] }>();
 
 const { showToast } = useToast();
 
@@ -32,7 +32,17 @@ async function tapSnippet(item: DevSnippet) {
             <Pin v-if="item.isPinned" class="h-3.5 w-3.5 shrink-0 text-primary" aria-label="Épinglé" />
             <span class="truncate">{{ item.title }}</span>
           </span>
-          <DsBadge tone="neutral">{{ item.language || "text" }}</DsBadge>
+          <div class="flex shrink-0 items-center gap-1">
+            <DsBadge tone="neutral">{{ item.language || "text" }}</DsBadge>
+            <button
+              type="button"
+              class="dh-focus-ring rounded-md p-1.5 text-muted-foreground hover:text-foreground"
+              aria-label="Modifier"
+              @click.stop="emit('edit', item.id)"
+            >
+              <Pencil class="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
         <p class="line-clamp-2 font-mono text-[length:var(--dh-text-xs)] text-muted-foreground">{{ item.content }}</p>
         <span class="flex items-center gap-1 text-[length:var(--dh-text-xs)] text-primary">

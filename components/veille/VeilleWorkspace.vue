@@ -2,8 +2,9 @@
 import type { VeilleItem, VeilleCategory, VeilleProvider } from "~/shared/veille/types";
 import { VEILLE_FILTER_CHIPS, VEILLE_PROVIDER_LABELS } from "~/shared/veille/labels";
 import { sortVeilleItems } from "~/shared/veille/sort";
-import { formatDate, addDaysIso } from "~/shared/lib/dates";
-import { filterVeilleLastSevenDays, latestVeilleFeedDay } from "~/shared/veille/days";
+import { filterVeilleLastSevenDays } from "~/shared/veille/days";
+import { feedDayGroupLabel } from "~/shared/veille/day-group";
+import { formatDate } from "~/shared/lib/dates";
 
 const props = defineProps<{
   initialItems: VeilleItem[];
@@ -11,44 +12,17 @@ const props = defineProps<{
   days: string[];
 }>();
 
-type FeedScope = "recent" | "day";
-
-const feedScope = ref<FeedScope>("recent");
-const day = ref(props.initialDay);
 const category = ref<"all" | VeilleCategory>("all");
 const provider = ref<VeilleProvider | "all">("all");
 const savedOnly = ref(false);
 const q = ref("");
 const selectedId = ref<string | null>(null);
 
-watch(
-  () => props.initialDay,
-  (value) => {
-    day.value = value;
-  },
-);
-
-watch(
-  () => props.days,
-  (days) => {
-    if (feedScope.value === "day" && days.length > 0) {
-      const hasRows = props.initialItems.some((i) => i.feed_date === day.value);
-      if (!hasRows) {
-        day.value = latestVeilleFeedDay(props.initialItems) ?? days[0]!;
-      }
-    }
-  },
-  { immediate: true },
-);
-
 const client = useSupabaseClient();
 
 const filtered = computed(() => {
   const query = q.value.trim().toLowerCase();
-  let list =
-    feedScope.value === "recent"
-      ? filterVeilleLastSevenDays([...props.initialItems])
-      : props.initialItems.filter((i) => i.feed_date === day.value);
+  let list = filterVeilleLastSevenDays([...props.initialItems]);
 
   if (category.value !== "all") list = list.filter((i) => i.category === category.value);
   if (provider.value !== "all") list = list.filter((i) => i.provider === provider.value);
@@ -61,17 +35,27 @@ const filtered = computed(() => {
   return sortVeilleItems(list);
 });
 
+const groupedSections = computed(() => {
+  const map = new Map<string, VeilleItem[]>();
+  for (const item of filtered.value) {
+    const key = item.feed_date || "unknown";
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(item);
+  }
+  return [...map.entries()].map(([feedDate, items]) => ({
+    feedDate,
+    label: feedDayGroupLabel(feedDate),
+    sub: formatDate(`${feedDate}T12:00:00`, "fr", "dayMonthYear"),
+    items,
+  }));
+});
+
 const selected = computed(
   () =>
     filtered.value.find((i) => i.id === selectedId.value) ??
     props.initialItems.find((i) => i.id === selectedId.value) ??
     null,
 );
-
-function shiftDay(delta: number) {
-  feedScope.value = "day";
-  day.value = addDaysIso(day.value, delta);
-}
 
 async function toggleSave(item: VeilleItem) {
   const user = useSupabaseUser();
@@ -88,34 +72,7 @@ async function toggleSave(item: VeilleItem) {
 
 <template>
   <div class="mx-auto flex max-w-3xl flex-col gap-4">
-    <div class="flex flex-wrap items-center gap-2">
-      <div class="flex rounded-full border border-border bg-muted/60 p-0.5 text-xs">
-        <button
-          type="button"
-          class="rounded-full px-3 py-1.5 font-medium transition-colors"
-          :class="feedScope === 'recent' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'"
-          @click="feedScope = 'recent'"
-        >
-          Récent (7 j)
-        </button>
-        <button
-          type="button"
-          class="rounded-full px-3 py-1.5 font-medium transition-colors"
-          :class="feedScope === 'day' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'"
-          @click="feedScope = 'day'"
-        >
-          Par jour
-        </button>
-      </div>
-      <template v-if="feedScope === 'day'">
-        <DsButton variant="ghost" size="sm" aria-label="Jour précédent" @click="shiftDay(-1)">←</DsButton>
-        <span class="text-sm font-medium text-foreground">{{
-          formatDate(day, "fr", "dayMonthYear")
-        }}</span>
-        <DsButton variant="ghost" size="sm" aria-label="Jour suivant" @click="shiftDay(1)">→</DsButton>
-      </template>
-      <DsInput v-model="q" class="ml-auto max-w-xs flex-1" placeholder="Rechercher…" />
-    </div>
+    <DsInput v-model="q" placeholder="Rechercher dans la veille…" aria-label="Rechercher" />
 
     <div class="flex flex-wrap gap-2">
       <button
@@ -149,6 +106,7 @@ async function toggleSave(item: VeilleItem) {
     <select
       v-model="provider"
       class="max-w-xs rounded-[var(--dh-radius)] border border-border bg-card px-3 py-2 text-sm text-foreground"
+      aria-label="Filtrer par éditeur"
     >
       <option value="all">Tous les éditeurs</option>
       <option v-for="(label, id) in VEILLE_PROVIDER_LABELS" :key="id" :value="id">
@@ -159,15 +117,32 @@ async function toggleSave(item: VeilleItem) {
     <DsEmptyState
       v-if="filtered.length === 0"
       title="Aucun résultat"
-      description="Assouplissez les filtres ou passez en vue Récent."
+      description="Assouplissez les filtres ou revenez demain."
     />
 
-    <VeilleFeedRow
-      v-for="item in filtered"
-      :key="item.id"
-      :item="item"
-      @open="selectedId = $event"
-    />
+    <section v-for="section in groupedSections" :key="section.feedDate" class="flex flex-col gap-2">
+      <header
+        class="sticky top-14 z-10 -mx-[var(--dh-space-page)] border-b border-border/50 bg-background/95 px-[var(--dh-space-page)] py-3 backdrop-blur-sm lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-2"
+      >
+        <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-3">
+          <h2 class="text-[length:var(--dh-text-base)] font-semibold capitalize leading-tight text-foreground">
+            {{ section.label }}
+          </h2>
+          <span
+            v-if="!['Aujourd\'hui', 'Hier'].includes(section.label)"
+            class="text-[length:var(--dh-text-xs)] text-muted-foreground sm:text-sm"
+          >
+            {{ section.sub }}
+          </span>
+        </div>
+      </header>
+      <VeilleFeedRow
+        v-for="item in section.items"
+        :key="item.id"
+        :item="item"
+        @open="selectedId = $event"
+      />
+    </section>
 
     <DsModal :open="Boolean(selected)" :title="selected?.title" @close="selectedId = null">
       <template v-if="selected">

@@ -1,10 +1,22 @@
 <script setup lang="ts">
-import { Briefcase, Code2, Home, LayoutGrid, MoreHorizontal, PiggyBank, Settings, Sparkles } from "lucide-vue-next";
+import {
+  Briefcase,
+  Code2,
+  Home,
+  LayoutGrid,
+  MoreHorizontal,
+  PiggyBank,
+  Plus,
+  Settings,
+  Sparkles,
+  Wrench,
+} from "lucide-vue-next";
 
 const route = useRoute();
 const router = useRouter();
 const user = useSupabaseUser();
 const { open, query, filtered, toggle, close, run } = useCommandPalette();
+const { openQuickAdd } = useSnippetQuickAdd();
 useCommandPaletteShortcuts(toggle, close);
 
 const sheetOpen = ref(false);
@@ -18,6 +30,7 @@ const primaryTabs = [
 const overflowLinks = [
   { label: "Carrière", href: "/app/career", icon: Briefcase },
   { label: "Budget", href: "/app/expenses", icon: PiggyBank },
+  { label: "Outils", href: "/app/outils", icon: Wrench },
   { label: "Paramètres", href: "/app/settings", icon: Settings },
   { label: "Modules", href: "/app/settings/modules", icon: LayoutGrid },
 ];
@@ -29,6 +42,7 @@ function isActive(match: (p: string) => boolean) {
 const pageTitle = computed(() => {
   if (route.path.startsWith("/app/ai")) return "Veille";
   if (route.path.startsWith("/app/snippets")) return "Snippets";
+  if (route.path.startsWith("/app/outils")) return "Outils";
   if (route.path.startsWith("/app/career")) return "Carrière";
   if (route.path.startsWith("/app/expenses")) return "Budget";
   if (route.path.startsWith("/app/settings")) return "Paramètres";
@@ -97,8 +111,11 @@ async function signOut() {
         <h1 class="min-w-0 flex-1 truncate text-[length:var(--dh-text-base)] font-semibold lg:text-[length:var(--dh-text-lg)]">
           {{ pageTitle }}
         </h1>
-        <DsButton variant="ghost" size="sm" aria-label="Rechercher" @click="toggle">
+        <DsButton variant="ghost" size="sm" aria-label="Palette de commandes" @click="toggle">
           ⌘K
+        </DsButton>
+        <DsButton size="sm" class="hidden sm:inline-flex" aria-label="Nouveau snippet" @click="openQuickAdd">
+          Ajouter
         </DsButton>
       </header>
 
@@ -170,7 +187,7 @@ async function signOut() {
         @click.self="close"
       >
         <div class="dh-surface w-full max-w-md p-2">
-          <DsInput v-model="query" placeholder="Module ou page…" aria-label="Palette" class="border-0" />
+          <DsInput v-model="query" placeholder="Page, outil ou snippet…" aria-label="Palette" class="border-0" />
           <ul class="max-h-64 overflow-y-auto py-1">
             <li v-for="item in filtered" :key="item.id">
               <button
@@ -185,6 +202,17 @@ async function signOut() {
           </ul>
         </div>
       </div>
+
+      <button
+        type="button"
+        class="dh-focus-ring fixed z-[45] flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95 max-lg:right-4 max-lg:bottom-[calc(var(--dh-nav-h)+env(safe-area-inset-bottom)+1rem)] lg:bottom-8 lg:right-8"
+        aria-label="Nouveau snippet"
+        @click="openQuickAdd"
+      >
+        <Plus class="h-6 w-6" />
+      </button>
+
+      <SnippetQuickAddSheet />
     </Teleport>
   </div>
 </template>

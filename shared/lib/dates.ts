@@ -7,11 +7,13 @@ export type DateStyle =
   | "dayMonthYear"
   | "monthYear"
   | "short"
-  | "dateTime";
+  | "dateTime"
+  | "weekdayDayMonth";
 
 const FORMATS: Record<DateStyle, Intl.DateTimeFormatOptions> = {
   dayMonth: { day: "2-digit", month: "short" },
   dayMonthYear: { day: "2-digit", month: "short", year: "numeric" },
+  weekdayDayMonth: { weekday: "long", day: "numeric", month: "long" },
   monthYear: { month: "long", year: "numeric" },
   short: { day: "2-digit", month: "2-digit", year: "numeric" },
   dateTime: {

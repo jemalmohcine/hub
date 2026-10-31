@@ -3,11 +3,15 @@ import type { DevSnippet, DevSnippetCategory } from "~/shared/snippets/types";
 import { rankSnippets } from "~/shared/snippets/match";
 import { userFacingDataError } from "~/shared/lib/user-error";
 
+const route = useRoute();
 const client = useSupabaseClient();
 const user = useSupabaseUser();
+const { openQuickAdd, refreshTick } = useSnippetQuickAdd();
 
 const copiedId = ref<string | null>(null);
-const q = ref("");
+const q = ref(typeof route.query.q === "string" ? route.query.q : "");
+const categoryId = ref<string | null>(null);
+const editId = ref<string | null>(null);
 
 function onCopied(id: string) {
   copiedId.value = id;
@@ -15,8 +19,6 @@ function onCopied(id: string) {
     if (copiedId.value === id) copiedId.value = null;
   }, 2000);
 }
-const categoryId = ref<string | null>(null);
-const selectedId = ref<string | null>(null);
 
 const { data, pending, error, refresh } = await useAsyncData(
   () => `snippets-${user.value?.id ?? "anon"}`,
@@ -24,52 +26,56 @@ const { data, pending, error, refresh } = await useAsyncData(
     const uid = user.value?.id;
     if (!uid) return null;
 
-  const { data: cats, error: cErr } = await client
-    .from("dev_snippet_categories")
-    .select("id, name, created_at")
-    .eq("user_id", uid)
-    .order("name");
+    const { data: cats, error: cErr } = await client
+      .from("dev_snippet_categories")
+      .select("id, name, created_at")
+      .eq("user_id", uid)
+      .order("name");
 
-  if (cErr) throw new Error(userFacingDataError(cErr));
+    if (cErr) throw new Error(userFacingDataError(cErr));
 
-  const { data: rows, error: rErr } = await client
-    .from("dev_snippets")
-    .select(
-      "id, title, kind, language, content, tags, category_id, reference_url, image_url, is_pinned, created_at, updated_at",
-    )
-    .eq("user_id", uid)
-    .order("is_pinned", { ascending: false })
-    .order("updated_at", { ascending: false });
+    const { data: rows, error: rErr } = await client
+      .from("dev_snippets")
+      .select(
+        "id, title, kind, language, content, tags, category_id, reference_url, image_url, is_pinned, created_at, updated_at",
+      )
+      .eq("user_id", uid)
+      .order("is_pinned", { ascending: false })
+      .order("updated_at", { ascending: false });
 
-  if (rErr) throw new Error(userFacingDataError(rErr));
+    if (rErr) throw new Error(userFacingDataError(rErr));
 
-  const names = new Map((cats ?? []).map((c) => [c.id, c.name as string]));
-  const snippets: DevSnippet[] = (rows ?? []).map((row) => ({
-    id: row.id as string,
-    title: row.title as string,
-    kind: row.kind as DevSnippet["kind"],
-    language: row.language as string | null,
-    content: row.content as string,
-    tags: (row.tags as string[]) ?? [],
-    categoryId: row.category_id as string | null,
-    categoryName: row.category_id ? names.get(row.category_id as string) ?? null : null,
-    referenceUrl: row.reference_url as string | null,
-    imageUrl: row.image_url as string | null,
-    isPinned: Boolean(row.is_pinned),
-    createdAt: row.created_at as string,
-    updatedAt: row.updated_at as string,
-  }));
+    const names = new Map((cats ?? []).map((c) => [c.id, c.name as string]));
+    const snippets: DevSnippet[] = (rows ?? []).map((row) => ({
+      id: row.id as string,
+      title: row.title as string,
+      kind: row.kind as DevSnippet["kind"],
+      language: row.language as string | null,
+      content: row.content as string,
+      tags: (row.tags as string[]) ?? [],
+      categoryId: row.category_id as string | null,
+      categoryName: row.category_id ? names.get(row.category_id as string) ?? null : null,
+      referenceUrl: row.reference_url as string | null,
+      imageUrl: row.image_url as string | null,
+      isPinned: Boolean(row.is_pinned),
+      createdAt: row.created_at as string,
+      updatedAt: row.updated_at as string,
+    }));
 
-  const categories: DevSnippetCategory[] = (cats ?? []).map((c) => ({
-    id: c.id as string,
-    name: c.name as string,
-    createdAt: c.created_at as string,
-  }));
+    const categories: DevSnippetCategory[] = (cats ?? []).map((c) => ({
+      id: c.id as string,
+      name: c.name as string,
+      createdAt: c.created_at as string,
+    }));
 
-  return { snippets, categories };
+    return { snippets, categories };
   },
   { watch: [() => user.value?.id], server: false },
 );
+
+watch(refreshTick, () => {
+  void refresh();
+});
 
 const filtered = computed(() => {
   let list = data.value?.snippets ?? [];
@@ -82,8 +88,8 @@ const filtered = computed(() => {
   return list;
 });
 
-const selected = computed(
-  () => filtered.value.find((s) => s.id === selectedId.value) ?? null,
+const editingSnippet = computed(
+  () => filtered.value.find((s) => s.id === editId.value) ?? data.value?.snippets.find((s) => s.id === editId.value) ?? null,
 );
 
 async function createCategory() {
@@ -95,45 +101,72 @@ async function createCategory() {
   await refresh();
 }
 
-function newSnippet() {
-  selectedId.value = "__new__";
+function onEditSaved() {
+  editId.value = null;
+  void refresh();
 }
-
-const editorSnippet = computed(() =>
-  selectedId.value === "__new__" ? null : selected.value,
-);
 </script>
 
 <template>
   <div>
-    <DsPageHeader compact title="Snippets" description="Toucher une ligne pour copier le code.">
+    <DsPageHeader compact title="Snippets" description="Toucher une carte pour copier. N ou Ajouter pour créer.">
       <template #actions>
-        <DsButton size="sm" @click="newSnippet">Nouveau</DsButton>
+        <DsButton size="sm" @click="openQuickAdd">Ajouter</DsButton>
       </template>
     </DsPageHeader>
-    <DsInput v-if="!error && data" v-model="q" placeholder="Rechercher…" class="mb-4 max-w-md" aria-label="Rechercher snippets" />
-    <div v-if="!error && data" class="grid gap-6 lg:grid-cols-[220px_1fr_1fr]">
-      <SnippetSidebar
-        :categories="data?.categories ?? []"
-        :active-id="categoryId"
-        @select="categoryId = $event"
-        @create="createCategory"
-      />
-      <div>
-        <DsButton size="sm" class="mb-3" @click="newSnippet">Nouveau snippet</DsButton>
-        <SnippetList
-          :snippets="filtered"
-          :selected-id="selectedId"
-          :copied-id="copiedId"
-          @select="selectedId = $event"
-          @copy="onCopied"
-        />
-      </div>
-      <SnippetEditor
-        :snippet="editorSnippet"
-        @saved="refresh(); selectedId = null"
-        @deleted="refresh(); selectedId = null"
-      />
+
+    <DsInput
+      v-if="!error && data"
+      v-model="q"
+      placeholder="Rechercher…"
+      class="mb-4 max-w-md"
+      aria-label="Rechercher snippets"
+    />
+
+    <div v-if="!error && data" class="mb-4 flex flex-wrap gap-2">
+      <button
+        type="button"
+        class="rounded-full border px-3 py-1 text-xs"
+        :class="!categoryId ? 'border-primary/30 bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground'"
+        @click="categoryId = null"
+      >
+        Tous
+      </button>
+      <button
+        v-for="cat in data.categories"
+        :key="cat.id"
+        type="button"
+        class="rounded-full border px-3 py-1 text-xs"
+        :class="
+          categoryId === cat.id
+            ? 'border-primary/30 bg-primary text-primary-foreground'
+            : 'border-border bg-card text-muted-foreground'
+        "
+        @click="categoryId = cat.id"
+      >
+        {{ cat.name }}
+      </button>
+      <DsButton variant="ghost" size="sm" @click="createCategory">+ Dossier</DsButton>
     </div>
+
+    <div v-if="pending && !data" class="dh-skeleton h-40" />
+
+    <SnippetList
+      v-else-if="!error && data"
+      :snippets="filtered"
+      :selected-id="editId"
+      :copied-id="copiedId"
+      @copy="onCopied"
+      @edit="editId = $event"
+    />
+
+    <DsSheet :open="Boolean(editingSnippet)" title="Modifier le snippet" @close="editId = null">
+      <SnippetEditor
+        v-if="editingSnippet"
+        :snippet="editingSnippet"
+        @saved="onEditSaved"
+        @deleted="onEditSaved"
+      />
+    </DsSheet>
   </div>
 </template>

@@ -29,7 +29,8 @@ Légende : `[x]` livré · `[—]` hors scope volontaire
 |-------|--------|
 | `/app/overview` (accès rapide Veille + Snippets) | [x] |
 | `/app/ai` (7 j `feed_date`) | [x] |
-| `/app/snippets` (copie 1 tap) | [x] |
+| `/app/snippets` (copie 1 tap, ajout rapide N / ⌘↵) | [x] |
+| `/app/outils` (JSON, encode, JWT, regex, UUID, time, couleur) | [x] |
 | `/app/career`, `?tab=cv` / `?tab=jobs` | [x] |
 | `/app/expenses`, `?tab=tools` | [x] |
 | `/app/settings` + `/account` `/appearance` `/security` `/billing` `/modules` | [x] |
@@ -67,9 +68,14 @@ Légende : `[x]` livré · `[—]` hors scope volontaire
 |-------|--------|
 | Nouveau design (pas reskin Next) | [x] |
 | Mobile-first 390px, bottom nav + bouton accueil | [x] |
-| Une action principale par écran | [x] |
-| Veille + Snippets depuis l’accueil | [x] |
+| Palette ⌘K (modules, snippets, outils) | [x] |
+| Snippet ultra rapide (sheet global, presse-papier, ⌘↵) | [x] |
+| Veille groupée par jour (Aujourd’hui, Hier, …) | [x] |
+| Outils dev client-side (section Outils) | [x] |
+| Veille + Snippets + Outils depuis l’accueil | [x] |
 | Empty / loading states DS | [x] |
+| Thème clair / sombre, PWA | [x] |
+| Copie FR pro, pas de mention Supabase UI | [x] |
 
 ## Release PR #80
 
