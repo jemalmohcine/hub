@@ -92,7 +92,7 @@ Légende : `[x]` porté et testé build · `[~]` partiel · `[ ]` manquant
 
 | Check | Statut |
 |-------|--------|
-| `npm run build` vert | en cours CI |
-| Preview hub-dev Ready | en cours CI |
-| `curl /sign-in` 200/redirect | en cours CI |
-| `curl /app/*` pas de 500 | en cours CI |
+| `npm run build` vert | [x] local |
+| Preview hub-dev Ready | CI en cours (#80) |
+| `curl /sign-in` 200/redirect | à valider sur preview |
+| `curl /app/*` pas de 500 | à valider sur preview |
