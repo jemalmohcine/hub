@@ -15,6 +15,8 @@ Supabase : **lfxiyrcfiieyxeziuglv**
 
 Supabase Auth → Redirect URLs : `https://hub-onedev.vercel.app/auth/confirm` (+ preview si besoin).
 
+Anciennes URLs Next : `/sign-in` et `/sign-up` redirigent vers `/auth/login` (query `next` conservée).
+
 ## CI (push `main`)
 
 Workflow **Deploy main** (`.github/workflows/deploy-main.yml`) :
