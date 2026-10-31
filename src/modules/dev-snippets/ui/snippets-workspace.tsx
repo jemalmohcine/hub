@@ -383,7 +383,7 @@ export function SnippetsWorkspace({
           <div>
             <Text weight="medium">Recherche rapide sur le web</Text>
             <Text size="sm" tone="muted" className="mt-1">
-              Cherchez une doc ou une solution sans quitter DevHub.
+              Cherchez une doc ou une solution sans quitter hub.
             </Text>
           </div>
           <Input

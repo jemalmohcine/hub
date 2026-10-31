@@ -12,7 +12,7 @@ export default function SignUpPage() {
   return (
     <AuthShell
       title="Créer un compte"
-      description="Rejoins DevHub en quelques secondes"
+      description="Rejoins hub en quelques secondes"
     >
       <Card>
         <SignUpForm />

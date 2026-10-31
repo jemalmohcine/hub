@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { type ReactNode } from "react";
 import { type LucideIcon } from "lucide-react";
+import { SITE_NAME } from "@/lib/site";
 import { cn } from "@/design-system/lib/cn";
 import {
   type ButtonSize,
@@ -38,8 +39,8 @@ export function BrandMark({
         decoding="async"
       />
       {withWordmark ? (
-        <span className="text-[length:var(--dh-text-lg)] font-semibold tracking-[var(--dh-tracking-tight)] text-[var(--dh-fg)]">
-          DevHub
+        <span className="text-[length:var(--dh-text-lg)] font-semibold tracking-[var(--dh-tracking-tight)] text-[var(--dh-fg)] lowercase">
+          {SITE_NAME}
         </span>
       ) : null}
     </>
@@ -49,7 +50,7 @@ export function BrandMark({
     <Link
       href={href}
       className="inline-flex cursor-pointer items-center gap-[var(--dh-space-2)]"
-      aria-label="DevHub"
+      aria-label={SITE_NAME}
     >
       {content}
     </Link>

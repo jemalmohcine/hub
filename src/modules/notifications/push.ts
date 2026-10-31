@@ -28,7 +28,7 @@ function configureWebPush(): boolean {
   const subject =
     process.env.VAPID_SUBJECT ||
     process.env.NEXT_PUBLIC_APP_URL ||
-    "mailto:noreply@devhub.app";
+    "mailto:noreply@hub.app";
 
   if (!publicKey || !privateKey) return false;
 

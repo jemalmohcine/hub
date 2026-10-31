@@ -22,6 +22,7 @@ import { NotificationBell } from "@/modules/notifications/ui/notification-bell";
 import type { HubNotification } from "@/modules/notifications/types";
 import type { HubLocale } from "@/core/i18n";
 import { MobileBottomNav } from "@/shared/ui/mobile-bottom-nav";
+import { MobileHomeLink } from "@/shared/ui/mobile-home-link";
 
 const SHELL_COPY = {
   fr: {
@@ -146,8 +147,11 @@ export function AppShell({
           className="z-20 shrink-0 border-b border-border bg-card/90 px-[var(--dh-space-4)] backdrop-blur lg:hidden"
           style={{ paddingTop: "var(--dh-safe-top)" }}
         >
-          <div className="flex h-[var(--dh-topbar-h)] items-center justify-between">
-            <BrandMark withWordmark href="/app/overview" size="sm" />
+          <div className="flex h-[var(--dh-topbar-h)] items-center justify-between gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-1">
+              <MobileHomeLink />
+              <BrandMark withWordmark href="/app/overview" size="sm" />
+            </div>
             <div className="flex items-center gap-1">
               <NotificationBell initialNotifications={notifications} locale={locale} />
               <Badge tone="neutral" className="capitalize">

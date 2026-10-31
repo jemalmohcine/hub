@@ -5,24 +5,16 @@ import { createClient } from "@/core/auth/supabase/server";
 import { assertEntitled } from "@/core/entitlements/assert-entitled";
 import { ENTITLEMENTS } from "@/core/entitlements/keys";
 import { addDaysIso } from "@/lib/dates";
-import { getCvDocumentById } from "@/modules/cv-builder/queries";
-import { profileFromCv } from "@/modules/job-board/cv-skills";
 import { MAX_JOB_LOCATIONS, resolveLocations } from "@/modules/job-board/locations";
 import { MAX_JOB_ROLES, resolveRoles, rolesToQuery } from "@/modules/job-board/roles";
 import { normalizeWorkModes, onsiteOnly } from "@/modules/job-board/work-modes";
-import { ingestJobsForPrefs } from "@/modules/job-board/ingest";
-import { shouldScrapeJobSearch } from "@/modules/job-board/filters";
 import {
   getJobListingById,
   getJobListingByUrl,
-  getJobSearchLastScrapedAt,
-  getJobSearchPrefs,
   listUserJobListings,
   saveJobSearchPrefs,
-  stampJobSearchScrapedAt,
 } from "@/modules/job-board/queries";
 import { scrapeJobOfferPage } from "@/modules/job-board/scrape-offer";
-import { jobScrapeIsDue } from "@/modules/job-board/scrape-schedule";
 import type { JobListing, JobSearchPrefs } from "@/modules/job-board/types";
 import type { JobApplication } from "@/modules/job-tracker/types";
 
@@ -103,25 +95,8 @@ export async function saveJobSearchConfig(
     keyword: (prefs.keyword ?? "").trim().slice(0, 80),
   });
 
-  let scraped = false;
-  if (options?.scrape && shouldScrapeJobSearch(saved)) {
-    const cv = saved.cvDocumentId
-      ? await getCvDocumentById(user.id, saved.cvDocumentId)
-      : null;
-    try {
-      await ingestJobsForPrefs(saved, {
-        userId: user.id,
-        cv: profileFromCv(cv),
-      });
-      await stampJobSearchScrapedAt(user.id);
-      scraped = true;
-    } catch (err) {
-      console.warn(
-        "[jobs] live scrape failed",
-        err instanceof Error ? err.message : err,
-      );
-    }
-  }
+  const scraped = false;
+  void options?.scrape;
 
   const library = await listUserJobListings(user.id);
   revalidatePath("/app/career");
@@ -134,34 +109,8 @@ export async function saveJobSearchConfig(
  * open the app — never a global morning scrape for everyone.
  */
 export async function refreshJobOffersIfDue(): Promise<{ scraped: boolean }> {
-  const user = await requireUser();
-  const prefs = await getJobSearchPrefs(user.id);
-  if (!prefs || !shouldScrapeJobSearch(prefs)) {
-    return { scraped: false };
-  }
-  const lastScrapedAt = await getJobSearchLastScrapedAt(user.id);
-  if (!jobScrapeIsDue(lastScrapedAt)) {
-    return { scraped: false };
-  }
-  const cv = prefs.cvDocumentId
-    ? await getCvDocumentById(user.id, prefs.cvDocumentId)
-    : null;
-  try {
-    await ingestJobsForPrefs(prefs, {
-      userId: user.id,
-      cv: profileFromCv(cv),
-    });
-    await stampJobSearchScrapedAt(user.id);
-  } catch (err) {
-    console.warn(
-      "[jobs] silent daily scrape failed",
-      err instanceof Error ? err.message : err,
-    );
-    return { scraped: false };
-  }
-  revalidatePath("/app/career");
-  revalidatePath("/app");
-  return { scraped: true };
+  // Scraped job boards are disabled; candidatures remain manual in job-tracker.
+  return { scraped: false };
 }
 
 /** Start tracking an offer — no extra scrape, so it stays instant. */

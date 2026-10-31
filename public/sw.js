@@ -1,5 +1,5 @@
 /* hub PWA — static shell only; never cache auth or API */
-const CACHE = "hub-shell-v4";
+const CACHE = "hub-shell-v5";
 const PRECACHE = [
   "/manifest.webmanifest",
   "/icons/icon-192x192.png",
@@ -11,7 +11,9 @@ function isNetworkOnly(url) {
     url.pathname.startsWith("/api/") ||
     url.pathname.startsWith("/auth/") ||
     url.pathname.startsWith("/sign-in") ||
-    url.pathname.startsWith("/sign-up")
+    url.pathname.startsWith("/sign-up") ||
+    url.pathname.startsWith("/forgot-password") ||
+    url.pathname.startsWith("/reset-password")
   );
 }
 
@@ -75,7 +77,7 @@ self.addEventListener("push", (event) => {
     title: "hub",
     body: "",
     href: "/app/ai",
-    tag: "devhub",
+    tag: "hub",
     severity: "info",
   };
 

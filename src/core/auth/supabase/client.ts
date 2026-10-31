@@ -6,7 +6,7 @@ export function createClient() {
   const key =
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
-    throw new Error("Missing Supabase URL or anon key");
+    throw new Error("Configuration auth incomplète (URL ou clé publique).");
   }
   return createBrowserClient(url, key);
 }

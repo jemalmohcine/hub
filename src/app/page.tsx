@@ -28,7 +28,7 @@ const LANDING_PITCH: Record<ModuleId, string> = {
     "Un tableau de bord unique : ce qui a changé, tes modules, et un accès rapide à tout le hub.",
   ai: "Un fil d’actualités IA lisible : modèles, prix, dépôts et alertes quand il faut agir.",
   cv: "Crée, adapte et exporte ton CV développeur, y compris pour une offre précise.",
-  jobs: "Offres près de chez toi ou en télétravail, filtrées selon ton CV, et suivi des candidatures.",
+  jobs: "Suis tes candidatures et tes relances, sans tableur éparpillé.",
   snippets:
     "Tes bouts de code et tes notes, retrouvés par langage, tag ou intention, sans quitter le hub.",
   expenses:
@@ -39,40 +39,40 @@ const STEPS = [
   {
     step: "01",
     title: "Tu crées un compte",
-    text: "Google, GitHub ou email. Tu peux ajouter un mot de passe plus tard si tu t’es inscrit avec Google.",
+    text: "Email et mot de passe. Confirmation par mail si ton projet l’exige.",
   },
   {
     step: "02",
     title: "Tu ouvres tes modules",
-    text: "AI, CV, candidatures, snippets et budget outils vivent dans le même espace, sur téléphone comme sur ordinateur.",
+    text: "Veille IA, CV, candidatures, snippets et budget outils vivent dans le même espace, sur téléphone comme sur ordinateur.",
   },
   {
     step: "03",
     title: "Tu travailles au même endroit",
-    text: "Plus besoin de dix onglets. Tes notes, tes offres et ta veille restent dans DevHub.",
+    text: "Plus besoin de dix onglets. Tes notes, ta veille et ton suivi restent dans hub.",
   },
 ] as const;
 
 const FAQS = [
   {
-    question: "C’est quoi DevHub ?",
+    question: "C’est quoi hub ?",
     answer:
-      "DevHub est un hub pour développeurs : veille IA, CV, candidatures, snippets et suivi du budget des outils, dans un seul espace.",
+      "hub regroupe le quotidien d’un développeur : veille IA, CV exportable, candidatures, snippets et budget outils, dans un seul espace.",
   },
   {
-    question: "Puis-je me connecter avec Google ?",
+    question: "Comment je me connecte ?",
     answer:
-      "Oui, avec Google, GitHub ou email. Si tu t’inscris avec Google, tu peux ensuite ajouter un mot de passe pour te connecter aussi avec ton email.",
+      "Avec ton email et ton mot de passe. Tu peux réinitialiser le mot de passe depuis l’écran de connexion.",
   },
   {
-    question: "DevHub est-il gratuit ?",
+    question: "hub est-il gratuit ?",
     answer:
       "Oui, tu peux créer un compte gratuitement. Certains modules avancés sont réservés au plan Pro.",
   },
   {
     question: "Est-ce que ça marche sur téléphone ?",
     answer:
-      "Oui. DevHub est pensé mobile-first et s’installe comme une application (PWA).",
+      "Oui. hub est pensé mobile-first et s’installe comme une application (PWA).",
   },
 ] as const;
 
@@ -182,7 +182,7 @@ export default function LandingPage() {
         <section className="flex min-h-[calc(100dvh-5.5rem)] flex-col justify-center pb-16 pt-8 sm:pt-12">
           <Container size="content">
             <Stack gap={5} className="max-w-3xl animate-landing-rise">
-              <Eyebrow>Hub développeur</Eyebrow>
+              <Eyebrow>hub · développeur</Eyebrow>
               <Heading
                 level={1}
                 className="!text-[clamp(2.75rem,8vw,4.75rem)] !leading-[0.95] !tracking-[-0.04em]"
@@ -228,7 +228,7 @@ export default function LandingPage() {
               {modules.map((mod, index) => (
                 <article
                   key={mod.id}
-                  className="rounded-2xl border border-border bg-card/40 p-6 backdrop-blur-sm animate-landing-rise"
+                  className="group rounded-2xl border border-border/80 bg-card/60 p-6 shadow-[var(--dh-shadow-sm)] ring-1 ring-transparent backdrop-blur-sm transition duration-[var(--dh-duration)] hover:border-primary/25 hover:bg-card hover:shadow-[var(--dh-shadow-md)] hover:ring-primary/15 animate-landing-rise"
                   style={{ animationDelay: `${index * 70}ms` }}
                 >
                   <Cluster gap={3} className="mb-3">
@@ -286,11 +286,11 @@ export default function LandingPage() {
               <article className="border-t border-border pt-6">
                 <KeyRound className="mb-4 size-5 text-primary" aria-hidden />
                 <Heading level={3} className="!text-lg">
-                  Connexion comme tu veux
+                  Connexion simple
                 </Heading>
                 <Text size="sm" tone="muted" className="mt-2">
-                  Google, GitHub ou email. Tu peux lier un mot de passe ensuite
-                  pour te connecter aussi sans Google.
+                  Email et mot de passe, avec réinitialisation si tu l’as oublié.
+                  Pas de compte tiers obligatoire.
                 </Text>
               </article>
               <article className="border-t border-border pt-6">
@@ -339,7 +339,7 @@ export default function LandingPage() {
               />
               <Stack gap={4} className="relative max-w-xl animate-landing-rise">
                 <Heading level={2} className="!text-3xl sm:!text-4xl">
-                  Rejoins DevHub.
+                  Rejoins hub.
                 </Heading>
                 <Text tone="muted">
                   Crée un compte en quelques secondes. Tes modules t’attendent :

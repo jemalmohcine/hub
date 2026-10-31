@@ -2,7 +2,6 @@ import type { HubUser } from "@/core/auth/types";
 import { hasEntitlement, ENTITLEMENTS } from "@/core/entitlements";
 import { daysBetween } from "@/lib/dates";
 import { plainDash } from "@/lib/text";
-import { shouldScrapeJobSearch } from "@/modules/job-board/filters";
 import { aiIntelInboxHref, aiIntelItemHref } from "@/modules/ai-intel/item-link";
 import {
   currentYearRange,
@@ -11,14 +10,10 @@ import {
 import { getAiIntelFeed, getLatestAiIntelRun } from "@/modules/ai-intel/queries";
 import { sourceDisplayName } from "@/modules/ai-intel/source-label";
 import { computeMonthlyTotals, listDevExpenseServices } from "@/modules/dev-expenses/queries";
-import { rankListingsForPrefs } from "@/modules/job-board/fit";
-import { listUserJobListings, getJobSearchPrefs } from "@/modules/job-board/queries";
 import { listJobApplications } from "@/modules/job-tracker/queries";
 import type { TodayDigest, TodayHighlight, TodaySignal } from "@/modules/today/types";
 import { formatCurrencyCents } from "@/lib/numbers";
 
-/** A listing scraped within this window counts as "new" on the board. */
-const NEW_LISTING_DAYS = 3;
 const MAX_HIGHLIGHTS = 3;
 
 const TONE_ORDER = { urgent: 0, attention: 1, neutral: 2 } as const;
@@ -60,31 +55,9 @@ async function aiSignals(userId: string): Promise<{
 }
 
 async function jobSignals(userId: string): Promise<TodaySignal[]> {
-  const prefs = await getJobSearchPrefs(userId).catch(() => null);
-  const [library, applications] = await Promise.all([
-    shouldScrapeJobSearch(prefs) && prefs
-      ? listUserJobListings(userId).catch(() => [])
-      : Promise.resolve([]),
-    listJobApplications(userId).catch(() => []),
-  ]);
-  const listings =
-    prefs && library.length > 0 ? rankListingsForPrefs(library, prefs) : [];
+  const applications = await listJobApplications(userId).catch(() => []);
 
   const signals: TodaySignal[] = [];
-
-  const fresh = listings.filter(
-    (listing) => daysBetween(listing.scrapedAt) < NEW_LISTING_DAYS,
-  );
-  if (fresh.length > 0) {
-    signals.push({
-      id: "jobs-new",
-      module: "jobs",
-      tone: "neutral",
-      label: `${fresh.length} ${plural(fresh.length, "nouvelle offre", "nouvelles offres")}`,
-      detail: `Parues ces ${NEW_LISTING_DAYS} derniers jours.`,
-      href: "/app/career?tab=offers",
-    });
-  }
 
   const dueFollowUps = applications.filter(
     (application) =>

@@ -12,7 +12,9 @@ Référence fonctionnelle : commit `0ba91f23`.
 | Veille UI (module ai-intel) | OK, données **`veille_ia_items`** + saves **`veille_ia_saves`** |
 | `POST /api/veille/ingest` + `x-ingest-secret` | OK |
 | Snippets, CV builder + export PDF, dépenses dev, catalogue outils | OK (code Next d’origine) |
-| PWA (`manifest.webmanifest`, icônes, SW via Serwist si activé) | OK |
+| PWA (`manifest.webmanifest`, icônes hub, SW statique) | OK |
+| Rebrand **hub** + palette indigo + logo SVG/PNG | OK |
+| Mobile : safe areas, bottom nav, bouton accueil | OK |
 | Offres scrapées (job-board ingest / onglet Offres) | **Retiré** (demande Mohcine) |
 | Candidatures manuelles (job-tracker) | OK |
 

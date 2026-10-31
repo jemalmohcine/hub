@@ -24,7 +24,7 @@ export type ModuleDefinition = {
 export const MODULE_REGISTRY: ModuleDefinition[] = [
   {
     id: "overview",
-    label: "Overview",
+    label: "Aperçu",
     description: "Tableau de bord du hub",
     pageDescription: "Ce qui a changé depuis ta dernière visite.",
     upsell: "",
@@ -62,11 +62,9 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
   {
     id: "jobs",
     label: "Candidatures",
-    description: "Offres près de chez toi et suivi des candidatures",
-    pageDescription:
-      "Offres dev mises à jour en continu, filtrées selon le CV choisi (compétences, expérience, poste).",
-    upsell:
-      "Télétravail et présentiel en même temps : les offres arrivent dès que tu enregistres, puis toutes les 3 heures.",
+    description: "Suivi manuel des candidatures et relances",
+    pageDescription: "Note tes candidatures, dates et relances au même endroit que ton CV.",
+    upsell: "Centralise entreprises, statuts et rappels de relance sans tableur.",
     href: "/app/career?tab=jobs",
     order: 25,
     requiredEntitlement: ENTITLEMENTS.jobs,

@@ -11,7 +11,7 @@ export const HTTP_TIMEOUTS = {
   scrape: 45_000,
 } as const;
 
-const USER_AGENT = "DevHub/1.0 (+https://github.com/devhub; nightly digest)";
+const USER_AGENT = "hub/1.0 (+https://github.com/jemalmohcine/hub; fetch)";
 
 const DEFAULT_ACCEPT =
   "text/html,application/xhtml+xml,application/xml,application/json,*/*";

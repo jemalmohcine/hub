@@ -35,11 +35,11 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   keywords: [
-    "DevHub",
+    "hub",
     "hub développeur",
     "veille IA",
     "CV développeur",
-    "offres d’emploi dev",
+    "candidatures dev",
     "snippets",
     "budget outils",
   ],
@@ -85,7 +85,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   // iOS PWA ignores media-query theme-color and falls back to black chrome.
-  themeColor: "#1a2030",
+  themeColor: "#0c0a1f",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
