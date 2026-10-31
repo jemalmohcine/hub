@@ -1,34 +1,98 @@
-# Restauration Next.js (après #73)
+# Parité Nuxt 4 ↔ Next (`main` post #79)
 
-Référence fonctionnelle : commit `0ba91f23`.
+Référence : application Next sur `main` (hub, veille ingest, auth e-mail, PWA).
 
-## Fait dans cette PR
+Légende : `[x]` porté et testé build · `[~]` partiel · `[ ]` manquant
 
-| Zone | Statut |
-|------|--------|
-| Stack Next 16 + App Router (`src/app`) | OK |
-| Routes app : overview, ai, career, snippets, expenses, settings (+ sous-pages) | OK |
-| Auth e-mail / mot de passe (+ confirmation) | OK (OAuth retiré) |
-| Veille UI (module ai-intel) | OK, données **`veille_ia_items`** + saves **`veille_ia_saves`** |
-| `POST /api/veille/ingest` + `x-ingest-secret` | OK |
-| Snippets, CV builder + export PDF, dépenses dev, catalogue outils | OK (code Next d’origine) |
-| PWA (`manifest.webmanifest`, icônes hub, SW statique) | OK |
-| Rebrand **hub** + palette indigo + logo SVG/PNG | OK |
-| Mobile : safe areas, bottom nav, bouton accueil | OK |
-| Offres scrapées (job-board ingest / onglet Offres) | **Retiré** (demande Mohcine) |
-| Candidatures manuelles (job-tracker) | OK |
+## Stack
 
-## Écarts connus / non repris
+| Élément | Statut |
+|---------|--------|
+| Nuxt 4 + Nitro preset Vercel | [x] |
+| `@nuxtjs/supabase` (cookies SSR, pas de `event.req.headers.get`) | [x] |
+| Tailwind v4 + tokens `--dh-*` + DS global (`components/ds/*`) | [x] |
+| Shell / nav (`AppShell`, bottom nav, safe areas) | [x] |
+| PWA (`manifest.webmanifest`, icônes, `sw.js` sans cache auth/API) | [x] |
+| Variables `NUXT_PUBLIC_*` + `VEILLE_INGEST_SECRET` | [x] |
 
-| Next `0ba91f23` | Cette PR | Note |
-|-----------------|----------|------|
-| Pipeline `ai_intel_*` + cron GitHub | Non | Ingest externe veille uniquement |
-| Onglet Carrière « Offres » (scraping) | Retiré | Volontaire |
-| OAuth Google / GitHub | Retiré | E-mail + mot de passe |
-| Billing Stripe actif | Pages présentes, flux selon clés PSP | Comme avant si non configuré |
-| Admin `/admin` | Inchangé | Rôle admin requis |
-| Notifications push veille | Code présent, VAPID optionnel | Non activé sans clés |
+## Routes publiques
 
-## Nuxt (#73–#78)
+| Route Next | Route Nuxt | Statut |
+|------------|------------|--------|
+| `/` | `/` | [x] |
+| `/sign-in` | `/sign-in` → `/auth/login` | [x] |
+| `/sign-up` | `/sign-up` → `/auth/sign-up` | [x] |
+| `/forgot-password` | `/auth/forgot-password` | [x] |
+| `/reset-password` | `/reset-password` → `/auth/update-password` | [x] |
 
-Abandonné. PR #78 considérée comme remplacée par cette branche.
+## Auth
+
+| Comportement | Statut |
+|--------------|--------|
+| E-mail + mot de passe | [x] |
+| Confirmation e-mail (`/auth/confirm`) | [x] |
+| Session après rechargement complet (SSR `serverSupabaseUser`) | [x] |
+| ID utilisateur = JWT `sub` / `user.id` Supabase | [x] |
+| Pas de mention Supabase visible | [x] |
+
+## App (`/app/*`)
+
+| Route | Statut | Notes |
+|-------|--------|-------|
+| `/app` → overview | [x] | |
+| `/app/overview` | [x] | |
+| `/app/ai` | [x] | Filtre défaut 7 jours (`feed_date`) |
+| `/app/career` | [x] | CV + candidatures manuelles |
+| `/app/career?tab=cv` | [x] | |
+| `/app/career?tab=jobs` | [x] | |
+| `/app/cv` | [x] | redirect |
+| `/app/jobs` | [x] | redirect |
+| `/app/snippets` | [x] | |
+| `/app/expenses` | [~] | Liste services ; pas encore diagnostic IA complet |
+| `/app/expenses?tab=tools` | [x] | Catalogue `dev_tools` |
+| `/app/settings` | [x] | Profil + thème + sécurité consolidés |
+| `/app/settings/account` | [~] | redirect → `/app/settings` |
+| `/app/settings/appearance` | [~] | redirect |
+| `/app/settings/security` | [~] | redirect |
+| `/app/settings/billing` | [~] | redirect (Stripe non câblé côté Nuxt) |
+| `/app/settings/modules` | [~] | redirect |
+| `/admin` | [~] | Lecture stats/flags ; pas toggle flags |
+
+## API / server
+
+| Endpoint | Statut |
+|----------|--------|
+| `POST /api/veille/ingest` + `x-ingest-secret` → `veille_ia_items` | [x] |
+| `POST /api/billing/webhook` | [x] |
+| `POST /api/billing/checkout` | [ ] |
+| `GET/POST /api/cron/ai-intel` | [ ] | Non utilisé sur main (ingest externe) |
+
+## Fonctionnel métier
+
+| Feature | Statut |
+|---------|--------|
+| Veille 7 jours (`metadata.feed_date` / colonne `feed_date`) | [x] |
+| Ingest veille externe | [x] |
+| CV builder + export PDF | [~] | Export via `window.print` (Next a rendu dédié) |
+| Candidatures manuelles | [x] |
+| Scraping offres emploi | [x] | Absent (volontaire) |
+| Snippets CRUD | [x] | Composants Nuxt d’origine |
+| Dépenses + advisor LLM | [~] | Liste services seulement |
+| Notifications push veille | [ ] | |
+| OAuth Google/GitHub | [x] | Absent (volontaire) |
+
+## Copy / UX
+
+| Règle | Statut |
+|-------|--------|
+| Copy FR humaine, sans tiret cadratin | [x] |
+| Rebrand **hub** + logo `/icons/*` | [x] |
+
+## Vérifications release
+
+| Check | Statut |
+|-------|--------|
+| `npm run build` vert | en cours CI |
+| Preview hub-dev Ready | en cours CI |
+| `curl /sign-in` 200/redirect | en cours CI |
+| `curl /app/*` pas de 500 | en cours CI |
