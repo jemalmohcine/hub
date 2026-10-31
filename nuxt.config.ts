@@ -26,6 +26,8 @@ export default defineNuxtConfig({
       appUrl: process.env.NUXT_PUBLIC_APP_URL || "http://localhost:3000",
       supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || "",
       supabaseKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY || "",
+      vapidPublicKey:
+        process.env.NUXT_PUBLIC_VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "",
     },
   },
   nitro: {

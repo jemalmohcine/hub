@@ -4,7 +4,7 @@ const colorMode = useColorMode();
 </script>
 
 <template>
-  <div class="landing-glow min-h-dvh">
+  <div class="landing-studio min-h-dvh">
     <header class="mx-auto flex max-w-5xl items-center justify-between px-4 py-5">
       <span class="text-[length:var(--dh-text-base)] font-semibold tracking-tight">hub</span>
       <DsButton

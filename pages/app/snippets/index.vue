@@ -6,7 +6,15 @@ import { userFacingDataError } from "~/shared/lib/user-error";
 const client = useSupabaseClient();
 const user = useSupabaseUser();
 
+const copiedId = ref<string | null>(null);
 const q = ref("");
+
+function onCopied(id: string) {
+  copiedId.value = id;
+  setTimeout(() => {
+    if (copiedId.value === id) copiedId.value = null;
+  }, 2000);
+}
 const categoryId = ref<string | null>(null);
 const selectedId = ref<string | null>(null);
 
@@ -98,12 +106,11 @@ const editorSnippet = computed(() =>
 
 <template>
   <div>
-    <DsPageHeader
-      title="Snippets"
-      description="Retrouvez, étiquetez et copiez vos extraits de code."
-      :pending="pending && !data"
-      :error="error?.message ?? null"
-    />
+    <DsPageHeader compact title="Snippets" description="Toucher une ligne pour copier le code.">
+      <template #actions>
+        <DsButton size="sm" @click="newSnippet">Nouveau</DsButton>
+      </template>
+    </DsPageHeader>
     <DsInput v-if="!error && data" v-model="q" placeholder="Rechercher…" class="mb-4 max-w-md" aria-label="Rechercher snippets" />
     <div v-if="!error && data" class="grid gap-6 lg:grid-cols-[220px_1fr_1fr]">
       <SnippetSidebar
@@ -117,7 +124,9 @@ const editorSnippet = computed(() =>
         <SnippetList
           :snippets="filtered"
           :selected-id="selectedId"
+          :copied-id="copiedId"
           @select="selectedId = $event"
+          @copy="onCopied"
         />
       </div>
       <SnippetEditor

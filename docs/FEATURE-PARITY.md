@@ -1,98 +1,80 @@
-# Parité Nuxt 4 ↔ Next (`main` post #79)
+# Parité Nuxt 4 ↔ ancienne app Next (`main` #79)
 
-Référence : application Next sur `main` (hub, veille ingest, auth e-mail, PWA).
+Référence fonctionnelle : hub post #79 (veille ingest externe, pas de scrape emploi).
 
-Légende : `[x]` porté et testé build · `[~]` partiel · `[ ]` manquant
+**Design Nuxt** : charte distincte (papier chaud, violet, mobile 390px, accueil en 2 taps). Ce n’est pas un reskin Next.
+
+Légende : `[x]` livré · `[—]` hors scope volontaire
 
 ## Stack
 
 | Élément | Statut |
 |---------|--------|
-| Nuxt 4 + Nitro preset Vercel | [x] |
-| `@nuxtjs/supabase` (cookies SSR, pas de `event.req.headers.get`) | [x] |
-| Tailwind v4 + tokens `--dh-*` + DS global (`components/ds/*`) | [x] |
-| Shell / nav (`AppShell`, bottom nav, safe areas) | [x] |
-| PWA (`manifest.webmanifest`, icônes, `sw.js` sans cache auth/API) | [x] |
-| Variables `NUXT_PUBLIC_*` + `VEILLE_INGEST_SECRET` | [x] |
+| Nuxt 4 + Nitro Vercel | [x] |
+| DS global `components/ds/*` partout | [x] |
+| Auth SSR (`serverSupabaseUser`, pas `event.req.headers.get`) | [x] |
+| PWA + SW sans cache auth/API | [x] |
+| Tree Next `src/` retiré | [x] |
 
 ## Routes publiques
 
-| Route Next | Route Nuxt | Statut |
-|------------|------------|--------|
-| `/` | `/` | [x] |
-| `/sign-in` | `/sign-in` → `/auth/login` | [x] |
-| `/sign-up` | `/sign-up` → `/auth/sign-up` | [x] |
-| `/forgot-password` | `/auth/forgot-password` | [x] |
-| `/reset-password` | `/reset-password` → `/auth/update-password` | [x] |
+| Route | Statut |
+|-------|--------|
+| `/`, `/sign-in`, `/sign-up`, auth complète | [x] |
+| `/reset-password` → update-password | [x] |
 
-## Auth
+## App
 
-| Comportement | Statut |
-|--------------|--------|
-| E-mail + mot de passe | [x] |
-| Confirmation e-mail (`/auth/confirm`) | [x] |
-| Session après rechargement complet (SSR `serverSupabaseUser`) | [x] |
-| ID utilisateur = JWT `sub` / `user.id` Supabase | [x] |
-| Pas de mention Supabase visible | [x] |
+| Route | Statut |
+|-------|--------|
+| `/app/overview` (accès rapide Veille + Snippets) | [x] |
+| `/app/ai` (7 j `feed_date`) | [x] |
+| `/app/snippets` (copie 1 tap) | [x] |
+| `/app/career`, `?tab=cv` / `?tab=jobs` | [x] |
+| `/app/expenses`, `?tab=tools` | [x] |
+| `/app/settings` + `/account` `/appearance` `/security` `/billing` `/modules` | [x] |
+| `/admin` | [x] |
+| Redirects `cv`, `jobs`, `profil`, `offres` | [x] |
 
-## App (`/app/*`)
-
-| Route | Statut | Notes |
-|-------|--------|-------|
-| `/app` → overview | [x] | |
-| `/app/overview` | [x] | |
-| `/app/ai` | [x] | Filtre défaut 7 jours (`feed_date`) |
-| `/app/career` | [x] | CV + candidatures manuelles |
-| `/app/career?tab=cv` | [x] | |
-| `/app/career?tab=jobs` | [x] | |
-| `/app/cv` | [x] | redirect |
-| `/app/jobs` | [x] | redirect |
-| `/app/snippets` | [x] | |
-| `/app/expenses` | [~] | Liste services ; pas encore diagnostic IA complet |
-| `/app/expenses?tab=tools` | [x] | Catalogue `dev_tools` |
-| `/app/settings` | [x] | Profil + thème + sécurité consolidés |
-| `/app/settings/account` | [~] | redirect → `/app/settings` |
-| `/app/settings/appearance` | [~] | redirect |
-| `/app/settings/security` | [~] | redirect |
-| `/app/settings/billing` | [~] | redirect (Stripe non câblé côté Nuxt) |
-| `/app/settings/modules` | [~] | redirect |
-| `/admin` | [~] | Lecture stats/flags ; pas toggle flags |
-
-## API / server
+## API
 
 | Endpoint | Statut |
 |----------|--------|
-| `POST /api/veille/ingest` + `x-ingest-secret` → `veille_ia_items` | [x] |
+| `POST /api/veille/ingest` | [x] |
 | `POST /api/billing/webhook` | [x] |
-| `POST /api/billing/checkout` | [ ] |
-| `GET/POST /api/cron/ai-intel` | [ ] | Non utilisé sur main (ingest externe) |
+| `POST /api/expenses/diagnose-service` | [x] |
+| `POST /api/expenses/diagnose-budget` | [x] |
+| `POST /api/admin/module-flag` | [x] |
+| `POST/DELETE /api/notifications/push` | [x] |
+| `POST /api/billing/checkout` | [—] paiement hors scope |
+| `GET/POST /api/cron/ai-intel` | [—] pas de fetch AI news in-app |
 
-## Fonctionnel métier
+## Fonctionnel
 
 | Feature | Statut |
 |---------|--------|
-| Veille 7 jours (`metadata.feed_date` / colonne `feed_date`) | [x] |
-| Ingest veille externe | [x] |
-| CV builder + export PDF | [~] | Export via `window.print` (Next a rendu dédié) |
+| Veille ingest externe uniquement | [x] |
+| CV + export PDF (iframe print Next) | [x] |
 | Candidatures manuelles | [x] |
-| Scraping offres emploi | [x] | Absent (volontaire) |
-| Snippets CRUD | [x] | Composants Nuxt d’origine |
-| Dépenses + advisor LLM | [~] | Liste services seulement |
-| Notifications push veille | [ ] | |
-| OAuth Google/GitHub | [x] | Absent (volontaire) |
+| Advisor dépenses (catalogue + LLM optionnel) | [x] |
+| Push notifications (VAPID) | [x] |
+| Admin toggle module flags | [x] |
+| OAuth / scrape offres | [—] |
 
-## Copy / UX
+## UX Nuxt (Mohcine)
 
 | Règle | Statut |
 |-------|--------|
-| Copy FR humaine, sans tiret cadratin | [x] |
-| Rebrand **hub** + logo `/icons/*` | [x] |
+| Nouveau design (pas reskin Next) | [x] |
+| Mobile-first 390px, bottom nav + bouton accueil | [x] |
+| Une action principale par écran | [x] |
+| Veille + Snippets depuis l’accueil | [x] |
+| Empty / loading states DS | [x] |
 
-## Vérifications release
+## Release PR #80
 
 | Check | Statut |
 |-------|--------|
-| `npm run build` vert | [x] local |
-| Preview hub-dev Ready | CI en cours (#80) |
-| `curl /sign-in` 200/redirect | à valider sur preview |
-| `curl /app/*` pas de 500 | à valider sur preview |
+| `npm run build` | [x] local |
+| Preview hub-dev Ready | CI |
+| curl `/sign-in`, `/app/*` sans 500 | CI / preview |

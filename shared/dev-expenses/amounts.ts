@@ -16,3 +16,22 @@ export function monthlyEquivalentCents(service: DevExpenseService): number {
 export function effectiveMonthlyCents(service: ServiceWithStats): number {
   return service.monthAmountCents ?? monthlyEquivalentCents(service);
 }
+
+export function computeMonthlyTotals(services: ServiceWithStats[]): {
+  currentMonthCents: number;
+  plannedMonthlyCents: number;
+  ytdCents: number;
+} {
+  let currentMonthCents = 0;
+  let plannedMonthlyCents = 0;
+  let ytdCents = 0;
+
+  for (const s of services) {
+    if (!s.isActive) continue;
+    plannedMonthlyCents += monthlyEquivalentCents(s);
+    ytdCents += s.ytdTotalCents;
+    currentMonthCents += effectiveMonthlyCents(s);
+  }
+
+  return { currentMonthCents, plannedMonthlyCents, ytdCents };
+}

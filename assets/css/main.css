@@ -18,42 +18,51 @@
   --color-warning: var(--dh-warning);
 }
 
+/* Nuxt hub — distinct from Next: warm paper, violet accent, soft geometry */
 :root {
   color-scheme: light dark;
-  --dh-bg: #f4f6fb;
-  --dh-fg: #0c1222;
-  --dh-muted: #eef1f8;
-  --dh-muted-fg: #475569;
-  --dh-card: #ffffff;
-  --dh-border: #dfe4ef;
-  --dh-primary: #1d4ed8;
+  --dh-bg: #f7f5f2;
+  --dh-fg: #14121a;
+  --dh-muted: #ece8e2;
+  --dh-muted-fg: #5c5768;
+  --dh-card: #fffcf8;
+  --dh-border: #ddd6cc;
+  --dh-primary: #6d28d9;
   --dh-primary-fg: #ffffff;
-  --dh-accent: #e8efff;
-  --dh-destructive: #dc2626;
-  --dh-success: #059669;
-  --dh-warning: #d97706;
-  --dh-sidebar-w: 15.5rem;
-  --dh-radius: 0.625rem;
-  --dh-radius-lg: 1rem;
-  --dh-shadow: 0 1px 2px rgb(12 18 34 / 6%), 0 8px 24px rgb(12 18 34 / 6%);
-  --dh-text-xs: 0.75rem;
-  --dh-text-sm: 0.875rem;
-  --dh-text-base: 1rem;
-  --dh-text-lg: 1.125rem;
-  --dh-text-xl: 1.25rem;
-  --dh-text-2xl: 1.5rem;
+  --dh-accent: #ede9fe;
+  --dh-accent-soft: #f5f3ff;
+  --dh-accent-line: rgb(109 40 217 / 22%);
+  --dh-destructive: #b91c1c;
+  --dh-success: #047857;
+  --dh-warning: #b45309;
+  --dh-sidebar-w: 16rem;
+  --dh-radius: 0.75rem;
+  --dh-radius-lg: 1.125rem;
+  --dh-radius-xl: 1.375rem;
+  --dh-shadow: 0 1px 0 rgb(20 18 26 / 4%), 0 12px 32px rgb(20 18 26 / 6%);
+  --dh-text-xs: 0.8125rem;
+  --dh-text-sm: 0.9375rem;
+  --dh-text-base: 1.0625rem;
+  --dh-text-lg: 1.1875rem;
+  --dh-text-xl: 1.3125rem;
+  --dh-text-2xl: 1.625rem;
+  --dh-space-page: 1rem;
+  --dh-nav-h: 4.25rem;
 }
 
 .dark {
-  --dh-bg: #070b14;
-  --dh-fg: #e8edf7;
-  --dh-muted: #101827;
-  --dh-muted-fg: #94a3b8;
-  --dh-card: #0f1629;
-  --dh-border: #1e293b;
-  --dh-primary: #3b82f6;
-  --dh-accent: #172554;
-  --dh-shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 12px 32px rgb(0 0 0 / 35%);
+  --dh-bg: #0e0c12;
+  --dh-fg: #f3f0fa;
+  --dh-muted: #1a1722;
+  --dh-muted-fg: #a89fb8;
+  --dh-card: #16131d;
+  --dh-border: #2a2533;
+  --dh-primary: #a78bfa;
+  --dh-primary-fg: #140f1f;
+  --dh-accent: #2e1065;
+  --dh-accent-soft: rgb(167 139 250 / 8%);
+  --dh-accent-line: rgb(167 139 250 / 25%);
+  --dh-shadow: 0 1px 0 rgb(0 0 0 / 35%), 0 16px 40px rgb(0 0 0 / 45%);
 }
 
 html,
@@ -65,6 +74,7 @@ body,
 body {
   @apply bg-background text-foreground antialiased;
   font-size: var(--dh-text-sm);
+  line-height: 1.55;
 }
 
 .app-shell {
@@ -83,22 +93,35 @@ body {
 .dh-page-title {
   font-size: var(--dh-text-2xl);
   @apply font-semibold tracking-tight text-foreground;
+  letter-spacing: -0.02em;
 }
 
 .dh-muted {
   @apply text-muted-foreground;
 }
 
-.landing-glow {
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgb(29 78 216 / 18%), transparent),
-    radial-gradient(ellipse 60% 40% at 100% 0%, rgb(5 150 105 / 10%), transparent);
+.dh-app-main {
+  max-width: 42rem;
+  margin-inline: auto;
 }
 
-.dark .landing-glow {
+@media (min-width: 1024px) {
+  .dh-app-main {
+    max-width: 56rem;
+  }
+}
+
+.landing-studio {
   background:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgb(59 130 246 / 22%), transparent),
-    radial-gradient(ellipse 60% 40% at 100% 0%, rgb(16 185 129 / 8%), transparent);
+    radial-gradient(120% 80% at 50% -30%, rgb(109 40 217 / 14%), transparent 55%),
+    radial-gradient(80% 50% at 100% 20%, rgb(4 120 87 / 8%), transparent 50%),
+    var(--dh-bg);
+}
+
+.dark .landing-studio {
+  background:
+    radial-gradient(120% 80% at 50% -30%, rgb(167 139 250 / 16%), transparent 55%),
+    var(--dh-bg);
 }
 
 @keyframes dh-pulse {
@@ -114,4 +137,15 @@ body {
 .dh-skeleton {
   animation: dh-pulse 1.4s ease-in-out infinite;
   @apply rounded-[var(--dh-radius)] bg-muted;
+}
+
+.dh-toast {
+  @apply fixed left-1/2 z-[100] -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-[length:var(--dh-text-sm)] font-medium shadow-lg;
+  bottom: calc(var(--dh-nav-h) + env(safe-area-inset-bottom) + 0.75rem);
+}
+
+@media (min-width: 1024px) {
+  .dh-toast {
+    bottom: 1.5rem;
+  }
 }

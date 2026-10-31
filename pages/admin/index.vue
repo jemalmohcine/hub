@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { getSortedModules } from "~/shared/core/module-registry";
+
 const client = useSupabaseClient();
 const user = useSupabaseUser();
-const router = useRouter();
+const toggling = ref<string | null>(null);
 
 const { data: profile } = await useAsyncData(
   () => `admin-gate-${user.value?.id ?? "anon"}`,
@@ -17,44 +19,80 @@ const { data: profile } = await useAsyncData(
 watch(
   profile,
   (p) => {
-    if (p && p.role !== "admin") router.replace("/app/overview");
+    if (p && p.role !== "admin") navigateTo("/app/overview");
   },
   { immediate: true },
 );
 
-const { data: stats } = await useAsyncData(
+const { data: stats, refresh } = await useAsyncData(
   "admin-stats",
   async () => {
     const [{ count: users }, { data: flags }] = await Promise.all([
       client.from("profiles").select("*", { count: "exact", head: true }),
       client.from("module_flags").select("module_id, enabled"),
     ]);
-    return { users: users ?? 0, flags: flags ?? [] };
+    return { users: users ?? 0, flags: flags ?? [], modules: getSortedModules() };
   },
   { server: false },
 );
+
+const flagMap = computed(() => {
+  const map = new Map<string, boolean>();
+  for (const f of stats.value?.flags ?? []) {
+    map.set(f.module_id as string, Boolean(f.enabled));
+  }
+  return map;
+});
+
+async function toggle(modId: string, enabled: boolean) {
+  toggling.value = modId;
+  try {
+    await $fetch("/api/admin/module-flag", {
+      method: "POST",
+      body: { moduleId: modId, enabled },
+    });
+    await refresh();
+  } finally {
+    toggling.value = null;
+  }
+}
 </script>
 
 <template>
   <div>
-    <DsPageHeader title="Admin" description="Flags modules et vue plateforme." />
-    <div v-if="stats" class="grid gap-3 sm:grid-cols-2">
+    <DsPageHeader title="Admin" description="Flags modules et vue plateforme.">
+      <template #actions>
+        <DsBadge tone="success">admin</DsBadge>
+      </template>
+    </DsPageHeader>
+    <div v-if="stats" class="mb-6 grid grid-cols-2 gap-3">
       <DsCard class="p-4">
         <p class="text-xs font-medium uppercase text-muted-foreground">Utilisateurs</p>
         <p class="mt-1 text-2xl font-semibold">{{ stats.users }}</p>
       </DsCard>
       <DsCard class="p-4">
-        <p class="text-xs font-medium uppercase text-muted-foreground">Flags modules</p>
-        <p class="mt-1 text-2xl font-semibold">{{ stats.flags.length }}</p>
+        <p class="text-xs font-medium uppercase text-muted-foreground">Modules</p>
+        <p class="mt-1 text-2xl font-semibold">{{ stats.modules.length }}</p>
       </DsCard>
     </div>
-    <DsCard v-if="stats?.flags.length" class="mt-6 divide-y divide-border">
-      <div v-for="flag in stats.flags" :key="flag.module_id as string" class="flex justify-between px-4 py-3 text-sm">
-        <span>{{ flag.module_id }}</span>
-        <span :class="flag.enabled ? 'text-success' : 'text-muted-foreground'">
-          {{ flag.enabled ? "Actif" : "Désactivé" }}
-        </span>
-      </div>
-    </DsCard>
+    <h2 class="mb-3 text-sm font-semibold">Module flags</h2>
+    <div class="flex flex-col gap-2">
+      <DsCard v-for="mod in stats?.modules ?? []" :key="mod.id" class="flex items-center justify-between gap-3 p-4">
+        <div>
+          <p class="font-medium">{{ mod.label }}</p>
+          <p class="text-xs text-muted-foreground">
+            {{ flagMap.get(mod.id) ?? true ? "Actif globalement" : "Désactivé globalement" }}
+          </p>
+        </div>
+        <DsButton
+          variant="secondary"
+          size="sm"
+          :disabled="toggling === mod.id"
+          @click="toggle(mod.id, !(flagMap.get(mod.id) ?? true))"
+        >
+          {{ flagMap.get(mod.id) ?? true ? "Désactiver" : "Activer" }}
+        </DsButton>
+      </DsCard>
+    </div>
   </div>
 </template>

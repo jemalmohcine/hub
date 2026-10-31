@@ -4,11 +4,12 @@ defineProps<{
   description?: string;
   pending?: boolean;
   error?: string | null;
+  compact?: boolean;
 }>();
 </script>
 
 <template>
-  <header class="mb-6">
+  <header class="mb-6" :class="compact ? 'mb-4' : ''">
     <div v-if="pending" class="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
       <DsSpinner />
       <span>Chargement…</span>
@@ -20,9 +21,16 @@ defineProps<{
     >
       {{ error }}
     </div>
-    <h1 class="dh-page-title">{{ title }}</h1>
-    <p v-if="description" class="mt-1 text-[length:var(--dh-text-sm)] text-muted-foreground">
-      {{ description }}
-    </p>
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div class="min-w-0 flex-1">
+        <h1 class="dh-page-title">{{ title }}</h1>
+        <p v-if="description" class="mt-1 max-w-prose text-[length:var(--dh-text-sm)] leading-relaxed text-muted-foreground">
+          {{ description }}
+        </p>
+      </div>
+      <div v-if="$slots.actions" class="shrink-0">
+        <slot name="actions" />
+      </div>
+    </div>
   </header>
 </template>

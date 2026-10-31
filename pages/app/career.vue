@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import type { CvDocument, CvDocumentSummary } from "~/shared/cv/types";
-import { defaultCvDocument } from "~/shared/cv/defaults";
+import { exportCvPdf } from "~/shared/cv-builder/export";
+import type { CvDocument, CvDocumentSummary } from "~/shared/cv-builder/types";
+import { defaultCvDocument } from "~/shared/cv-builder/defaults";
 import type { JobApplication, JobApplicationInput } from "~/shared/job-tracker/types";
 import { JOB_STATUS_LABELS } from "~/shared/job-tracker/types";
 import { userFacingDataError } from "~/shared/lib/user-error";
@@ -119,12 +120,12 @@ async function saveCv() {
 }
 
 function exportPdf() {
-  const html = `<html><head><title>CV</title></head><body><pre>${cvForm.profile.fullName}\n${cvForm.profile.headline}\n\n${cvForm.profile.summary}</pre></body></html>`;
-  const w = window.open("", "_blank");
-  if (!w) return;
-  w.document.write(html);
-  w.document.close();
-  w.print();
+  const ok = exportCvPdf(cvForm as CvDocument);
+  if (!ok) {
+    useToast().showToast("Impossible d’ouvrir l’impression. Réessaie.");
+  } else {
+    useToast().showToast("Choisis « Enregistrer au format PDF » dans la fenêtre d’impression.");
+  }
 }
 
 const jobForm = reactive<JobApplicationInput>({

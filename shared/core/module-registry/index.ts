@@ -1,25 +1,22 @@
-import type { LucideIcon } from "lucide-react";
-import { Bot, Briefcase, Code2, FileText, LayoutDashboard, PiggyBank } from "lucide-react";
 import type { ModuleStatus } from "~/shared/core/auth/types";
 import { ENTITLEMENTS, type EntitlementKey } from "~/shared/core/entitlements/keys";
 
-export type ModuleId = "overview" | "ai" | "cv" | "jobs" | "snippets" | "expenses";
+export type ModuleIconId = "layout-dashboard" | "bot" | "file-text" | "briefcase" | "code" | "piggy-bank";
 
 export type ModuleDefinition = {
   id: ModuleId;
   label: string;
-  /** One-liner shown in the sidebar and on the overview module cards. */
   description: string;
-  /** Longer default subtitle for the module page header. */
   pageDescription: string;
-  /** Pitch shown when the user lacks the entitlement. */
   upsell: string;
   href: string;
   order: number;
   requiredEntitlement: EntitlementKey | null;
   status: ModuleStatus;
-  icon: LucideIcon;
+  icon: ModuleIconId;
 };
+
+export type ModuleId = "overview" | "ai" | "cv" | "jobs" | "snippets" | "expenses";
 
 export const MODULE_REGISTRY: ModuleDefinition[] = [
   {
@@ -32,7 +29,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     order: 0,
     requiredEntitlement: null,
     status: "active",
-    icon: LayoutDashboard,
+    icon: "layout-dashboard",
   },
   {
     id: "ai",
@@ -44,7 +41,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     order: 10,
     requiredEntitlement: ENTITLEMENTS.ai,
     status: "active",
-    icon: Bot,
+    icon: "bot",
   },
   {
     id: "cv",
@@ -57,7 +54,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     order: 20,
     requiredEntitlement: ENTITLEMENTS.cv,
     status: "active",
-    icon: FileText,
+    icon: "file-text",
   },
   {
     id: "jobs",
@@ -69,7 +66,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     order: 25,
     requiredEntitlement: ENTITLEMENTS.jobs,
     status: "active",
-    icon: Briefcase,
+    icon: "briefcase",
   },
   {
     id: "snippets",
@@ -82,7 +79,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     order: 30,
     requiredEntitlement: ENTITLEMENTS.snippets,
     status: "active",
-    icon: Code2,
+    icon: "code",
   },
   {
     id: "expenses",
@@ -96,7 +93,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
     order: 35,
     requiredEntitlement: ENTITLEMENTS.expenses,
     status: "active",
-    icon: PiggyBank,
+    icon: "piggy-bank",
   },
 ];
 
