@@ -8,7 +8,13 @@ export function useAuthUserId(): ComputedRef<string | null> {
   const claims = useSupabaseUser();
   const session = useSupabaseSession();
 
-  return computed(() => extractAuthUserId(claims.value, session.value?.user?.id ?? null));
+  return computed(() =>
+    extractAuthUserId(
+      claims.value,
+      session.value?.user?.id ?? null,
+      session.value?.access_token ?? null,
+    ),
+  );
 }
 
 export function useAuthUserEmail(): ComputedRef<string | null> {
@@ -25,13 +31,13 @@ export function useAuthUserEmail(): ComputedRef<string | null> {
 }
 
 export async function waitForAuthUserId(timeoutMs = 8000): Promise<string | null> {
-  if (import.meta.server) return null;
-
   const authUserId = useAuthUserId();
   if (authUserId.value) return authUserId.value;
 
-  await restoreClientSession();
+  await syncSupabaseAuthState();
   if (authUserId.value) return authUserId.value;
+
+  if (import.meta.server) return authUserId.value;
 
   return new Promise((resolve) => {
     const stop = watch(authUserId, (id) => {

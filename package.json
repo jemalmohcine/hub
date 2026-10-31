@@ -15,6 +15,7 @@
   "dependencies": {
     "@nuxtjs/supabase": "^2.1.0",
     "@supabase/supabase-js": "^2.110.7",
+    "@vite-pwa/nuxt": "^1.1.1",
     "@vueuse/core": "^13.9.0",
     "@vueuse/nuxt": "^13.9.0",
     "lucide-vue-next": "^0.548.0",

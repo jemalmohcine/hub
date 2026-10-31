@@ -31,6 +31,9 @@ export default defineNuxtConfig({
     routeRules: {
       "/sign-in": { redirect: { to: "/auth/login", statusCode: 301 } },
       "/sign-up": { redirect: { to: "/auth/sign-up", statusCode: 301 } },
+      "/app/profil": { redirect: { to: "/app/career?tab=cv", statusCode: 301 } },
+      "/app/cv": { redirect: { to: "/app/career?tab=cv", statusCode: 301 } },
+      "/app/offres": { redirect: { to: "/app/expenses?tab=tools", statusCode: 301 } },
       "/auth/confirm": { ssr: false },
       "/auth/update-password": { ssr: false },
       "/**": {

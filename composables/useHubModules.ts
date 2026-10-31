@@ -1,4 +1,4 @@
-export type HubModuleId = "overview" | "ai" | "snippets" | "profil" | "offres";
+export type HubModuleId = "overview" | "ai" | "career" | "snippets" | "expenses";
 
 export type HubModule = {
   id: HubModuleId;
@@ -8,41 +8,42 @@ export type HubModule = {
   icon: string;
 };
 
+/** Aligné sur le registre Next (`0ba91f23`). */
 const MODULES: HubModule[] = [
   {
     id: "overview",
     label: "Aperçu",
-    description: "Vos modules en un coup d’œil",
+    description: "Ce qui compte depuis votre dernière visite",
     href: "/app/overview",
     icon: "layout-dashboard",
   },
   {
     id: "ai",
     label: "Veille IA",
-    description: "Actualités tech et IA, mises à jour chaque jour",
+    description: "Modèles, prix, repos et changements produits",
     href: "/app/ai",
     icon: "bot",
   },
   {
+    id: "career",
+    label: "Carrière",
+    description: "CV, export et suivi des candidatures",
+    href: "/app/career?tab=cv",
+    icon: "briefcase",
+  },
+  {
     id: "snippets",
     label: "Snippets",
-    description: "Bibliothèque de code et de notes",
+    description: "Code, notes et recherche doc",
     href: "/app/snippets",
     icon: "code",
   },
   {
-    id: "profil",
-    label: "Profil",
-    description: "CV et suivi de candidatures",
-    href: "/app/profil",
-    icon: "user",
-  },
-  {
-    id: "offres",
-    label: "Offres gratuites",
-    description: "Crédits, essais gratuits et programmes pro",
-    href: "/app/offres",
-    icon: "gift",
+    id: "expenses",
+    label: "Dépenses dev",
+    description: "Budget outils et catalogue d’alternatives",
+    href: "/app/expenses",
+    icon: "piggy-bank",
   },
 ];
 

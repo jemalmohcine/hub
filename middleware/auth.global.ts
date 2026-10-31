@@ -8,12 +8,20 @@ export default defineNuxtRouteMiddleware(async (to) => {
   }
   if (!to.path.startsWith("/app")) return;
 
-  if (import.meta.client) {
-    await restoreClientSession();
-  }
+  await syncSupabaseAuthState();
 
   const authUserId = useAuthUserId();
-  if (!authUserId.value) {
+  if (authUserId.value) return;
+
+  if (import.meta.server) {
+    if (likelyAuthenticatedButPending()) {
+      return;
+    }
+    return;
+  }
+
+  await restoreClientSession();
+  if (!useAuthUserId().value) {
     return navigateTo(`/auth/login?next=${encodeURIComponent(to.fullPath)}`);
   }
 });

@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import {
   Bot,
+  Briefcase,
   ChevronLeft,
   Code2,
-  Gift,
   LayoutDashboard,
   LogOut,
   Menu,
+  MoreHorizontal,
+  PiggyBank,
   Search,
   Settings,
-  User,
   X,
 } from "lucide-vue-next";
 
@@ -25,21 +26,30 @@ useCommandPaletteShortcuts(toggle, close);
 
 const menuOpen = ref(false);
 const userMenuOpen = ref(false);
+const moreOpen = ref(false);
 
 const mobileTabs = computed(() =>
-  modules.filter((m) => ["overview", "ai", "snippets", "profil", "offres"].includes(m.id)),
+  modules.filter((m) => ["overview", "ai", "career", "snippets"].includes(m.id)),
 );
 
 const iconMap: Record<string, typeof LayoutDashboard> = {
   "layout-dashboard": LayoutDashboard,
   bot: Bot,
   code: Code2,
-  user: User,
-  gift: Gift,
+  briefcase: Briefcase,
+  "piggy-bank": PiggyBank,
 };
 
 function isActive(href: string) {
-  return route.path.startsWith(href.split("?")[0]!);
+  const path = route.path;
+  const base = href.split("?")[0]!;
+  if (base === "/app/career") {
+    return path.startsWith("/app/career") || path.startsWith("/app/profil") || path.startsWith("/app/cv");
+  }
+  if (base === "/app/expenses") {
+    return path.startsWith("/app/expenses") || path.startsWith("/app/offres");
+  }
+  return path.startsWith(base);
 }
 
 const pageTitle = computed(() => {
@@ -68,6 +78,7 @@ async function signOut() {
 function closeMenus() {
   menuOpen.value = false;
   userMenuOpen.value = false;
+  moreOpen.value = false;
 }
 </script>
 
@@ -78,7 +89,7 @@ function closeMenus() {
     >
       <div class="flex h-14 items-center gap-2 border-b border-border/80 px-4">
         <NuxtLink to="/app/overview" class="dh-focus-ring flex items-center gap-2 font-semibold text-foreground">
-          <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">D</span>
+          <img src="/brand/logo.svg" alt="" class="h-8 w-8 rounded-lg" width="32" height="32" />
           DevHub
         </NuxtLink>
       </div>
@@ -193,9 +204,50 @@ function closeMenus() {
         :class="isActive(tab.href) ? 'text-primary' : 'text-muted-foreground'"
       >
         <component :is="iconMap[tab.icon] ?? LayoutDashboard" class="h-5 w-5" aria-hidden="true" />
-        <span>{{ tab.id === "overview" ? "Accueil" : tab.label.replace(" gratuites", "") }}</span>
+        <span>{{ tab.id === "overview" ? "Accueil" : tab.id === "career" ? "Carrière" : tab.label.replace("Veille IA", "Veille") }}</span>
       </NuxtLink>
+      <button
+        type="button"
+        class="flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium"
+        :class="moreOpen || isActive('/app/expenses') || isActive('/app/settings') ? 'text-primary' : 'text-muted-foreground'"
+        aria-label="Plus de modules"
+        @click="moreOpen = !moreOpen"
+      >
+        <MoreHorizontal class="h-5 w-5" aria-hidden="true" />
+        <span>Plus</span>
+      </button>
     </nav>
+
+    <div
+      v-if="moreOpen"
+      class="fixed inset-0 z-50 bg-black/40 lg:hidden"
+      @click="moreOpen = false"
+    >
+      <div
+        class="absolute inset-x-0 bottom-0 rounded-t-[var(--dh-radius-lg)] border-t border-border bg-card p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+        @click.stop
+      >
+        <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Autres modules</p>
+        <NuxtLink
+          v-for="mod in modules.filter((m) => m.id === 'expenses')"
+          :key="mod.id"
+          :to="mod.href"
+          class="flex items-center gap-3 rounded-[var(--dh-radius)] px-3 py-3 text-sm font-medium text-foreground hover:bg-muted"
+          @click="closeMenus"
+        >
+          <PiggyBank class="h-5 w-5 text-primary" aria-hidden="true" />
+          {{ mod.label }}
+        </NuxtLink>
+        <NuxtLink
+          to="/app/settings"
+          class="flex items-center gap-3 rounded-[var(--dh-radius)] px-3 py-3 text-sm font-medium text-foreground hover:bg-muted"
+          @click="closeMenus"
+        >
+          <Settings class="h-5 w-5 text-primary" aria-hidden="true" />
+          Paramètres
+        </NuxtLink>
+      </div>
+    </div>
 
     <Teleport to="body">
       <div
