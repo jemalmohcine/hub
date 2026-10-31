@@ -48,7 +48,7 @@ export function CvReadinessCard({
           <Cluster gap={2} className="items-center">
             <CheckCircle2 className="h-4 w-4 text-[var(--dh-brand)]" />
             <Button asChild size="sm">
-              <a href="/app/career?tab=offers">Voir les offres</a>
+              <a href="/app/career?tab=jobs">Suivre mes candidatures</a>
             </Button>
           </Cluster>
         ) : null}
