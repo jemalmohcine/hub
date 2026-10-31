@@ -1,0 +1,398 @@
+import { foldCase } from "@/lib/text";
+import {
+  citiesInCountry,
+  expandMoroccoCountry,
+  expandWithParentCountries,
+  isEuropeanPlace,
+  resolveLocation,
+  resolveLocations,
+  type JobLocation,
+} from "@/modules/job-board/locations";
+import { resolveRole, SOFTWARE_FAMILY_ROLE_IDS } from "@/modules/job-board/roles";
+import { acceptsWorkMode, wantsRemote } from "@/modules/job-board/work-modes";
+import type { JobSearchPrefs, JobWorkMode } from "@/modules/job-board/types";
+
+const FRANCE_HINT =
+  /\b(france|francais|français|french|paris|lyon|marseille|toulouse|lille|nantes|bordeaux|rennes|grenoble|montpellier|strasbourg|nice|rouen|tours|dijon|orleans|orléans|clermont|angers|le havre|reims|ile[- ]de[- ]france|île-de-france|\bidf\b|hauts-de-seine|seine-saint-denis|val-de-marne)\b/i;
+
+const EUROPE_HINT =
+  /\b(europe|european union|\beu\b|\bue\b|emea|belgium|belgique|switzerland|suisse|luxembourg|germany|allemagne|netherlands|pays-bas|spain|espagne|portugal|italy|italie|united kingdom|\buk\b)\b/i;
+
+const WORLDWIDE_ONLY =
+  /\b(worldwide|anywhere in the world|global remote|united states|\busa\b|\bus only\b|india\b|philippines|pakistan|bangladesh|latam|south america|asia only|africa only)\b/i;
+
+const REMOTE_RE =
+  /\b(remote|fully remote|full[- ]remote|télétravail|teletravail|100\s*%\s*remote|wfh|work from home)\b/i;
+
+const HYBRID_RE =
+  /\b(hybrid|hybride|flex office|2j|3j|quelques jours|office \+ remote)\b/i;
+
+const ONSITE_RE =
+  /\b(onsite|on-site|présentiel|presentiel|sur site|au bureau|office based)\b/i;
+
+const ROLE_STOPWORDS = new Set([
+  "dev",
+  "developer",
+  "developpeur",
+  "développeur",
+  "engineer",
+  "ingenieur",
+  "ingénieur",
+  "software",
+  "poste",
+  "emploi",
+  "job",
+  "senior",
+  "junior",
+  "confirmé",
+  "confirme",
+  "full",
+  "stack",
+  "end",
+  "web",
+]);
+
+const CITY_ALIASES: Record<string, string[]> = {
+  paris: [
+    "ile de france",
+    "île-de-france",
+    "idf",
+    "hauts de seine",
+    "nanterre",
+    "boulogne",
+    "saint denis",
+  ],
+  lyon: ["villeurbanne", "rhone", "rhône"],
+  lille: ["roubaix", "tourcoing", "nord"],
+  marseille: ["aix en provence", "bouches du rhone"],
+  toulouse: ["haute garonne"],
+  nantes: ["loire atlantique"],
+  bordeaux: ["gironde"],
+  casablanca: [
+    "casablanca settat",
+    "casa settat",
+    "mechouar",
+    "méchouar",
+    "peripherie",
+    "périphérie",
+  ],
+};
+
+export function classifyWorkMode(hit: {
+  title: string;
+  description: string;
+  location?: string;
+  tags?: string[];
+  workMode?: JobWorkMode | null;
+}): JobWorkMode | null {
+  if (hit.workMode) return hit.workMode;
+  const blob = `${hit.title} ${hit.description} ${hit.location ?? ""} ${(hit.tags ?? []).join(" ")}`;
+  if (HYBRID_RE.test(blob)) return "hybrid";
+  if (REMOTE_RE.test(blob) && !ONSITE_RE.test(blob)) return "remote";
+  if (ONSITE_RE.test(blob)) return "onsite";
+  if (REMOTE_RE.test(blob)) return "remote";
+  return null;
+}
+
+/** City / country only — never the job description (ISO aliases like "ma" leak there). */
+export function listingPlaceHay(
+  location: string | null | undefined,
+  title = "",
+): string {
+  return foldCase(`${location ?? ""} ${title}`);
+}
+
+function locationVariants(entry: JobLocation): string[] {
+  const extras = CITY_ALIASES[entry.id] ?? [];
+  return [
+    entry.id,
+    foldCase(entry.label),
+    foldCase(entry.indeed),
+    ...entry.aliases.map(foldCase),
+    ...extras.map(foldCase),
+  ].filter(Boolean);
+}
+
+function variantHits(hay: string, variant: string): boolean {
+  const needle = foldCase(variant).trim();
+  if (needle.length < 2) return false;
+  return hayHasNeedle(hay, needle);
+}
+
+export function locationMatches(
+  entry: JobLocation,
+  location: string | null | undefined,
+  extra = "",
+): boolean {
+  const hay = listingPlaceHay(location, extra);
+  if (!hay) return false;
+  if (entry.id === "monde") return true;
+  if (entry.id === "europe") return EUROPE_HINT.test(hay) || FRANCE_HINT.test(hay);
+  if (entry.id === "afrique") {
+    return /\b(africa|afrique|maroc|morocco|alger|tunis|dakar|senegal|egypt|nigeria|kenya)\b/i.test(hay);
+  }
+  if (locationVariants(entry).some((variant) => variantHits(hay, variant))) return true;
+  if (entry.kind === "country" && entry.id === "france" && FRANCE_HINT.test(hay)) return true;
+  if (entry.kind === "country") {
+    return citiesInCountry(entry.id).some((city) =>
+      locationVariants(city).some((variant) => variantHits(hay, variant)),
+    );
+  }
+  return false;
+}
+
+export function anyLocationMatches(
+  selected: JobLocation[],
+  location: string | null | undefined,
+  extra = "",
+): boolean {
+  if (selected.length === 0) return true;
+  return selected.some((entry) => locationMatches(entry, location, extra));
+}
+
+const EMEA_HINT = /\b(emea|mena|maghreb)\b/i;
+
+function wantsMaghreb(selected: JobLocation[]): boolean {
+  return selected.some(
+    (entry) =>
+      ["maroc", "algerie", "tunisie", "egypte", "afrique"].includes(entry.id) ||
+      ["maroc", "algerie", "tunisie", "egypte"].includes(entry.countryId),
+  );
+}
+
+/** Remote/hybrid: "Europe" counts for France, "EMEA" for Maroc — not "Anywhere". */
+export function remoteRegionMatches(
+  selected: JobLocation[],
+  location: string | null | undefined,
+  extra = "",
+): boolean {
+  const hay = listingPlaceHay(location, extra);
+  if (!hay) return false;
+  const hasOurRegion =
+    EUROPE_HINT.test(hay) ||
+    FRANCE_HINT.test(hay) ||
+    EMEA_HINT.test(hay) ||
+    /\b(morocco|maroc|africa|afrique)\b/i.test(hay);
+  if (
+    /\b(worldwide|anywhere|anywhere in the world|global remote)\b/i.test(hay) &&
+    !hasOurRegion
+  ) {
+    return false;
+  }
+  if (/\b(united states|\busa\b|\bus only\b)\b/i.test(hay) && !hasOurRegion) {
+    return false;
+  }
+  const wantsEu = selected.some((entry) => isEuropeanPlace(entry));
+  if (wantsEu && (EUROPE_HINT.test(hay) || FRANCE_HINT.test(hay) || EMEA_HINT.test(hay))) {
+    return true;
+  }
+  if (
+    wantsMaghreb(selected) &&
+    (EMEA_HINT.test(hay) || /\b(africa|afrique|morocco|maroc)\b/i.test(hay))
+  ) {
+    return true;
+  }
+  return false;
+}
+
+export function placeFitsPrefs(
+  selected: JobLocation[],
+  location: string | null | undefined,
+  title: string,
+  remoteEligible: boolean,
+): boolean {
+  if (selected.length === 0) return true;
+  if (anyLocationMatches(selected, location, title)) return true;
+  return remoteEligible && remoteRegionMatches(selected, location, title);
+}
+
+/** Keep offers in the selected countries; drop US-only / worldwide dumps. */
+export function isCredibleRegion(
+  location: string | null | undefined,
+  blob = "",
+  selected: JobLocation[] = [],
+): boolean {
+  const text = `${location ?? ""} ${blob}`;
+  if (selected.length > 0) {
+    return anyLocationMatches(selected, location, blob);
+  }
+  if (WORLDWIDE_ONLY.test(text) && !FRANCE_HINT.test(text) && !EUROPE_HINT.test(text)) {
+    return false;
+  }
+  if (FRANCE_HINT.test(text) || EUROPE_HINT.test(text)) return true;
+  if (!location || !location.trim()) return false;
+  return FRANCE_HINT.test(location) || EUROPE_HINT.test(location);
+}
+
+function cityVariants(city: string): string[] {
+  const folded = foldCase(city);
+  if (!folded) return [];
+  const extra = CITY_ALIASES[folded] ?? [];
+  return [folded, ...extra.map(foldCase)];
+}
+
+/** @deprecated Prefer locationMatches — kept for existing tests. */
+export function cityMatches(
+  city: string,
+  location: string | null | undefined,
+  extra = "",
+): boolean {
+  if (!city.trim()) return true;
+  return locationMatches(resolveLocation(city), location, extra) ||
+    cityVariants(city).some((variant) => variantHits(listingPlaceHay(location, extra), variant));
+}
+
+function roleTokens(roleQuery: string): { specific: string[]; generic: string[] } {
+  const tokens = foldCase(roleQuery)
+    .split(/[^a-z0-9+]+/)
+    .filter((token) => token.length >= 2);
+  const specific = tokens.filter((token) => !ROLE_STOPWORDS.has(token));
+  const generic = tokens.filter((token) => ROLE_STOPWORDS.has(token));
+  return { specific, generic };
+}
+
+function uniqueNeedles(values: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const value of values) {
+    const needle = foldCase(value).trim();
+    if (needle.length < 3 || seen.has(needle)) continue;
+    seen.add(needle);
+    out.push(needle);
+  }
+  return out;
+}
+
+/** Distinctive phrases for a role id or free-text query — aliases, not "dev". */
+export function roleNeedles(roleQuery: string): string[] {
+  const role = resolveRole(roleQuery);
+  const fromLabel = roleTokens(role.label).specific;
+  const fromId = foldCase(role.id).replace(/-/g, " ");
+  return uniqueNeedles([fromId, ...fromLabel, ...role.aliases]);
+}
+
+function escapeRe(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function hayHasNeedle(hay: string, needle: string): boolean {
+  const token = needle.replace(/-/g, " ").trim();
+  const spacedHay = hay.replace(/-/g, " ");
+  if (!token) return false;
+  if (token.includes(" ")) {
+    const compact = token.replace(/\s+/g, "");
+    return (
+      spacedHay.includes(token) ||
+      (compact.length >= 5 && hayHasNeedle(hay.replace(/[\s-]/g, ""), compact))
+    );
+  }
+  if (token.length < 2) return false;
+  return new RegExp(`(?:^|[^a-z0-9+])${escapeRe(token)}(?:$|[^a-z0-9+])`).test(spacedHay);
+}
+
+const SOFTWARE_TITLE =
+  /\b(dev|developer|développeur|developpeur|engineer|ingénieur|ingenieur|software|programmer|fullstack|full[- ]stack|frontend|backend|sde)\b/i;
+
+/** Catalog roles that should keep generic "Software Engineer" / "Développeur" titles. */
+const BROAD_SOFTWARE_ROLE_IDS = new Set(
+  [...SOFTWARE_FAMILY_ROLE_IDS].filter((id) => id !== "mobile"),
+);
+
+const OTHER_CAREER_TITLE =
+  /\b(data engineer|data scientist|machine learning|ml engineer|product manager|product owner|product designer|scrum master|qa engineer|testeur|sdet|cyber|security engineer|customer success|procurement|sales)\b/i;
+
+const FRONTEND_HINT =
+  /\b(front[- ]?end|frontend|react|vue|angular|next\.?js|svelte)\b/i;
+
+const BACKEND_EXCLUSIVE = /\b(back[- ]?end|backend)\b/i;
+
+const BACKEND_STACK_ONLY =
+  /\b(python|django|flask|spring boot|\bphp\b|laravel|ruby on rails|golang)\b/i;
+
+const FULL_STACK_HINT = /\bfull[- ]?stack\b/i;
+
+function isGenericSoftwareQuery(roleQuery: string): boolean {
+  const folded = foldCase(roleQuery).trim();
+  if (!folded) return false;
+  if (ROLE_STOPWORDS.has(folded)) return true;
+  const { specific, generic } = roleTokens(roleQuery);
+  return specific.length === 0 && generic.length > 0;
+}
+
+function softwareTitleFitsRole(roleId: string, blob: string): boolean {
+  if (!SOFTWARE_TITLE.test(blob) || OTHER_CAREER_TITLE.test(blob)) return false;
+  if (roleId === "frontend") {
+    if (FULL_STACK_HINT.test(blob) || FRONTEND_HINT.test(blob)) return true;
+    if (BACKEND_EXCLUSIVE.test(blob) || BACKEND_STACK_ONLY.test(blob)) return false;
+  }
+  if (roleId === "backend") {
+    if (FULL_STACK_HINT.test(blob) || BACKEND_EXCLUSIVE.test(blob)) return true;
+    if (FRONTEND_HINT.test(blob) && !BACKEND_STACK_ONLY.test(blob)) return false;
+  }
+  return true;
+}
+
+export function roleMatches(roleQuery: string, blob: string): boolean {
+  if (foldCase(roleQuery).length < 2) return true;
+  const hay = foldCase(blob);
+  if (isGenericSoftwareQuery(roleQuery)) {
+    return SOFTWARE_TITLE.test(blob) && !OTHER_CAREER_TITLE.test(blob);
+  }
+  const roleId = resolveRole(roleQuery).id;
+  if (BROAD_SOFTWARE_ROLE_IDS.has(roleId) && softwareTitleFitsRole(roleId, blob)) {
+    return true;
+  }
+  const needles = roleNeedles(roleQuery);
+  if (needles.length === 0) {
+    const { specific, generic } = roleTokens(roleQuery);
+    const fallback = specific.length > 0 ? specific : generic;
+    return fallback.some((token) => hayHasNeedle(hay, token));
+  }
+  return needles.some((needle) => hayHasNeedle(hay, needle));
+}
+
+export function roleMatchesAny(prefs: JobSearchPrefs, blob: string): boolean {
+  const needles =
+    prefs.roles.length > 0 ? prefs.roles : prefs.roleQuery.trim() ? [prefs.roleQuery] : [];
+  if (needles.length === 0) return true;
+  return needles.some((role) => roleMatches(role, blob));
+}
+
+/** Remote feeds match the country; Morocco cities also match the whole country. */
+export function regionForPrefs(prefs: JobSearchPrefs): JobLocation[] {
+  const selected = resolveLocations(prefs.locations);
+  if (wantsRemote(prefs)) return expandWithParentCountries(selected);
+  return expandMoroccoCountry(selected);
+}
+
+export function matchesSearchPrefs(
+  listing: {
+    title: string;
+    description: string | null;
+    location: string | null;
+    tags: string[];
+    workMode: JobWorkMode | null;
+  },
+  prefs: JobSearchPrefs,
+): boolean {
+  const region = regionForPrefs(prefs);
+
+  const mode = listing.workMode ?? classifyWorkMode({
+    title: listing.title,
+    description: listing.description ?? "",
+    location: listing.location ?? undefined,
+    tags: listing.tags,
+  });
+
+  if (!acceptsWorkMode(prefs, mode)) return false;
+
+  const remoteEligible = mode !== "onsite";
+  if (!placeFitsPrefs(region, listing.location, listing.title, remoteEligible)) {
+    return false;
+  }
+
+  const roleNeedles =
+    prefs.roles.length > 0 ? prefs.roles : prefs.roleQuery.trim() ? [prefs.roleQuery] : [];
+  if (roleNeedles.length === 0) return true;
+  return roleMatchesAny(prefs, listing.title);
+}

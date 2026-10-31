@@ -1,0 +1,95 @@
+/**
+ * CSS entry — keep thin.
+ * Token architecture (Tailwind v4):
+ *   primitives → semantic roles → @theme utilities → base
+ * @see https://tailwindcss.com/docs/theme
+ */
+
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* 1. Primitives */
+@import "../assets/styles/tokens/colors.primitives.css";
+@import "../assets/styles/tokens/spacing.css";
+@import "../assets/styles/tokens/typography.css";
+@import "../assets/styles/tokens/radius.css";
+@import "../assets/styles/tokens/shadows.css";
+@import "../assets/styles/tokens/motion.css";
+@import "../assets/styles/tokens/layout.css";
+
+/* 2. Semantic roles (+ dark) */
+@import "../assets/styles/semantic/colors.css";
+
+/* 3. Tailwind @theme (utilities) */
+@import "../assets/styles/theme.css";
+
+/* 4. Base element styles */
+@import "../assets/styles/base.css";
+
+@keyframes nav-progress {
+  0% {
+    transform: scaleX(0.08);
+  }
+  50% {
+    transform: scaleX(0.65);
+  }
+  100% {
+    transform: scaleX(0.92);
+  }
+}
+
+@utility animate-nav-progress {
+  animation: nav-progress 1.1s var(--ease-out) infinite;
+  transform-origin: left;
+}
+
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-landing-rise {
+  animation: landing-rise 0.7s var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-landing-rise,
+  .animate-nav-progress {
+    animation: none !important;
+  }
+}
+
+/*
+ * iOS standalone PWA: 100dvh is the lying viewport (home-indicator strip
+ * excluded, env(safe-area-inset-bottom) = 0). Extend the shell by the
+ * measured --ios-pwa-bottom-gap so the nav background paints that strip.
+ * Do not use position:fixed; inset:0 — that clips to the lying viewport.
+ */
+@media (max-width: 1023px) {
+  html:has(.app-shell),
+  body:has(.app-shell) {
+    height: calc(100dvh + var(--ios-pwa-bottom-gap, 0px));
+    overflow: hidden;
+    background-color: var(--card);
+  }
+
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: calc(100dvh + var(--ios-pwa-bottom-gap, 0px));
+    background-color: var(--background);
+  }
+
+  .mobile-bottom-nav {
+    background-color: var(--card);
+    padding-bottom: calc(var(--ios-pwa-bottom-gap, 0px) + var(--bottom-nav-pad));
+  }
+}
