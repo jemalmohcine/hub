@@ -20,6 +20,8 @@ export default defineNuxtConfig({
   nitro: {
     preset: "vercel",
     routeRules: {
+      "/sign-in": { redirect: { to: "/auth/login", statusCode: 301 } },
+      "/sign-up": { redirect: { to: "/auth/login", statusCode: 301 } },
       "/**": {
         headers: {
           "X-Frame-Options": "DENY",
