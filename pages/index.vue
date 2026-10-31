@@ -31,12 +31,12 @@ const colorMode = useColorMode();
           <NuxtLink to="/auth/login">
             <DsButton>Se connecter</DsButton>
           </NuxtLink>
-          <NuxtLink to="/auth/login?next=/app/overview">
-            <DsButton variant="secondary">Ouvrir l’application</DsButton>
+          <NuxtLink to="/auth/sign-up">
+            <DsButton variant="secondary">Créer un compte</DsButton>
           </NuxtLink>
         </div>
         <p class="mt-4 text-[length:var(--dh-text-xs)] text-muted-foreground">
-          GitHub ou lien par e-mail · raccourci <kbd class="rounded border border-border px-1 font-mono">⌘K</kbd> dans l’app
+          E-mail et mot de passe · raccourci <kbd class="rounded border border-border px-1 font-mono">⌘K</kbd> dans l’app
         </p>
       </div>
 
