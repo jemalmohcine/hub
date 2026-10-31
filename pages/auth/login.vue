@@ -25,7 +25,6 @@ function resolveNext(): string {
 
 async function signIn() {
   loading.value = true;
-  message.value = "";
   error.value = "";
   const { error: err } = await client.auth.signInWithPassword({
     email: email.value.trim(),
