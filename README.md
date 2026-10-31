@@ -4,10 +4,10 @@ Hub dev personnel — **Nuxt 4**, Supabase, Vercel.
 
 ## Modules
 
-- **Veille IA** — fil quotidien (`POST /api/veille/ingest` pour l’agent Info Ai)
-- **Snippets** — code et notes
-- **Profil** — CV + suivi candidatures manuel
-- **Offres gratuites** — catalogue tiers free / crédits / programmes (table `dev_tools` + `dev_tool_saves`)
+- **Veille IA** — `POST /api/veille/ingest`
+- **Snippets** — code et notes (Supabase `dev_snippets`)
+- **Profil** — CV + candidatures manuelles
+- **Offres gratuites** — catalogue `dev_tools` + suivis
 
 ## Dev
 
@@ -17,18 +17,13 @@ npm install
 npm run dev
 ```
 
-## Build
-
-```bash
-npm run build
-```
-
 ## Docs
 
-- [`docs/MIGRATION-NUXT.md`](docs/MIGRATION-NUXT.md) — architecture, env, migrations
-- [`DEPLOY.md`](DEPLOY.md) — déploiement Vercel
+- [`docs/MIGRATION-NUXT.md`](docs/MIGRATION-NUXT.md)
+- [`DEPLOY.md`](DEPLOY.md)
 
-## Scripts maintenance (GitHub Actions)
+## CI
 
-- `npm run dev-tools:ingest` — catalogue outils
-- `npm run job-board:ingest` — purge / rappels (legacy `src/modules/job-board`)
+Push `main` → `.github/workflows/deploy-main.yml` (migrations Supabase) + déploiement Vercel.
+
+Catalogue outils : workflow manuel `dev-tools-ingest.yml`.

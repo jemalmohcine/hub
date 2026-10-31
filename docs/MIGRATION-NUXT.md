@@ -68,6 +68,30 @@ VEILLE_INGEST_SECRET=...             # agent Info Ai
 
 Supabase Auth → URL de redirection : `https://hub-onedev.vercel.app/auth/confirm`
 
+## CI GitHub Actions
+
+### Workflow `Deploy main` (push sur `main`)
+
+Secrets **obligatoires** (Settings → Secrets → Actions) :
+
+| Secret | Description |
+|--------|-------------|
+| `SUPABASE_ACCESS_TOKEN` | Token CLI Supabase (Dashboard → Account → Access Tokens) |
+| `SUPABASE_DB_PASSWORD` | Mot de passe DB du projet |
+| `SUPABASE_PROJECT_REF` | `lfxiyrcfiieyxeziuglv` |
+
+Secrets **optionnels** (ingest catalogue manuel, Vercel les utilise aussi pour l’app) :
+
+| Secret | Description |
+|--------|-------------|
+| `NUXT_PUBLIC_SUPABASE_URL` | URL API Supabase |
+| `NUXT_PUBLIC_SUPABASE_ANON_KEY` | Clé anon |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Classification dev_tools |
+| `GITHUB_TOKEN` | Métriques GitHub (actions: read) |
+
+Vercel reçoit les `NUXT_PUBLIC_*`, `SUPABASE_SERVICE_ROLE_KEY` et `VEILLE_INGEST_SECRET` dans le dashboard projet — pas besoin de les dupliquer pour le déploiement si l’intégration Git est branchée.
+
 ## Déploiement
 
 ```bash

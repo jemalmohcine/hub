@@ -11,13 +11,16 @@ const props = withDefaults(
 
 const classes = computed(() => {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-[var(--dh-radius)] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50";
-  const sizes = { sm: "px-3 py-1.5 text-sm", md: "px-4 py-2 text-sm" };
+    "dh-focus-ring inline-flex items-center justify-center gap-2 rounded-[var(--dh-radius)] font-medium transition-[color,background,opacity] disabled:pointer-events-none disabled:opacity-50";
+  const sizes = {
+    sm: "px-3 py-1.5 text-[length:var(--dh-text-xs)]",
+    md: "px-4 py-2 text-[length:var(--dh-text-sm)]",
+  };
   const variants = {
-    primary: "bg-primary text-primary-foreground hover:opacity-90",
-    secondary: "bg-muted text-foreground hover:bg-muted/80",
-    ghost: "hover:bg-muted",
-    danger: "bg-destructive text-white hover:opacity-90",
+    primary: "bg-primary text-primary-foreground hover:brightness-110",
+    secondary: "border border-border bg-card text-foreground hover:bg-muted",
+    ghost: "text-muted-foreground hover:bg-muted hover:text-foreground",
+    danger: "bg-destructive text-white hover:brightness-110",
   };
   return [base, sizes[props.size], variants[props.variant]].join(" ");
 });

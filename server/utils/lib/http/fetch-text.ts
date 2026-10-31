@@ -38,7 +38,7 @@ export async function fetchText(
         Accept: DEFAULT_ACCEPT,
         ...opts.headers,
       },
-      next: { revalidate: 0 },
+      cache: "no-store",
     });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status} for ${url}`);
@@ -79,7 +79,7 @@ export async function postJson<T>(
         ...opts.headers,
       },
       body: JSON.stringify(body),
-      next: { revalidate: 0 },
+      cache: "no-store",
     });
     if (!res.ok) {
       const snippet = (await res.text().catch(() => "")).trim().slice(0, 240);

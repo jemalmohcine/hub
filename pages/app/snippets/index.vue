@@ -9,17 +9,19 @@ const q = ref("");
 const categoryId = ref<string | null>(null);
 const selectedId = ref<string | null>(null);
 
-const { data, refresh } = await useAsyncData("snippets", async () => {
+const { data, pending, error, refresh } = await useAsyncData("snippets", async () => {
   const uid = user.value?.id;
   if (!uid) return { snippets: [] as DevSnippet[], categories: [] as DevSnippetCategory[] };
 
-  const { data: cats } = await client
+  const { data: cats, error: cErr } = await client
     .from("dev_snippet_categories")
     .select("id, name, created_at")
     .eq("user_id", uid)
     .order("name");
 
-  const { data: rows } = await client
+  if (cErr) throw new Error(cErr.message);
+
+  const { data: rows, error: rErr } = await client
     .from("dev_snippets")
     .select(
       "id, title, kind, language, content, tags, category_id, reference_url, image_url, is_pinned, created_at, updated_at",
@@ -27,6 +29,8 @@ const { data, refresh } = await useAsyncData("snippets", async () => {
     .eq("user_id", uid)
     .order("is_pinned", { ascending: false })
     .order("updated_at", { ascending: false });
+
+  if (rErr) throw new Error(rErr.message);
 
   const names = new Map((cats ?? []).map((c) => [c.id, c.name as string]));
   const snippets: DevSnippet[] = (rows ?? []).map((row) => ({
@@ -89,15 +93,9 @@ const editorSnippet = computed(() =>
 
 <template>
   <div>
-    <div class="flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 class="text-2xl font-semibold">Snippets</h1>
-        <p class="text-sm text-muted-foreground">Recherche, tags et copie en un geste.</p>
-      </div>
-      <DsInput v-model="q" placeholder="Rechercher…" class="max-w-xs" />
-    </div>
-
-    <div class="mt-6 grid gap-6 lg:grid-cols-[220px_1fr_1fr]">
+    <DsPageHeader title="Snippets" description="Recherche, tags et copie en un geste." :pending="pending" :error="error?.message ?? null" />
+    <DsInput v-if="!error" v-model="q" placeholder="Rechercher…" class="mb-4 max-w-md" aria-label="Rechercher snippets" />
+    <div v-if="!error" class="grid gap-6 lg:grid-cols-[220px_1fr_1fr]">
       <SnippetSidebar
         :categories="data?.categories ?? []"
         :active-id="categoryId"

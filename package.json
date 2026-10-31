@@ -10,7 +10,6 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "dev-tools:ingest": "node --env-file-if-exists=.env.local --import tsx scripts/dev-tools-ingest.ts",
-    "job-board:ingest": "node --env-file-if-exists=.env.local --import tsx scripts/job-board-ingest.ts",
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {

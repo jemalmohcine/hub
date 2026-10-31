@@ -113,49 +113,43 @@ async function toggleSave(item: VeilleItem) {
       @open="selectedId = $event"
     />
 
-    <Teleport to="body">
-      <div
-        v-if="selected"
-        class="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center"
-        @click.self="selectedId = null"
-      >
-        <DsCard class="max-h-[85vh] w-full max-w-lg overflow-y-auto p-5">
-          <div class="flex items-start justify-between gap-3">
-            <h2 class="text-lg font-semibold">{{ selected.title }}</h2>
-            <DsButton variant="ghost" size="sm" @click="selectedId = null">Fermer</DsButton>
-          </div>
-          <p class="mt-2 text-sm text-muted-foreground">{{ selected.summary }}</p>
-          <section v-if="selected.quoi" class="mt-4">
-            <h3 class="text-sm font-medium">Quoi</h3>
-            <ul class="mt-1 list-disc pl-5 text-sm text-muted-foreground">
-              <li v-for="(line, idx) in selected.quoi.split('\n').filter(Boolean)" :key="idx">
-                {{ line.replace(/^•\s*/, "") }}
-              </li>
-            </ul>
-          </section>
-          <section v-if="selected.impact" class="mt-4">
-            <h3 class="text-sm font-medium">Impact</h3>
-            <ul class="mt-1 list-disc pl-5 text-sm text-muted-foreground">
-              <li v-for="(line, idx) in selected.impact.split('\n').filter(Boolean)" :key="idx">
-                {{ line.replace(/^•\s*/, "") }}
-              </li>
-            </ul>
-          </section>
-          <div class="mt-4 flex flex-wrap gap-2">
-            <DsButton variant="secondary" size="sm" @click="toggleSave(selected)">
-              {{ selected.saved ? "Retirer" : "Enregistrer" }}
-            </DsButton>
-            <a
-              :href="selected.link"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="inline-flex items-center text-sm text-primary underline"
-            >
-              Source
-            </a>
-          </div>
-        </DsCard>
-      </div>
-    </Teleport>
+    <DsModal :open="Boolean(selected)" :title="selected?.title" @close="selectedId = null">
+      <template v-if="selected">
+        <div class="flex items-start justify-between gap-3">
+          <h2 class="text-[length:var(--dh-text-lg)] font-semibold leading-snug">{{ selected.title }}</h2>
+          <DsButton variant="ghost" size="sm" @click="selectedId = null">Fermer</DsButton>
+        </div>
+        <p class="mt-2 text-[length:var(--dh-text-sm)] text-muted-foreground">{{ selected.summary }}</p>
+        <section v-if="selected.quoi" class="mt-4">
+          <h3 class="text-[length:var(--dh-text-sm)] font-medium">Quoi</h3>
+          <ul class="mt-1 list-disc pl-5 text-[length:var(--dh-text-sm)] text-muted-foreground">
+            <li v-for="(line, idx) in selected.quoi.split('\n').filter(Boolean)" :key="idx">
+              {{ line.replace(/^•\s*/, "") }}
+            </li>
+          </ul>
+        </section>
+        <section v-if="selected.impact" class="mt-4">
+          <h3 class="text-[length:var(--dh-text-sm)] font-medium">Impact</h3>
+          <ul class="mt-1 list-disc pl-5 text-[length:var(--dh-text-sm)] text-muted-foreground">
+            <li v-for="(line, idx) in selected.impact.split('\n').filter(Boolean)" :key="idx">
+              {{ line.replace(/^•\s*/, "") }}
+            </li>
+          </ul>
+        </section>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <DsButton variant="secondary" size="sm" @click="toggleSave(selected)">
+            {{ selected.saved ? "Retirer" : "Enregistrer" }}
+          </DsButton>
+          <a
+            :href="selected.link"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="dh-focus-ring inline-flex items-center text-[length:var(--dh-text-sm)] text-primary underline"
+          >
+            Source externe
+          </a>
+        </div>
+      </template>
+    </DsModal>
   </div>
 </template>

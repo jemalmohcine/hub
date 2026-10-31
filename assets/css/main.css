@@ -20,31 +20,40 @@
 
 :root {
   color-scheme: light dark;
-  --dh-bg: #f8fafc;
-  --dh-fg: #0f172a;
-  --dh-muted: #f1f5f9;
-  --dh-muted-fg: #64748b;
+  --dh-bg: #f4f6fb;
+  --dh-fg: #0c1222;
+  --dh-muted: #eef1f8;
+  --dh-muted-fg: #5c6578;
   --dh-card: #ffffff;
-  --dh-border: #e2e8f0;
-  --dh-primary: #2563eb;
+  --dh-border: #dfe4ef;
+  --dh-primary: #1d4ed8;
   --dh-primary-fg: #ffffff;
-  --dh-accent: #eff6ff;
+  --dh-accent: #e8efff;
   --dh-destructive: #dc2626;
-  --dh-success: #16a34a;
+  --dh-success: #059669;
   --dh-warning: #d97706;
-  --dh-sidebar-w: 16rem;
-  --dh-radius: 0.75rem;
+  --dh-sidebar-w: 15.5rem;
+  --dh-radius: 0.625rem;
+  --dh-radius-lg: 1rem;
+  --dh-shadow: 0 1px 2px rgb(12 18 34 / 6%), 0 8px 24px rgb(12 18 34 / 6%);
+  --dh-text-xs: 0.75rem;
+  --dh-text-sm: 0.875rem;
+  --dh-text-base: 1rem;
+  --dh-text-lg: 1.125rem;
+  --dh-text-xl: 1.25rem;
+  --dh-text-2xl: 1.5rem;
 }
 
 .dark {
-  --dh-bg: #0b1120;
-  --dh-fg: #e2e8f0;
-  --dh-muted: #111827;
+  --dh-bg: #070b14;
+  --dh-fg: #e8edf7;
+  --dh-muted: #101827;
   --dh-muted-fg: #94a3b8;
-  --dh-card: #111827;
-  --dh-border: #1f2937;
+  --dh-card: #0f1629;
+  --dh-border: #1e293b;
   --dh-primary: #3b82f6;
   --dh-accent: #172554;
+  --dh-shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 12px 32px rgb(0 0 0 / 35%);
 }
 
 html,
@@ -55,8 +64,54 @@ body,
 
 body {
   @apply bg-background text-foreground antialiased;
+  font-size: var(--dh-text-sm);
 }
 
 .app-shell {
   min-height: 100dvh;
+}
+
+.dh-surface {
+  @apply rounded-[var(--dh-radius-lg)] border border-border bg-card;
+  box-shadow: var(--dh-shadow);
+}
+
+.dh-focus-ring {
+  @apply outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+}
+
+.dh-page-title {
+  font-size: var(--dh-text-2xl);
+  @apply font-semibold tracking-tight;
+}
+
+.dh-muted {
+  @apply text-muted-foreground;
+}
+
+.landing-glow {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgb(29 78 216 / 18%), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgb(5 150 105 / 10%), transparent);
+}
+
+.dark .landing-glow {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgb(59 130 246 / 22%), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgb(16 185 129 / 8%), transparent);
+}
+
+@keyframes dh-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.dh-skeleton {
+  animation: dh-pulse 1.4s ease-in-out infinite;
+  @apply rounded-[var(--dh-radius)] bg-muted;
 }

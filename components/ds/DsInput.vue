@@ -1,12 +1,13 @@
 <script setup lang="ts">
-defineProps<{ modelValue?: string; placeholder?: string; type?: string }>();
+defineProps<{ modelValue?: string; placeholder?: string; type?: string; ariaLabel?: string }>();
 defineEmits<{ "update:modelValue": [value: string] }>();
 </script>
 
 <template>
   <input
     :type="type || 'text'"
-    class="w-full rounded-[var(--dh-radius)] border border-border bg-card px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    :aria-label="ariaLabel || placeholder"
+    class="dh-focus-ring w-full rounded-[var(--dh-radius)] border border-border bg-card px-3 py-2 text-[length:var(--dh-text-sm)] transition-colors placeholder:text-muted-foreground"
     :placeholder="placeholder"
     :value="modelValue"
     @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"

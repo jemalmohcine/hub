@@ -1,12 +1,8 @@
-name: Dev Tools Ingest
+name: Dev tools catalogue
 
-# Refreshes the shared tool catalogue: GitHub metrics, pricing pages, and the
-# LLM classification behind the expense advisor's suggestions.
-# Triggered on every main merge via post-merge-main.yml (workflow_call).
+# Manual refresh of shared dev_tools rows (GitHub metrics + optional LLM).
+# Nightly schedule disabled — run after deploy or on demand.
 on:
-  workflow_call:
-  schedule:
-    - cron: "0 */3 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -19,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
