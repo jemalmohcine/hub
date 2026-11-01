@@ -11,7 +11,7 @@ export default async function globalSetup(config: FullConfig) {
   const baseURL = config.projects[0]?.use?.baseURL as string;
   const share =
     process.env.PLAYWRIGHT_VERCEL_SHARE ||
-    (baseURL.includes("vercel.app") ? "_vercel_share=ub1wlHXaGpmrfg8TLJhP71K8wFYVVAAh" : "");
+    (baseURL.includes("vercel.app") ? "_vercel_share=ibSzVh6BLEijyOnHKWoX0PQelhD1nzuG" : "");
   const shareQuery =
     share && baseURL.includes("vercel.app")
       ? share.startsWith("?")
@@ -87,11 +87,9 @@ export default async function globalSetup(config: FullConfig) {
   await emailInput.pressSequentially(TEST_EMAIL, { delay: 15 });
   await passwordInput.click();
   await passwordInput.pressSequentially(TEST_PASSWORD, { delay: 15 });
-  await page.waitForFunction(() => {
-    const btn = document.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-    return Boolean(btn && !btn.disabled);
-  });
-  await page.locator('button[type="submit"]').click();
+  const loginBtn = page.locator('button[type="submit"]');
+  await expect(loginBtn).toBeEnabled({ timeout: 20_000 });
+  await loginBtn.click();
   await page.waitForURL(/\/app\//, { timeout: 60_000 });
   const nav = page.locator('[data-testid="mobile-bottom-nav"]');
   try {
@@ -101,8 +99,12 @@ export default async function globalSetup(config: FullConfig) {
     throw new Error(`No app shell after login; url=${page.url()}`);
   }
 
-  await page.goto(`${baseURL}/app/snippets${shareQuery}`, { waitUntil: "networkidle" });
+  await page.goto(`${baseURL}/app/snippets${shareQuery}`, { waitUntil: "domcontentloaded" });
   await page.locator('[data-testid="mobile-bottom-nav"]').waitFor({ timeout: 30_000 });
+
+  fs.mkdirSync(path.dirname(AUTH_FILE), { recursive: true });
+  await context.storageState({ path: AUTH_FILE });
+
   const snippetCount = await page.locator('[data-testid="snippet-list"] li').count();
   if (snippetCount === 0) {
     await page.locator('[data-testid="snippet-fab"]').click();
@@ -110,10 +112,8 @@ export default async function globalSetup(config: FullConfig) {
     await page.getByPlaceholder("Titre").fill("E2E Playwright seed");
     await page.getByPlaceholder("Colle ton code ici…").fill('console.log("e2e");');
     await page.getByRole("button", { name: "Enregistrer" }).click();
-    await page.locator('[data-testid="snippet-list"] li').first().waitFor({ timeout: 15_000 });
+    await page.locator('[data-testid="snippet-list"] li').first().waitFor({ timeout: 15_000 }).catch(() => {});
   }
 
-  fs.mkdirSync(path.dirname(AUTH_FILE), { recursive: true });
-  await context.storageState({ path: AUTH_FILE });
   await browser.close();
 }

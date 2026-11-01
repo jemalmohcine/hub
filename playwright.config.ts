@@ -4,7 +4,7 @@ const baseURL =
   process.env.PLAYWRIGHT_BASE_URL ||
   "https://hub-dev-git-cursor-nuxt-port-1245-solvencys-projects-d62e6b46.vercel.app";
 
-const shareRaw = process.env.PLAYWRIGHT_VERCEL_SHARE || "_vercel_share=ub1wlHXaGpmrfg8TLJhP71K8wFYVVAAh";
+const shareRaw = process.env.PLAYWRIGHT_VERCEL_SHARE || "_vercel_share=ibSzVh6BLEijyOnHKWoX0PQelhD1nzuG";
 const vercelBypass =
   process.env.VERCEL_AUTOMATION_BYPASS_SECRET ||
   (shareRaw.includes("=") ? shareRaw.split("=").slice(1).join("=") : shareRaw);

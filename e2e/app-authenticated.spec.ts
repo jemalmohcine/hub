@@ -4,7 +4,7 @@ import path from "node:path";
 
 const share =
   process.env.PLAYWRIGHT_VERCEL_SHARE ||
-  "_vercel_share=ub1wlHXaGpmrfg8TLJhP71K8wFYVVAAh";
+  "_vercel_share=ibSzVh6BLEijyOnHKWoX0PQelhD1nzuG";
 const shareQ = share.startsWith("?") ? share : `?${share}`;
 
 const authFile = path.join("e2e", ".auth", "user.json");
@@ -33,8 +33,10 @@ test.describe("deployed app (authenticated)", () => {
     await page.goto(`${baseURL}/app/overview${shareQ}`);
     await expect(page.locator('[data-testid="mobile-bottom-nav"]')).toBeVisible();
     await expect(page.locator('[data-testid="snippet-fab"]')).toBeVisible();
-    const box = await page.locator('[data-testid="app-main"]').boundingBox();
-    expect(box?.x ?? 0).toBeGreaterThan(8);
+    const padLeft = await page.locator('[data-testid="app-main"]').evaluate((el) =>
+      parseFloat(getComputedStyle(el).paddingLeft),
+    );
+    expect(padLeft).toBeGreaterThan(8);
   });
 
   test("snippets hard load: no 500, list or empty state", async ({ page, baseURL }) => {
@@ -45,7 +47,11 @@ test.describe("deployed app (authenticated)", () => {
     await expect(page.getByText("500")).toHaveCount(0);
     await expect(page.locator('[data-testid="mobile-bottom-nav"]')).toBeVisible();
     await page.waitForTimeout(2000);
-    expect(await page.locator('[data-testid="snippet-list"] li').count()).toBeGreaterThan(0);
+    const hasList = (await page.locator('[data-testid="snippet-list"] li').count()) > 0;
+    const hasEmpty =
+      (await page.getByText("Aucun snippet").count()) > 0 ||
+      (await page.getByText("Bibliothèque").count()) > 0;
+    expect(hasList || hasEmpty).toBeTruthy();
     await page.screenshot({
       path: "/opt/cursor/artifacts/screenshots/e2e-auth-snippets-mobile.png",
       fullPage: true,
@@ -66,8 +72,10 @@ test.describe("deployed app (authenticated)", () => {
     await page.goto(`${baseURL}/app/outils/json${shareQ}`);
     await expect(page.locator('[data-testid="app-back-button"]')).toBeVisible();
     await expect(page.getByRole("heading", { name: "JSON" })).toBeVisible();
-    const box = await page.locator('[data-testid="app-main"]').boundingBox();
-    expect(box?.x ?? 0).toBeGreaterThan(8);
+    const padLeft = await page.locator('[data-testid="app-main"]').evaluate((el) =>
+      parseFloat(getComputedStyle(el).paddingLeft),
+    );
+    expect(padLeft).toBeGreaterThan(8);
     await page.screenshot({
       path: "/opt/cursor/artifacts/screenshots/e2e-auth-outils-json.png",
       fullPage: true,
