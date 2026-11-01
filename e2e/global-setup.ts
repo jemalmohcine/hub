@@ -80,17 +80,18 @@ export default async function globalSetup(config: FullConfig) {
 
   await page.goto(`${baseURL}/auth/login${shareQuery}`, { waitUntil: "domcontentloaded" });
   await page.locator("h1", { hasText: "Connexion" }).waitFor({ timeout: 30_000 });
+
   const emailInput = page.locator('input[type="email"]');
   const passwordInput = page.locator('input[type="password"]');
   await emailInput.click();
   await emailInput.pressSequentially(TEST_EMAIL, { delay: 15 });
   await passwordInput.click();
   await passwordInput.pressSequentially(TEST_PASSWORD, { delay: 15 });
-  await passwordInput.blur();
-  const loginBtn = page.getByRole("button", { name: "Se connecter" });
-  await loginBtn.waitFor({ state: "visible", timeout: 15_000 });
-  await expect(loginBtn).toBeEnabled({ timeout: 15_000 });
-  await loginBtn.click();
+  await page.waitForFunction(() => {
+    const btn = document.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    return Boolean(btn && !btn.disabled);
+  });
+  await page.locator('button[type="submit"]').click();
   await page.waitForURL(/\/app\//, { timeout: 60_000 });
   const nav = page.locator('[data-testid="mobile-bottom-nav"]');
   try {

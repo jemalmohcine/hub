@@ -1,8 +1,6 @@
 <template>
   <AppShell v-if="showAppShell">
-    <NuxtLayout>
-      <NuxtPage />
-    </NuxtLayout>
+    <NuxtPage />
   </AppShell>
   <NuxtLayout v-else>
     <NuxtPage />
@@ -16,6 +14,9 @@
 </template>
 
 <script setup lang="ts">
+import AppShell from "~/components/shell/AppShell.vue";
+import SnippetQuickAddSheet from "~/components/snippets/SnippetQuickAddSheet.vue";
+
 const route = useRoute();
 const colorMode = useColorMode();
 const { toastMessage } = useToast();

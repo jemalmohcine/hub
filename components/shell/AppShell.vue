@@ -87,7 +87,7 @@ async function signOut() {
 </script>
 
 <template>
-  <div class="app-shell flex min-h-dvh flex-col bg-background lg:flex-row">
+  <div data-testid="app-shell" class="app-shell flex min-h-dvh flex-col bg-background lg:flex-row">
     <aside
       class="hidden w-[var(--dh-sidebar-w)] shrink-0 flex-col border-r border-border/70 bg-card/40 lg:flex"
     >
