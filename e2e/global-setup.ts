@@ -9,7 +9,9 @@ const TEST_PASSWORD = process.env.PLAYWRIGHT_TEST_PASSWORD || "E2eHubPlaywright!
 
 export default async function globalSetup(config: FullConfig) {
   const baseURL = config.projects[0]?.use?.baseURL as string;
-  const share = process.env.PLAYWRIGHT_VERCEL_SHARE || "";
+  const share =
+    process.env.PLAYWRIGHT_VERCEL_SHARE ||
+    (baseURL.includes("vercel.app") ? "_vercel_share=ub1wlHXaGpmrfg8TLJhP71K8wFYVVAAh" : "");
   const shareQuery =
     share && baseURL.includes("vercel.app")
       ? share.startsWith("?")
@@ -58,19 +60,33 @@ export default async function globalSetup(config: FullConfig) {
     }
   }
 
+  const vercelBypass =
+    process.env.VERCEL_AUTOMATION_BYPASS_SECRET ||
+    (share.includes("=") ? share.split("=").slice(1).join("=") : share);
+  const extraHTTPHeaders =
+    baseURL.includes("vercel.app") && vercelBypass
+      ? {
+          "x-vercel-protection-bypass": vercelBypass,
+          "x-vercel-set-bypass-cookie": "true",
+        }
+      : undefined;
+
   const browser = await chromium.launch();
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
+    extraHTTPHeaders,
   });
   const page = await context.newPage();
 
   await page.goto(`${baseURL}/auth/login${shareQuery}`, { waitUntil: "domcontentloaded" });
+  await page.locator("h1", { hasText: "Connexion" }).waitFor({ timeout: 30_000 });
   const emailInput = page.locator('input[type="email"]');
   const passwordInput = page.locator('input[type="password"]');
   await emailInput.click();
-  await emailInput.fill(TEST_EMAIL);
+  await emailInput.pressSequentially(TEST_EMAIL, { delay: 15 });
   await passwordInput.click();
-  await passwordInput.pressSequentially(TEST_PASSWORD, { delay: 20 });
+  await passwordInput.pressSequentially(TEST_PASSWORD, { delay: 15 });
+  await passwordInput.blur();
   const loginBtn = page.getByRole("button", { name: "Se connecter" });
   await loginBtn.waitFor({ state: "visible", timeout: 15_000 });
   await expect(loginBtn).toBeEnabled({ timeout: 15_000 });

@@ -1,5 +1,10 @@
 <template>
-  <NuxtLayout>
+  <AppShell v-if="showAppShell">
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
+  </AppShell>
+  <NuxtLayout v-else>
     <NuxtPage />
   </NuxtLayout>
   <ClientOnly>
