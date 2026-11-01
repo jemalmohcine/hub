@@ -1,34 +1,86 @@
-# Restauration Next.js (après #73)
+# Parité Nuxt 4 ↔ ancienne app Next (`main` #79)
 
-Référence fonctionnelle : commit `0ba91f23`.
+Référence fonctionnelle : hub post #79 (veille ingest externe, pas de scrape emploi).
 
-## Fait dans cette PR
+**Design Nuxt** : charte distincte (papier chaud, violet, mobile 390px, accueil en 2 taps). Ce n’est pas un reskin Next.
 
-| Zone | Statut |
-|------|--------|
-| Stack Next 16 + App Router (`src/app`) | OK |
-| Routes app : overview, ai, career, snippets, expenses, settings (+ sous-pages) | OK |
-| Auth e-mail / mot de passe (+ confirmation) | OK (OAuth retiré) |
-| Veille UI (module ai-intel) | OK, données **`veille_ia_items`** + saves **`veille_ia_saves`** |
-| `POST /api/veille/ingest` + `x-ingest-secret` | OK |
-| Snippets, CV builder + export PDF, dépenses dev, catalogue outils | OK (code Next d’origine) |
-| PWA (`manifest.webmanifest`, icônes hub, SW statique) | OK |
-| Rebrand **hub** + palette indigo + logo SVG/PNG | OK |
-| Mobile : safe areas, bottom nav, bouton accueil | OK |
-| Offres scrapées (job-board ingest / onglet Offres) | **Retiré** (demande Mohcine) |
-| Candidatures manuelles (job-tracker) | OK |
+Légende : `[x]` livré · `[—]` hors scope volontaire
 
-## Écarts connus / non repris
+## Stack
 
-| Next `0ba91f23` | Cette PR | Note |
-|-----------------|----------|------|
-| Pipeline `ai_intel_*` + cron GitHub | Non | Ingest externe veille uniquement |
-| Onglet Carrière « Offres » (scraping) | Retiré | Volontaire |
-| OAuth Google / GitHub | Retiré | E-mail + mot de passe |
-| Billing Stripe actif | Pages présentes, flux selon clés PSP | Comme avant si non configuré |
-| Admin `/admin` | Inchangé | Rôle admin requis |
-| Notifications push veille | Code présent, VAPID optionnel | Non activé sans clés |
+| Élément | Statut |
+|---------|--------|
+| Nuxt 4 + Nitro Vercel | [x] |
+| DS global `components/ds/*` partout | [x] |
+| Auth SSR (`serverSupabaseUser`, claims `sub` → user id client) | [x] |
+| PWA + SW sans cache auth/API | [x] |
+| Tree Next `src/` retiré | [x] |
 
-## Nuxt (#73–#78)
+## Routes publiques
 
-Abandonné. PR #78 considérée comme remplacée par cette branche.
+| Route | Statut |
+|-------|--------|
+| `/`, `/sign-in`, `/sign-up`, auth complète | [x] |
+| `/reset-password` → update-password | [x] |
+
+## App
+
+| Route | Statut |
+|-------|--------|
+| `/app/overview` (accès rapide Veille + Snippets) | [x] |
+| `/app/ai` (7 j `feed_date`, alias `/app/veille`) | [x] |
+| `/app/snippets` (copie 1 tap, ajout rapide N / ⌘↵) | [x] |
+| `/app/outils` (JSON, encode, JWT, regex, UUID, time, couleur) | [x] |
+| `/app/career`, `?tab=cv` / `?tab=jobs` | [x] |
+| `/app/expenses`, `?tab=tools` | [x] |
+| `/app/settings` + `/account` `/appearance` `/security` `/billing` `/modules` | [x] |
+| `/admin` | [x] |
+| Redirects `cv`, `jobs`, `profil`, `offres` | [x] |
+
+## API
+
+| Endpoint | Statut |
+|----------|--------|
+| `POST /api/veille/ingest` | [x] |
+| `POST /api/billing/webhook` | [x] |
+| `POST /api/expenses/diagnose-service` | [x] |
+| `POST /api/expenses/diagnose-budget` | [x] |
+| `POST /api/admin/module-flag` | [x] |
+| `POST/DELETE /api/notifications/push` | [x] |
+| `POST /api/billing/checkout` | [—] paiement hors scope |
+| `GET/POST /api/cron/ai-intel` | [—] pas de fetch AI news in-app |
+
+## Fonctionnel
+
+| Feature | Statut |
+|---------|--------|
+| Veille ingest externe uniquement | [x] |
+| CV + export PDF (iframe print Next) | [x] |
+| Candidatures manuelles | [x] |
+| Advisor dépenses (catalogue + LLM optionnel) | [x] |
+| Push notifications (VAPID) | [x] |
+| Admin toggle module flags | [x] |
+| OAuth / scrape offres | [—] |
+
+## UX Nuxt (Mohcine)
+
+| Règle | Statut |
+|-------|--------|
+| Nouveau design (pas reskin Next) | [x] |
+| Mobile-first 390px, bottom nav + bouton accueil | [x] |
+| Palette ⌘K (modules, snippets, outils) | [x] |
+| Snippet ultra rapide (sheet global, presse-papier, ⌘↵) | [x] |
+| Veille groupée par jour (Aujourd’hui, Hier, …) | [x] |
+| Outils dev client-side (section Outils) | [x] |
+| Veille + Snippets + Outils depuis l’accueil | [x] |
+| Empty / loading states DS | [x] |
+| Thème clair / sombre, PWA | [x] |
+| Copie FR pro, pas de mention Supabase UI | [x] |
+
+## Release PR #80
+
+| Check | Statut |
+|-------|--------|
+| `npm run build` | [x] local |
+| Preview hub-dev Ready | CI |
+| curl `/sign-in`, `/app/*` sans 500 | CI / preview |

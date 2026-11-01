@@ -6,7 +6,7 @@ Le projet Next lit **`NEXT_PUBLIC_*` en priorité**. Les noms **`NUXT_PUBLIC_*`*
 
 | Nom sur Vercel | Lu par Next | Rôle |
 |----------------|-------------|------|
-| `NUXT_PUBLIC_SUPABASE_URL` | Oui (fallback URL) | Auth + données |
+| `NUXT_PUBLIC_SUPABASE_URL` | Oui (fallback URL) | Auth + données. Preview PR #80 : `https://lfxiyrcfiieyxeziuglv.supabase.co` |
 | `NUXT_PUBLIC_SUPABASE_ANON_KEY` | Oui (fallback anon) | Auth client / SSR |
 | `NUXT_PUBLIC_APP_URL` | Oui (fallback origin) | Canonical, emails, VAPID subject |
 | `SUPABASE_SERVICE_ROLE_KEY` | Oui | `POST /api/veille/ingest`, admin serveur |
