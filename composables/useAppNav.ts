@@ -3,7 +3,6 @@ const PRIMARY_TAB_PATHS = [
   "/app/ai",
   "/app/snippets",
   "/app/outils",
-  "/app/career",
   "/app/expenses",
   "/app/settings",
 ] as const;
