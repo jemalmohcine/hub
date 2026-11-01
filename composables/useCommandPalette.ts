@@ -24,15 +24,15 @@ export function useCommandPalette() {
   const { modules } = useHubModules();
   const router = useRouter();
   const client = useSupabaseClient();
-  const user = useSupabaseUser();
+  const authUserId = useAuthUserId();
   const { openQuickAdd } = useSnippetQuickAdd();
 
   const snippetHits = ref<CommandItem[]>([]);
 
-  watch([open, query, () => user.value?.id], async () => {
+  watch([open, query, authUserId], async () => {
     if (!open.value) return;
     const q = query.value.trim();
-    const uid = user.value?.id;
+    const uid = authUserId.value;
     if (!uid || q.length < 2) {
       snippetHits.value = [];
       return;

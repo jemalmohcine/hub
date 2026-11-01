@@ -42,6 +42,8 @@ export default defineNuxtConfig({
       "/app/jobs": { redirect: { to: "/app/career?tab=jobs", statusCode: 301 } },
       "/app/offres": { redirect: { to: "/app/expenses?tab=tools", statusCode: 301 } },
       "/app/offres/**": { redirect: { to: "/app/expenses?tab=tools", statusCode: 301 } },
+      "/app/veille": { redirect: { to: "/app/ai", statusCode: 301 } },
+      "/app/veille/**": { redirect: { to: "/app/ai", statusCode: 301 } },
       "/auth/confirm": { ssr: false },
       "/auth/update-password": { ssr: false },
       "/**": {
@@ -51,7 +53,7 @@ export default defineNuxtConfig({
           "Referrer-Policy": "strict-origin-when-cross-origin",
           "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
           "Content-Security-Policy":
-            "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+            "default-src 'self'; script-src 'self' 'unsafe-inline' https://vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live wss://vercel.live; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
         },
       },
     },

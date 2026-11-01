@@ -3,7 +3,7 @@ defineProps<{ title: string; description?: string }>();
 </script>
 
 <template>
-  <div class="mx-auto max-w-2xl">
+  <div class="w-full">
     <NuxtLink
       to="/app/outils"
       class="dh-focus-ring mb-4 inline-flex items-center gap-1 text-[length:var(--dh-text-sm)] text-muted-foreground hover:text-foreground"

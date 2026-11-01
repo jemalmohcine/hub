@@ -2,6 +2,9 @@
   <NuxtLayout>
     <NuxtPage />
   </NuxtLayout>
+  <ClientOnly>
+    <SnippetQuickAddSheet />
+  </ClientOnly>
   <Teleport to="body">
     <p v-if="toastMessage" class="dh-toast" role="status">{{ toastMessage }}</p>
   </Teleport>

@@ -4,22 +4,25 @@ import { entitlementsForPlan } from "~/shared/core/entitlements";
 export function useHubUser() {
   const client = useSupabaseClient();
   const authUser = useSupabaseUser();
+  const authUserId = useAuthUserId();
 
   const { data: hubUser, pending, refresh } = useAsyncData(
-    () => `hub-user-${authUser.value?.id ?? "anon"}`,
+    () => `hub-user-${authUserId.value ?? "anon"}`,
     async (): Promise<HubUser | null> => {
+      await ensureAuthUserId();
+      const userId = authUserId.value;
       const user = authUser.value;
-      if (!user?.id) return null;
+      if (!userId || !user) return null;
 
       const [{ data: profile }, { data: subscription }, { data: preferences }] =
         await Promise.all([
-          client.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-          client.from("subscriptions").select("*").eq("user_id", user.id).maybeSingle(),
-          client.from("user_preferences").select("*").eq("user_id", user.id).maybeSingle(),
+          client.from("profiles").select("*").eq("id", userId).maybeSingle(),
+          client.from("subscriptions").select("*").eq("user_id", userId).maybeSingle(),
+          client.from("user_preferences").select("*").eq("user_id", userId).maybeSingle(),
         ]);
 
       const fallbackProfile: Profile = {
-        id: user.id,
+        id: userId,
         email: user.email ?? "",
         first_name: (user.user_metadata?.first_name as string | null) ?? null,
         last_name: (user.user_metadata?.last_name as string | null) ?? null,
@@ -35,7 +38,7 @@ export function useHubUser() {
       const plan = resolvedSub?.plan ?? "free";
 
       return {
-        id: user.id,
+        id: userId,
         email: user.email ?? resolvedProfile.email,
         profile: resolvedProfile,
         subscription: resolvedSub,
@@ -43,7 +46,7 @@ export function useHubUser() {
         entitlements: entitlementsForPlan(plan),
       };
     },
-    { watch: [() => authUser.value?.id], server: false },
+    { watch: [() => authUserId.value], server: false },
   );
 
   return { hubUser, pending, refresh };

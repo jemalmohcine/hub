@@ -12,7 +12,7 @@ Légende : `[x]` livré · `[—]` hors scope volontaire
 |---------|--------|
 | Nuxt 4 + Nitro Vercel | [x] |
 | DS global `components/ds/*` partout | [x] |
-| Auth SSR (`serverSupabaseUser`, pas `event.req.headers.get`) | [x] |
+| Auth SSR (`serverSupabaseUser`, claims `sub` → user id client) | [x] |
 | PWA + SW sans cache auth/API | [x] |
 | Tree Next `src/` retiré | [x] |
 
@@ -28,7 +28,7 @@ Légende : `[x]` livré · `[—]` hors scope volontaire
 | Route | Statut |
 |-------|--------|
 | `/app/overview` (accès rapide Veille + Snippets) | [x] |
-| `/app/ai` (7 j `feed_date`) | [x] |
+| `/app/ai` (7 j `feed_date`, alias `/app/veille`) | [x] |
 | `/app/snippets` (copie 1 tap, ajout rapide N / ⌘↵) | [x] |
 | `/app/outils` (JSON, encode, JWT, regex, UUID, time, couleur) | [x] |
 | `/app/career`, `?tab=cv` / `?tab=jobs` | [x] |

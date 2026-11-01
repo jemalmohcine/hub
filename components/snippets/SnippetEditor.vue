@@ -8,7 +8,7 @@ const props = defineProps<{
 const emit = defineEmits<{ saved: []; deleted: [] }>();
 
 const client = useSupabaseClient();
-const user = useSupabaseUser();
+const authUserId = useAuthUserId();
 
 const form = reactive<DevSnippetInput>({
   title: "",
@@ -59,7 +59,7 @@ function parseTags(raw: string): string[] {
 }
 
 async function save() {
-  const uid = user.value?.id;
+  const uid = authUserId.value ?? (await ensureAuthUserId());
   if (!uid) return;
   const row = {
     user_id: uid,

@@ -5,7 +5,7 @@ import { userFacingDataError } from "~/shared/lib/user-error";
 
 const route = useRoute();
 const client = useSupabaseClient();
-const user = useSupabaseUser();
+const authUserId = useAuthUserId();
 const { openQuickAdd, refreshTick } = useSnippetQuickAdd();
 
 const copiedId = ref<string | null>(null);
@@ -21,9 +21,9 @@ function onCopied(id: string) {
 }
 
 const { data, pending, error, refresh } = await useAsyncData(
-  () => `snippets-${user.value?.id ?? "anon"}`,
+  () => `snippets-${authUserId.value ?? "anon"}`,
   async () => {
-    const uid = user.value?.id;
+    const uid = await ensureAuthUserId();
     if (!uid) return null;
 
     const { data: cats, error: cErr } = await client
@@ -70,7 +70,7 @@ const { data, pending, error, refresh } = await useAsyncData(
 
     return { snippets, categories };
   },
-  { watch: [() => user.value?.id], server: false },
+  { watch: [() => authUserId.value], server: false },
 );
 
 watch(refreshTick, () => {
@@ -89,11 +89,14 @@ const filtered = computed(() => {
 });
 
 const editingSnippet = computed(
-  () => filtered.value.find((s) => s.id === editId.value) ?? data.value?.snippets.find((s) => s.id === editId.value) ?? null,
+  () =>
+    filtered.value.find((s) => s.id === editId.value) ??
+    data.value?.snippets.find((s) => s.id === editId.value) ??
+    null,
 );
 
 async function createCategory() {
-  const uid = user.value?.id;
+  const uid = authUserId.value;
   if (!uid) return;
   const name = window.prompt("Nom du dossier");
   if (!name?.trim()) return;
@@ -111,7 +114,7 @@ function onEditSaved() {
   <div>
     <DsPageHeader compact title="Snippets" description="Toucher une carte pour copier. N ou Ajouter pour créer.">
       <template #actions>
-        <DsButton size="sm" @click="openQuickAdd">Ajouter</DsButton>
+        <DsButton size="sm" type="button" @click="openQuickAdd">Ajouter</DsButton>
       </template>
     </DsPageHeader>
 

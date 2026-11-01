@@ -1,9 +1,9 @@
 import { detectSnippetLanguage } from "~/shared/snippets/detect-language";
 
-const open = ref(false);
+const open = useState("dh-snippet-quick-add-open", () => false);
 
 /** Bump to tell snippet lists to refresh after a quick save. */
-const refreshTick = ref(0);
+const refreshTick = useState("dh-snippet-quick-add-tick", () => 0);
 
 export function useSnippetQuickAdd() {
   function openQuickAdd() {

@@ -12,9 +12,23 @@ export async function restoreClientSession(): Promise<boolean> {
   if (error || !sessionData.session) return false;
 
   session.value = sessionData.session;
+  const sessionUser = sessionData.session.user;
+  if (sessionUser?.id) {
+    user.value = sessionUser;
+    return true;
+  }
+
   const { data: claimsData } = await client.auth.getClaims();
-  user.value = claimsData?.claims ?? null;
-  return Boolean(user.value);
+  const claims = claimsData?.claims as { sub?: string; email?: string } | undefined;
+  const sub = claims?.sub;
+  if (!sub) return false;
+
+  user.value = {
+    ...claims,
+    id: sub,
+    email: claims?.email,
+  } as typeof user.value;
+  return true;
 }
 
 export function useRestoreSessionOnMount() {

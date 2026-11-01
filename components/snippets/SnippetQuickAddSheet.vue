@@ -2,8 +2,8 @@
 import { detectSnippetLanguage } from "~/shared/snippets/detect-language";
 
 const client = useSupabaseClient();
-const user = useSupabaseUser();
-const { quickAddOpen, closeQuickAdd, notifySnippetSaved } = useSnippetQuickAdd();
+const authUserId = useAuthUserId();
+const { openQuickAdd, closeQuickAdd, notifySnippetSaved } = useSnippetQuickAdd();
 const { showToast } = useToast();
 
 const title = ref("");
@@ -38,7 +38,7 @@ function parseTags(raw: string): string[] {
 }
 
 async function save() {
-  const uid = user.value?.id;
+  const uid = authUserId.value ?? (await ensureAuthUserId());
   if (!uid || !title.value.trim() || !content.value.trim()) return;
   saving.value = true;
   const { error } = await client.from("dev_snippets").insert({

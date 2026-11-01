@@ -19,6 +19,7 @@ const q = ref("");
 const selectedId = ref<string | null>(null);
 
 const client = useSupabaseClient();
+const authUserId = useAuthUserId();
 
 const filtered = computed(() => {
   const query = q.value.trim().toLowerCase();
@@ -58,13 +59,13 @@ const selected = computed(
 );
 
 async function toggleSave(item: VeilleItem) {
-  const user = useSupabaseUser();
-  if (!user.value) return;
+  const uid = authUserId.value ?? (await ensureAuthUserId());
+  if (!uid) return;
   if (item.saved) {
-    await client.from("veille_ia_saves").delete().eq("user_id", user.value.id).eq("item_id", item.id);
+    await client.from("veille_ia_saves").delete().eq("user_id", uid).eq("item_id", item.id);
     item.saved = false;
   } else {
-    await client.from("veille_ia_saves").insert({ user_id: user.value.id, item_id: item.id });
+    await client.from("veille_ia_saves").insert({ user_id: uid, item_id: item.id });
     item.saved = true;
   }
 }
@@ -122,7 +123,7 @@ async function toggleSave(item: VeilleItem) {
 
     <section v-for="section in groupedSections" :key="section.feedDate" class="flex flex-col gap-2">
       <header
-        class="sticky top-14 z-10 -mx-[var(--dh-space-page)] border-b border-border/50 bg-background/95 px-[var(--dh-space-page)] py-3 backdrop-blur-sm lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-2"
+        class="sticky top-14 z-10 border-b border-border/50 bg-background/95 py-3 backdrop-blur-sm lg:static lg:border-0 lg:bg-transparent lg:py-2"
       >
         <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-3">
           <h2 class="text-[length:var(--dh-text-base)] font-semibold capitalize leading-tight text-foreground">
