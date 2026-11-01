@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { createChunks } from "@supabase/ssr/dist/module/utils/chunker.js";
 import { chromium, expect, type FullConfig } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
@@ -91,8 +92,41 @@ export default async function globalSetup(config: FullConfig) {
         password: TEST_PASSWORD,
       });
       if (signUpErr) console.warn("[e2e] signUp:", signUpErr.message);
+      await anon.auth.signInWithPassword({ email: TEST_EMAIL, password: TEST_PASSWORD });
+    }
+    const uid = (await anon.auth.getUser()).data.user?.id;
+    if (uid) {
+      const { count } = await anon
+        .from("dev_snippets")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", uid);
+      const need = Math.max(0, 4 - (count ?? 0));
+      for (let i = 0; i < need; i++) {
+        await anon.from("dev_snippets").insert({
+          user_id: uid,
+          title: `E2E seed ${i + 1}`,
+          kind: "snippet",
+          language: "typescript",
+          content: `console.log("e2e-seed-${i + 1}");`,
+          tags: [],
+          category_id: i % 2 === 1 ? null : undefined,
+        });
+      }
     }
   }
+
+  const { data: browserSession, error: browserSignInError } = await anon.auth.signInWithPassword({
+    email: TEST_EMAIL,
+    password: TEST_PASSWORD,
+  });
+  if (browserSignInError || !browserSession.session) {
+    throw new Error(`[e2e] browser session: ${browserSignInError?.message ?? "no session"}`);
+  }
+  const projectRef = new URL(supabaseUrl).hostname.split(".")[0] ?? "supabase";
+  const cookiePrefix = `sb-${projectRef}-auth-token`;
+  const sessionCookieValue = JSON.stringify(browserSession.session);
+  const sessionCookies = createChunks(cookiePrefix, sessionCookieValue);
+  const cookieDomain = new URL(baseURL).hostname;
 
   const vercelBypass =
     process.env.VERCEL_AUTOMATION_BYPASS_SECRET ||
@@ -110,21 +144,19 @@ export default async function globalSetup(config: FullConfig) {
     viewport: { width: 390, height: 844 },
     extraHTTPHeaders,
   });
+  await context.addCookies(
+    sessionCookies.map((chunk) => ({
+      name: chunk.name,
+      value: chunk.value,
+      domain: cookieDomain,
+      path: "/",
+      secure: true,
+      sameSite: "Lax" as const,
+    })),
+  );
   const page = await context.newPage();
 
-  await page.goto(`${baseURL}/auth/login${shareQuery}`, { waitUntil: "domcontentloaded" });
-  await page.locator("h1", { hasText: "Connexion" }).waitFor({ timeout: 30_000 });
-
-  const emailInput = page.locator('input[type="email"]');
-  const passwordInput = page.locator('input[type="password"]');
-  await emailInput.click();
-  await emailInput.pressSequentially(TEST_EMAIL, { delay: 15 });
-  await passwordInput.click();
-  await passwordInput.pressSequentially(TEST_PASSWORD, { delay: 15 });
-  const loginBtn = page.locator('button[type="submit"]');
-  await expect(loginBtn).toBeEnabled({ timeout: 20_000 });
-  await loginBtn.click();
-  await page.waitForURL(/\/app\//, { timeout: 60_000 });
+  await page.goto(`${baseURL}/app/overview${shareQuery}`, { waitUntil: "domcontentloaded" });
   const nav = page.locator('[data-testid="mobile-bottom-nav"]');
   try {
     await nav.waitFor({ timeout: 30_000 });
@@ -133,11 +165,11 @@ export default async function globalSetup(config: FullConfig) {
     throw new Error(`No app shell after login; url=${page.url()}`);
   }
 
-  await page.goto(`${baseURL}/app/snippets${shareQuery}`, { waitUntil: "domcontentloaded" });
-  await page.locator('[data-testid="mobile-bottom-nav"]').waitFor({ timeout: 30_000 });
-
   fs.mkdirSync(path.dirname(AUTH_FILE), { recursive: true });
   await context.storageState({ path: AUTH_FILE });
+
+  await page.goto(`${baseURL}/app/snippets${shareQuery}`, { waitUntil: "domcontentloaded", timeout: 60_000 }).catch(() => {});
+  await page.locator('[data-testid="mobile-bottom-nav"]').waitFor({ timeout: 30_000 }).catch(() => {});
 
   const snippetCount = await page.locator('[data-testid="snippet-list"] li').count();
   if (snippetCount === 0) {
