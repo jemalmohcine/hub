@@ -1,10 +1,7 @@
+import { resolveAuthUserId } from "~/shared/lib/auth-user-id";
+
 /** Supabase user id: session user has `id`, JWT claims use `sub`. */
-export function resolveAuthUserId(
-  user: { id?: string; sub?: string } | null | undefined,
-): string | null {
-  if (!user) return null;
-  return user.id ?? user.sub ?? null;
-}
+export { resolveAuthUserId };
 
 export function useAuthUserId() {
   const user = useSupabaseUser();
