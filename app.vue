@@ -1,6 +1,8 @@
 <template>
   <ShellAppShell v-if="showAppShell">
-    <NuxtPage />
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
   </ShellAppShell>
   <NuxtLayout v-else>
     <NuxtPage />
