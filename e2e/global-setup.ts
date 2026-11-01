@@ -49,11 +49,25 @@ export default async function globalSetup(config: FullConfig) {
       userId = created.user?.id;
     }
     if (userId) {
+      const { data: cats } = await admin
+        .from("dev_snippet_categories")
+        .select("id, name")
+        .eq("user_id", userId);
+      let folderId = cats?.find((c) => c.name === "E2E Dossier")?.id as string | undefined;
+      if (!folderId) {
+        const { data: createdCat } = await admin
+          .from("dev_snippet_categories")
+          .insert({ user_id: userId, name: "E2E Dossier" })
+          .select("id")
+          .single();
+        folderId = createdCat?.id as string | undefined;
+      }
+
       const { count } = await admin
         .from("dev_snippets")
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId);
-      const need = 3 - (count ?? 0);
+      const need = 4 - (count ?? 0);
       for (let i = 0; i < need; i++) {
         await admin.from("dev_snippets").insert({
           user_id: userId,
@@ -62,6 +76,7 @@ export default async function globalSetup(config: FullConfig) {
           language: "typescript",
           content: `console.log("e2e-seed-${i + 1}");`,
           tags: [],
+          category_id: i % 2 === 0 ? (folderId ?? null) : null,
         });
       }
     }

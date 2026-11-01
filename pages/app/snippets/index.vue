@@ -52,9 +52,7 @@ const filtered = computed(() => {
   let list = data.value?.snippets ?? [];
   if (categoryId.value) list = list.filter((s) => s.categoryId === categoryId.value);
   if (q.value.trim()) {
-    const ranked = rankSnippets(list, q.value.trim());
-    const order = new Map(ranked.map((r, i) => [r.id, i]));
-    list = [...list].sort((a, b) => (order.get(a.id) ?? 99) - (order.get(b.id) ?? 99));
+    list = rankSnippets(q.value.trim(), list);
   }
   return list;
 });
@@ -133,7 +131,7 @@ function onEditSaved() {
       description="Appuyez sur Ajouter ou sur le bouton + pour enregistrer du code."
     />
 
-    <SnippetList
+    <SnippetsSnippetList
       v-else-if="!error && data && filtered.length > 0"
       :snippets="filtered"
       :selected-id="editId"
@@ -143,7 +141,7 @@ function onEditSaved() {
     />
 
     <DsSheet :open="Boolean(editingSnippet)" title="Modifier le snippet" @close="editId = null">
-      <SnippetEditor
+      <SnippetsSnippetEditor
         v-if="editingSnippet"
         :snippet="editingSnippet"
         @saved="onEditSaved"

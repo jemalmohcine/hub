@@ -39,6 +39,13 @@ test.describe("deployed app (authenticated)", () => {
     expect(padLeft).toBeGreaterThan(8);
   });
 
+  test("career hub: Retour to overview (not Accueil tab icon only)", async ({ page, baseURL }) => {
+    await page.goto(`${baseURL}/app/career${shareQ}`);
+    await expect(page.locator('[data-testid="app-back-button"]')).toBeVisible();
+    await page.locator('[data-testid="app-back-button"]').click();
+    await expect(page).toHaveURL(/\/app\/overview/);
+  });
+
   test("snippets hard load: no 500, list or empty state", async ({ page, baseURL }) => {
     const response = await page.goto(`${baseURL}/app/snippets${shareQ}`, {
       waitUntil: "networkidle",
