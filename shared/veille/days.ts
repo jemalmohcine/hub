@@ -1,5 +1,5 @@
 import type { VeilleItem } from "./types";
-import { addDaysIso, toDayKey } from "../lib/dates";
+import { addDaysIso, hubDayKey, toDayKey } from "../lib/dates";
 
 /** Most recent feed_date present in items (YYYY-MM-DD), or null. */
 export function latestVeilleFeedDay(items: Pick<VeilleItem, "feed_date">[]): string | null {
@@ -8,13 +8,13 @@ export function latestVeilleFeedDay(items: Pick<VeilleItem, "feed_date">[]): str
 }
 
 /** Default veille window: last 7 calendar days including today (matches Next `7d` preset). */
-export function veilleSevenDayCutoff(today = toDayKey(new Date())): string {
+export function veilleSevenDayCutoff(today = hubDayKey()): string {
   return addDaysIso(today, -6);
 }
 
 export function filterVeilleLastSevenDays<T extends Pick<VeilleItem, "feed_date">>(
   items: T[],
-  today = toDayKey(new Date()),
+  today = hubDayKey(),
 ): T[] {
   const cutoff = veilleSevenDayCutoff(today);
   return items.filter((item) => item.feed_date >= cutoff && item.feed_date <= today);

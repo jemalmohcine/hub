@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ inheritAttrs: false });
 defineProps<{ open: boolean; title?: string }>();
 defineEmits<{ close: [] }>();
 </script>
@@ -7,6 +8,7 @@ defineEmits<{ close: [] }>();
   <Teleport to="body">
     <div
       v-if="open"
+      v-bind="$attrs"
       class="fixed inset-0 z-[60] flex flex-col justify-end bg-black/45 sm:justify-center sm:p-4"
       role="dialog"
       aria-modal="true"

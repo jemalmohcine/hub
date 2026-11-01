@@ -3,7 +3,7 @@ import { detectSnippetLanguage } from "~/shared/snippets/detect-language";
 
 const client = useSupabaseClient();
 const authUserId = useAuthUserId();
-const { openQuickAdd, closeQuickAdd, notifySnippetSaved } = useSnippetQuickAdd();
+const { quickAddOpen, openQuickAdd, closeQuickAdd, notifySnippetSaved } = useSnippetQuickAdd();
 const { showToast } = useToast();
 
 const title = ref("");
@@ -69,7 +69,7 @@ function onKeydown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <DsSheet :open="quickAddOpen" title="Nouveau snippet" @close="closeQuickAdd">
+  <DsSheet :open="quickAddOpen" title="Nouveau snippet" data-testid="snippet-quick-add-sheet" @close="closeQuickAdd">
     <form class="flex flex-col gap-3" @submit.prevent="save" @keydown="onKeydown">
       <DsInput ref="titleRef" v-model="title" placeholder="Titre" autocomplete="off" />
       <div class="flex gap-2">

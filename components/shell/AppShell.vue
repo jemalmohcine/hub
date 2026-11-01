@@ -125,11 +125,13 @@ async function signOut() {
 
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
       <header
-        class="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border/60 bg-background/90 px-[var(--dh-space-page)] pt-[env(safe-area-inset-top)] backdrop-blur-md lg:h-16 lg:px-8"
+        data-testid="app-top-bar"
+        class="sticky top-0 z-30 flex h-14 min-h-14 items-center gap-2 border-b border-border/60 bg-background/95 pl-[max(var(--dh-space-page),env(safe-area-inset-left))] pr-[max(var(--dh-space-page),env(safe-area-inset-right))] pt-[env(safe-area-inset-top)] backdrop-blur-md lg:h-16 lg:px-8"
       >
         <button
           v-if="showMobileBack"
           type="button"
+          data-testid="app-back-button"
           class="dh-focus-ring inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] border border-border bg-card lg:hidden"
           aria-label="Retour"
           @click="goBack"
@@ -147,22 +149,32 @@ async function signOut() {
         <h1 class="min-w-0 flex-1 truncate text-[length:var(--dh-text-base)] font-semibold lg:text-[length:var(--dh-text-lg)]">
           {{ pageTitle }}
         </h1>
-        <DsButton variant="ghost" size="sm" aria-label="Palette de commandes" @click="toggle">
+        <DsButton variant="ghost" size="sm" class="hidden shrink-0 sm:inline-flex" aria-label="Palette de commandes" @click="toggle">
           ⌘K
         </DsButton>
-        <DsButton size="sm" class="hidden sm:inline-flex" type="button" aria-label="Nouveau snippet" @click="openQuickAdd()">
-          Ajouter
+        <DsButton
+          size="sm"
+          type="button"
+          class="shrink-0"
+          data-testid="snippet-add-header"
+          aria-label="Nouveau snippet"
+          @click="openQuickAdd()"
+        >
+          <span class="hidden sm:inline">Ajouter</span>
+          <span class="sm:hidden">+</span>
         </DsButton>
       </header>
 
       <main
-        class="dh-app-main w-full flex-1 px-[var(--dh-space-page)] py-5 pb-[calc(var(--dh-nav-h)+env(safe-area-inset-bottom)+1.25rem)] lg:max-w-none lg:px-8 lg:py-8 lg:pb-8"
+        data-testid="app-main"
+        class="dh-app-main box-border w-full max-w-full flex-1 px-[max(var(--dh-space-page),env(safe-area-inset-left))] py-5 pb-[calc(var(--dh-nav-h)+env(safe-area-inset-bottom)+1.25rem)] max-lg:pr-[max(var(--dh-space-page),env(safe-area-inset-right))] lg:max-w-none lg:px-8 lg:py-8 lg:pb-8"
       >
         <slot />
       </main>
     </div>
 
     <nav
+      data-testid="mobile-bottom-nav"
       class="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-border/80 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
       aria-label="Navigation mobile"
       style="height: calc(var(--dh-nav-h) + env(safe-area-inset-bottom))"
@@ -242,7 +254,8 @@ async function signOut() {
       <button
         v-if="route.path.startsWith('/app')"
         type="button"
-        class="dh-focus-ring fixed z-[45] flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95 max-lg:right-4 max-lg:bottom-[calc(var(--dh-nav-h)+env(safe-area-inset-bottom)+1rem)] lg:bottom-8 lg:right-8"
+        data-testid="snippet-fab"
+        class="dh-focus-ring fixed z-[45] flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95 max-lg:right-[max(1rem,env(safe-area-inset-right))] max-lg:bottom-[calc(var(--dh-nav-h)+env(safe-area-inset-bottom)+1rem)] lg:bottom-8 lg:right-8"
         aria-label="Nouveau snippet"
         @click="openQuickAdd()"
       >

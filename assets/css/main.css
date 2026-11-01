@@ -103,6 +103,7 @@ body {
 .dh-app-main {
   max-width: 42rem;
   margin-inline: auto;
+  width: 100%;
 }
 
 @media (min-width: 1024px) {

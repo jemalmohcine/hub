@@ -1,5 +1,5 @@
-/* hub PWA — static shell only; never cache auth or API */
-const CACHE = "hub-shell-v5";
+/* hub PWA — never cache HTML or Nuxt bundles; static icons only */
+const CACHE = "hub-shell-v7";
 const PRECACHE = [
   "/manifest.webmanifest",
   "/icons/icon-192x192.png",
@@ -10,6 +10,9 @@ function isNetworkOnly(url) {
   return (
     url.pathname.startsWith("/api/") ||
     url.pathname.startsWith("/auth/") ||
+    url.pathname.startsWith("/app/") ||
+    url.pathname.startsWith("/admin") ||
+    url.pathname.startsWith("/_nuxt/") ||
     url.pathname.startsWith("/sign-in") ||
     url.pathname.startsWith("/sign-up") ||
     url.pathname.startsWith("/forgot-password") ||
@@ -37,19 +40,27 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (isNetworkOnly(url)) return;
 
-  if (request.mode === "navigate") {
+  if (isNetworkOnly(url) || request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() =>
-        caches.match(request).then((r) => r || caches.match("/app/overview")),
-      ),
+      fetch(request).catch(() => {
+        if (request.mode === "navigate") {
+          return caches.match("/icons/icon-192x192.png");
+        }
+        throw new Error("offline");
+      }),
     );
     return;
   }

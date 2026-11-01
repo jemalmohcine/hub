@@ -121,9 +121,9 @@ async function toggleSave(item: VeilleItem) {
       description="Assouplissez les filtres ou revenez demain."
     />
 
-    <section v-for="section in groupedSections" :key="section.feedDate" class="flex flex-col gap-2">
+    <section v-for="section in groupedSections" :key="section.feedDate" class="flex flex-col gap-2 pb-2">
       <header
-        class="sticky top-14 z-10 border-b border-border/50 bg-background/95 py-3 backdrop-blur-sm lg:static lg:border-0 lg:bg-transparent lg:py-2"
+        class="sticky top-14 z-20 border-b border-border bg-background px-[var(--dh-space-page)] py-3 shadow-[0_1px_0_var(--dh-border)] lg:static lg:shadow-none"
       >
         <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-3">
           <h2 class="text-[length:var(--dh-text-base)] font-semibold capitalize leading-tight text-foreground">

@@ -18,6 +18,11 @@ export default defineEventHandler(async (event) => {
 
   if (!path.startsWith("/app") && path !== "/admin") return;
 
+  if (path === "/app/playwright-fixture") {
+    const config = useRuntimeConfig();
+    if (config.public.e2eShell) return;
+  }
+
   const user = await serverSupabaseUser(event);
   if (!user) {
     const next = encodeURIComponent(path + (getRequestURL(event).search || ""));

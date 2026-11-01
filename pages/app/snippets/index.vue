@@ -3,6 +3,8 @@ import type { DevSnippet, DevSnippetCategory } from "~/shared/snippets/types";
 import { rankSnippets } from "~/shared/snippets/match";
 import { userFacingDataError } from "~/shared/lib/user-error";
 
+definePageMeta({ ssr: false });
+
 const route = useRoute();
 const client = useSupabaseClient();
 const authUserId = useAuthUserId();
@@ -24,7 +26,7 @@ const { data, pending, error, refresh } = await useAsyncData(
   () => `snippets-${authUserId.value ?? "anon"}`,
   async () => {
     const uid = await ensureAuthUserId();
-    if (!uid) return null;
+    if (!uid) return { snippets: [], categories: [] };
 
     const { data: cats, error: cErr } = await client
       .from("dev_snippet_categories")
@@ -75,6 +77,11 @@ const { data, pending, error, refresh } = await useAsyncData(
 
 watch(refreshTick, () => {
   void refresh();
+});
+
+onMounted(async () => {
+  await ensureAuthUserId();
+  await refresh();
 });
 
 const filtered = computed(() => {
@@ -154,8 +161,14 @@ function onEditSaved() {
 
     <div v-if="pending && !data" class="dh-skeleton h-40" />
 
+    <DsEmptyState
+      v-else-if="!error && data && filtered.length === 0"
+      title="Aucun snippet"
+      description="Appuyez sur Ajouter ou sur le bouton + pour enregistrer du code."
+    />
+
     <SnippetList
-      v-else-if="!error && data"
+      v-else-if="!error && data && filtered.length > 0"
       :snippets="filtered"
       :selected-id="editId"
       :copied-id="copiedId"

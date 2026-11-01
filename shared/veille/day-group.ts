@@ -1,7 +1,7 @@
-import { addDaysIso, formatDate, toDayKey, toDate } from "~/shared/lib/dates";
+import { addDaysIso, formatDate, hubDayKey, toDate } from "~/shared/lib/dates";
 
 /** Human section title for a feed_date (YYYY-MM-DD). */
-export function feedDayGroupLabel(feedDate: string, today = toDayKey(new Date())): string {
+export function feedDayGroupLabel(feedDate: string, today = hubDayKey()): string {
   if (!feedDate) return "";
   const yesterday = addDaysIso(today, -1);
   if (feedDate === today) return "Aujourd'hui";
