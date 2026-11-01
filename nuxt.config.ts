@@ -25,6 +25,8 @@ export default defineNuxtConfig({
     public: {
       appUrl: process.env.NUXT_PUBLIC_APP_URL || "http://localhost:3000",
       e2eShell: process.env.NUXT_PUBLIC_E2E_SHELL === "1",
+      buildSha: process.env.VERCEL_GIT_COMMIT_SHA || process.env.NUXT_PUBLIC_BUILD_SHA || "dev",
+      buildFramework: "nuxt4",
       supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || "",
       supabaseKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY || "",
       vapidPublicKey:
@@ -45,6 +47,8 @@ export default defineNuxtConfig({
       "/app/offres/**": { redirect: { to: "/app/expenses?tab=tools", statusCode: 301 } },
       "/app/veille": { redirect: { to: "/app/ai", statusCode: 301 } },
       "/app/veille/**": { redirect: { to: "/app/ai", statusCode: 301 } },
+      "/app/snippets": { ssr: false },
+      "/app/snippets/**": { ssr: false },
       "/auth/confirm": { ssr: false },
       "/auth/update-password": { ssr: false },
       "/**": {

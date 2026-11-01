@@ -62,8 +62,8 @@ export function addDaysIso(
   return toDayKey(next);
 }
 
-/** Calendar day in hub timezone (YYYY-MM-DD), default Europe/Paris. */
-export function hubDayKey(value: Date = new Date(), timeZone = "Europe/Paris"): string {
+/** Calendar day in hub timezone (YYYY-MM-DD), default Africa/Casablanca. */
+export function hubDayKey(value: Date = new Date(), timeZone = "Africa/Casablanca"): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",

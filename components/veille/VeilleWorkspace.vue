@@ -43,7 +43,9 @@ const groupedSections = computed(() => {
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(item);
   }
-  return [...map.entries()].map(([feedDate, items]) => ({
+  return [...map.entries()]
+    .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
+    .map(([feedDate, items]) => ({
     feedDate,
     label: feedDayGroupLabel(feedDate),
     sub: formatDate(`${feedDate}T12:00:00`, "fr", "dayMonthYear"),

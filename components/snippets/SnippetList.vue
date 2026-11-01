@@ -19,7 +19,7 @@ async function tapSnippet(item: DevSnippet) {
 </script>
 
 <template>
-  <ul class="flex flex-col gap-2">
+  <ul data-testid="snippet-list" class="flex flex-col gap-2">
     <li v-for="item in snippets" :key="item.id">
       <button
         type="button"

@@ -16,6 +16,8 @@ import {
 const route = useRoute();
 const router = useRouter();
 const user = useSupabaseUser();
+const config = useRuntimeConfig();
+const buildSha = computed(() => String(config.public.buildSha || "dev"));
 const { open, query, filtered, toggle, close, run } = useCommandPalette();
 const { openQuickAdd } = useSnippetQuickAdd();
 const { backTarget, showMobileBack } = useAppNav();
@@ -262,5 +264,6 @@ async function signOut() {
         <Plus class="h-6 w-6" />
       </button>
     </Teleport>
+    <span data-testid="build-sha" class="sr-only" aria-hidden="true">{{ buildSha }}</span>
   </div>
 </template>

@@ -1,4 +1,4 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig } from "@playwright/test";
 
 const baseURL =
   process.env.PLAYWRIGHT_BASE_URL ||
@@ -6,6 +6,7 @@ const baseURL =
 
 export default defineConfig({
   testDir: "./e2e",
+  globalSetup: "./e2e/global-setup.ts",
   timeout: 120_000,
   retries: 1,
   use: {

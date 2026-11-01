@@ -13,6 +13,7 @@ export function useHubUser() {
       const userId = authUserId.value;
       const user = authUser.value;
       if (!userId || !user) return null;
+      if (!/^[0-9a-f-]{36}$/i.test(userId)) return null;
 
       const [{ data: profile }, { data: subscription }, { data: preferences }] =
         await Promise.all([
