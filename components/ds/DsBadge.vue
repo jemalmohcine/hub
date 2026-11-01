@@ -1,7 +1,11 @@
 <script setup lang="ts">
-defineProps<{
-  tone?: "neutral" | "critical" | "warning" | "success" | "info";
-}>();
+const props = withDefaults(
+  defineProps<{
+    tone?: "neutral" | "critical" | "warning" | "success" | "info";
+  }>(),
+  { tone: "neutral" },
+);
+
 const toneClass = computed(() => {
   const map = {
     neutral: "bg-muted text-foreground",
@@ -10,7 +14,7 @@ const toneClass = computed(() => {
     success: "bg-success/15 text-success",
     info: "bg-primary/10 text-primary",
   };
-  return map[tone || "neutral"];
+  return map[props.tone];
 });
 </script>
 

@@ -21,8 +21,11 @@ watch(quickAddOpen, async (isOpen) => {
   tagsInput.value = "";
   await nextTick();
   titleRef.value?.focus();
-  await pasteClipboardIntoSnippet(content, language);
 });
+
+async function pasteFromClipboard() {
+  await pasteClipboardIntoSnippet(content, language);
+}
 
 watch(content, (value) => {
   if (value.trim().length > 8) {
@@ -77,6 +80,11 @@ function onKeydown(e: KeyboardEvent) {
         <p class="flex items-center text-[length:var(--dh-text-xs)] text-muted-foreground">
           Détection auto · ⌘↵ pour enregistrer
         </p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <DsButton type="button" size="sm" variant="secondary" @click="pasteFromClipboard">
+          Coller
+        </DsButton>
       </div>
       <DsTextarea v-model="content" :rows="8" placeholder="Colle ton code ici…" class="font-mono text-xs" />
       <DsInput v-model="tagsInput" placeholder="Tags optionnels (virgules)" />

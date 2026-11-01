@@ -38,13 +38,32 @@ export default async function globalSetup(config: FullConfig) {
     });
     const { data: existing } = await admin.auth.admin.listUsers({ perPage: 200 });
     const found = existing.users.find((u) => u.email === TEST_EMAIL);
+    let userId = found?.id;
     if (!found) {
-      const { error } = await admin.auth.admin.createUser({
+      const { data: created, error } = await admin.auth.admin.createUser({
         email: TEST_EMAIL,
         password: TEST_PASSWORD,
         email_confirm: true,
       });
       if (error) console.warn("[e2e] createUser:", error.message);
+      userId = created.user?.id;
+    }
+    if (userId) {
+      const { count } = await admin
+        .from("dev_snippets")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId);
+      const need = 3 - (count ?? 0);
+      for (let i = 0; i < need; i++) {
+        await admin.from("dev_snippets").insert({
+          user_id: userId,
+          title: `E2E seed ${i + 1}`,
+          kind: "snippet",
+          language: "typescript",
+          content: `console.log("e2e-seed-${i + 1}");`,
+          tags: [],
+        });
+      }
     }
   } else {
     const { error: signInErr } = await anon.auth.signInWithPassword({

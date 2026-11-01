@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import type { DevSnippet, DevSnippetCategory } from "~/shared/snippets/types";
+import type { DevSnippet } from "~/shared/snippets/types";
 import { rankSnippets } from "~/shared/snippets/match";
+import { loadSnippetsWorkspace } from "~/shared/snippets/queries";
 import { userFacingDataError } from "~/shared/lib/user-error";
 
 definePageMeta({ ssr: false });
@@ -26,51 +27,12 @@ const { data, pending, error, refresh } = await useAsyncData(
   () => `snippets-${authUserId.value ?? "anon"}`,
   async () => {
     const uid = await ensureAuthUserId();
-    if (!uid) return { snippets: [], categories: [] };
-
-    const { data: cats, error: cErr } = await client
-      .from("dev_snippet_categories")
-      .select("id, name, created_at")
-      .eq("user_id", uid)
-      .order("name");
-
-    if (cErr) throw new Error(userFacingDataError(cErr));
-
-    const { data: rows, error: rErr } = await client
-      .from("dev_snippets")
-      .select(
-        "id, title, kind, language, content, tags, category_id, reference_url, image_url, is_pinned, created_at, updated_at",
-      )
-      .eq("user_id", uid)
-      .order("is_pinned", { ascending: false })
-      .order("updated_at", { ascending: false });
-
-    if (rErr) throw new Error(userFacingDataError(rErr));
-
-    const names = new Map((cats ?? []).map((c) => [c.id, c.name as string]));
-    const snippets: DevSnippet[] = (rows ?? []).map((row) => ({
-      id: row.id as string,
-      title: row.title as string,
-      kind: row.kind as DevSnippet["kind"],
-      language: row.language as string | null,
-      content: row.content as string,
-      tags: (row.tags as string[]) ?? [],
-      categoryId: row.category_id as string | null,
-      categoryName: row.category_id ? names.get(row.category_id as string) ?? null : null,
-      referenceUrl: row.reference_url as string | null,
-      imageUrl: row.image_url as string | null,
-      isPinned: Boolean(row.is_pinned),
-      createdAt: row.created_at as string,
-      updatedAt: row.updated_at as string,
-    }));
-
-    const categories: DevSnippetCategory[] = (cats ?? []).map((c) => ({
-      id: c.id as string,
-      name: c.name as string,
-      createdAt: c.created_at as string,
-    }));
-
-    return { snippets, categories };
+    if (!uid) return null;
+    try {
+      return await loadSnippetsWorkspace(client, uid);
+    } catch (e) {
+      throw new Error(userFacingDataError(e));
+    }
   },
   { watch: [() => authUserId.value], server: false },
 );
@@ -79,10 +41,12 @@ watch(refreshTick, () => {
   void refresh();
 });
 
-onMounted(async () => {
-  await ensureAuthUserId();
-  await refresh();
-});
+watch(
+  () => authUserId.value,
+  (uid) => {
+    if (uid) void refresh();
+  },
+);
 
 const filtered = computed(() => {
   let list = data.value?.snippets ?? [];
@@ -103,7 +67,7 @@ const editingSnippet = computed(
 );
 
 async function createCategory() {
-  const uid = authUserId.value;
+  const uid = authUserId.value ?? (await ensureAuthUserId());
   if (!uid) return;
   const name = window.prompt("Nom du dossier");
   if (!name?.trim()) return;
@@ -124,6 +88,8 @@ function onEditSaved() {
         <DsButton size="sm" type="button" @click="openQuickAdd">Ajouter</DsButton>
       </template>
     </DsPageHeader>
+
+    <p v-if="error" class="mb-4 text-[length:var(--dh-text-sm)] text-destructive">{{ error.message }}</p>
 
     <DsInput
       v-if="!error && data"

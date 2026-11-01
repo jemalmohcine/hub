@@ -47,11 +47,8 @@ test.describe("deployed app (authenticated)", () => {
     await expect(page.getByText("500")).toHaveCount(0);
     await expect(page.locator('[data-testid="mobile-bottom-nav"]')).toBeVisible();
     await page.waitForTimeout(2000);
-    const hasList = (await page.locator('[data-testid="snippet-list"] li').count()) > 0;
-    const hasEmpty =
-      (await page.getByText("Aucun snippet").count()) > 0 ||
-      (await page.getByText("Bibliothèque").count()) > 0;
-    expect(hasList || hasEmpty).toBeTruthy();
+    const hasList = (await page.locator('[data-testid="snippet-list"] li').count()) >= 3;
+    expect(hasList).toBeTruthy();
     await page.screenshot({
       path: "/opt/cursor/artifacts/screenshots/e2e-auth-snippets-mobile.png",
       fullPage: true,

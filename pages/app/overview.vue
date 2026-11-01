@@ -5,6 +5,7 @@ import { filterClientVeilleItems } from "~/shared/veille/client-filter";
 import { filterVeilleLastSevenDays } from "~/shared/veille/days";
 import { mapVeilleRow } from "~/shared/veille/map-row";
 import { sortVeilleItems } from "~/shared/veille/sort";
+import { countDevSnippetsForUser, fetchDevSnippetsForUser } from "~/shared/snippets/queries";
 
 const client = useSupabaseClient();
 const authUserId = useAuthUserId();
@@ -15,26 +16,17 @@ const { data, pending } = await useAsyncData(
   async () => {
     const uid = await ensureAuthUserId();
 
-    const [snippetListRes, snippetCountRes, veilleRes] = await Promise.all([
-      uid
-        ? client
-            .from("dev_snippets")
-            .select("id, title, language, content, updated_at")
-            .eq("user_id", uid)
-            .order("updated_at", { ascending: false })
-            .limit(5)
-        : Promise.resolve({ data: [], error: null }),
-      uid
-        ? client.from("dev_snippets").select("id", { count: "exact", head: true }).eq("user_id", uid)
-        : Promise.resolve({ count: 0, error: null }),
+    const [snippetRows, snippetTotal, veilleRes] = await Promise.all([
+      uid ? fetchDevSnippetsForUser(client, uid) : Promise.resolve([]),
+      uid ? countDevSnippetsForUser(client, uid) : Promise.resolve(0),
       client.from("veille_ia_items").select("*").order("feed_date", { ascending: false }).limit(120),
     ]);
 
-    const snippets = (snippetListRes.data ?? []).map((row) => ({
-      id: row.id as string,
-      title: row.title as string,
-      language: row.language as string | null,
-      content: row.content as string,
+    const snippets = snippetRows.slice(0, 5).map((row) => ({
+      id: row.id,
+      title: row.title,
+      language: row.language,
+      content: row.content,
     }));
 
     const veilleRows = filterClientVeilleItems(
@@ -43,7 +35,7 @@ const { data, pending } = await useAsyncData(
     const veilleRecent = sortVeilleItems(filterVeilleLastSevenDays(veilleRows)).slice(0, 5);
 
     return {
-      snippetTotal: snippetCountRes.count ?? snippets.length,
+      snippetTotal,
       snippets,
       veilleRecent: veilleRecent as VeilleItem[],
       veilleCount: filterVeilleLastSevenDays(veilleRows).length,
