@@ -157,17 +157,16 @@ async function signOut() {
         <DsButton variant="ghost" size="sm" class="hidden h-11 min-h-11 shrink-0 sm:inline-flex" aria-label="Palette de commandes" @click="toggle">
           ⌘K
         </DsButton>
-        <DsButton
-          size="sm"
+        <button
           type="button"
-          class="h-11 min-h-11 min-w-11 shrink-0 px-3 sm:min-w-0"
+          class="dh-focus-ring relative z-10 inline-flex h-11 min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--dh-radius)] bg-primary px-3 text-[length:var(--dh-text-sm)] font-medium text-primary-foreground active:brightness-95 sm:min-w-0"
           data-testid="snippet-add-header"
           aria-label="Nouveau snippet"
-          @click="openQuickAdd()"
+          @click="openQuickAdd"
         >
           <span class="hidden sm:inline">Ajouter</span>
           <span class="sm:hidden text-lg leading-none">+</span>
-        </DsButton>
+        </button>
         </div>
       </header>
 
@@ -269,5 +268,8 @@ async function signOut() {
       </button>
     </Teleport>
     <span data-testid="build-sha" class="sr-only" aria-hidden="true">{{ buildSha }}</span>
+    <ClientOnly>
+      <SnippetsSnippetQuickAddSheet />
+    </ClientOnly>
   </div>
 </template>

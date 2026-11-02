@@ -24,13 +24,13 @@ function severityTone(sev: VeilleItem["severity"]) {
     >
       <div class="flex flex-wrap items-center gap-1.5">
         <DsBadge :tone="severityTone(item.severity)" class="text-[0.65rem]">
-          {{ VEILLE_SEVERITY_LABELS[item.severity] }}
+          {{ VEILLE_SEVERITY_LABELS[item.severity] ?? item.severity }}
         </DsBadge>
         <DsBadge tone="neutral" class="text-[0.65rem]">
-          {{ VEILLE_CATEGORY_LABELS[item.category] }}
+          {{ VEILLE_CATEGORY_LABELS[item.category] ?? item.category }}
         </DsBadge>
         <span class="text-[0.65rem] text-muted-foreground">
-          {{ VEILLE_PROVIDER_LABELS[item.provider] }}
+          {{ VEILLE_PROVIDER_LABELS[item.provider] ?? item.provider }}
         </span>
         <DsBadge v-if="item.saved" tone="info" class="text-[0.65rem]">Enregistré</DsBadge>
       </div>

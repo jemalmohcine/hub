@@ -6,6 +6,8 @@ import { filterClientVeilleItems } from "~/shared/veille/client-filter";
 import { collectVeilleDays, filterVeilleAppFeedItems, latestVeilleFeedDay } from "~/shared/veille/days";
 import { mapVeilleRow } from "~/shared/veille/map-row";
 
+definePageMeta({ ssr: false });
+
 const client = useSupabaseClient();
 const authUserId = useAuthUserId();
 
