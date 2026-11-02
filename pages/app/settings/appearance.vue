@@ -1,7 +1,9 @@
 <script setup lang="ts">
+definePageMeta({ ssr: false });
+
 const { hubUser } = useHubUser();
 const client = useSupabaseClient();
-const colorMode = useColorMode();
+const { preference, setPreference, isDark } = useHubColorMode();
 const locale = ref("fr");
 const message = ref("");
 
@@ -19,6 +21,12 @@ async function saveLocale() {
   const { error } = await client.from("user_preferences").upsert({ user_id: uid, locale: locale.value });
   message.value = error ? "Erreur." : "Préférences enregistrées.";
 }
+
+const themeOptions = [
+  { id: "light" as const, label: "Clair" },
+  { id: "dark" as const, label: "Sombre" },
+  { id: "auto" as const, label: "Système" },
+];
 </script>
 
 <template>
@@ -39,9 +47,25 @@ async function saveLocale() {
             <option value="en">English</option>
           </select>
         </label>
-        <DsButton variant="secondary" @click="colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'">
-          Thème {{ colorMode.value === "dark" ? "clair" : "sombre" }}
-        </DsButton>
+        <div>
+          <p class="text-[length:var(--dh-text-xs)] font-medium text-muted-foreground">Thème</p>
+          <div class="mt-2 flex flex-wrap gap-2" data-testid="theme-preference">
+            <DsButton
+              v-for="opt in themeOptions"
+              :key="opt.id"
+              size="sm"
+              :variant="preference === opt.id ? 'primary' : 'secondary'"
+              :data-testid="`theme-option-${opt.id}`"
+              @click="setPreference(opt.id)"
+            >
+              {{ opt.label }}
+            </DsButton>
+          </div>
+          <p class="mt-2 text-[length:var(--dh-text-xs)] text-muted-foreground">
+            {{ isDark ? "Mode sombre actif." : "Mode clair actif." }}
+            <span v-if="preference === 'auto'"> (réglage système)</span>
+          </p>
+        </div>
         <p v-if="message" class="text-sm text-success">{{ message }}</p>
       </DsCard>
     </div>

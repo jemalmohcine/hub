@@ -91,6 +91,14 @@ export default defineNuxtConfig({
         { name: "apple-mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-status-bar-style", content: "default" },
       ],
+      script: [
+        {
+          key: "hub-color-mode-init",
+          type: "text/javascript",
+          tagPriority: 0,
+          innerHTML: `(()=>{try{var keys=["hub-color-mode","vueuse-color-scheme","nuxt-color-mode","color-mode"];var pref=null;for(var i=0;i<keys.length;i++){var raw=localStorage.getItem(keys[i]);if(!raw)continue;try{var parsed=JSON.parse(raw);pref=typeof parsed==="string"?parsed:(parsed&&parsed.preference)||(parsed&&parsed.value)||null;}catch(e){pref=raw;}if(pref==="light"||pref==="dark"||pref==="auto")break;pref=null;}if(!pref)return;var dark=pref==="dark"||(pref==="auto"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",dark);}catch(e){}})();`,
+        },
+      ],
     },
   },
 });

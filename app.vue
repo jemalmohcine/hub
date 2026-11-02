@@ -1,20 +1,6 @@
-<template>
-  <ShellAppShell v-if="showAppShell">
-    <NuxtLayout>
-      <NuxtPage />
-    </NuxtLayout>
-  </ShellAppShell>
-  <NuxtLayout v-else>
-    <NuxtPage />
-  </NuxtLayout>
-  <Teleport to="body">
-    <p v-if="toastMessage" class="dh-toast" role="status">{{ toastMessage }}</p>
-  </Teleport>
-</template>
-
 <script setup lang="ts">
 const route = useRoute();
-const colorMode = useColorMode();
+const { isDark } = useHubColorMode();
 const { toastMessage } = useToast();
 const config = useRuntimeConfig();
 
@@ -22,7 +8,7 @@ const showAppShell = computed(
   () => route.path.startsWith("/app") || route.path === "/admin",
 );
 
-const themeColor = computed(() => (colorMode.value === "dark" ? "#0e0c12" : "#f7f5f2"));
+const themeColor = computed(() => (isDark.value ? "#0e0c12" : "#f7f5f2"));
 
 useHead({
   meta: [
@@ -43,10 +29,18 @@ useHead({
     },
   ],
 });
-
-watchEffect(() => {
-  if (import.meta.client) {
-    document.documentElement.classList.toggle("dark", colorMode.value === "dark");
-  }
-});
 </script>
+
+<template>
+  <ShellAppShell v-if="showAppShell">
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
+  </ShellAppShell>
+  <NuxtLayout v-else>
+    <NuxtPage />
+  </NuxtLayout>
+  <Teleport to="body">
+    <p v-if="toastMessage" class="dh-toast" role="status">{{ toastMessage }}</p>
+  </Teleport>
+</template>
