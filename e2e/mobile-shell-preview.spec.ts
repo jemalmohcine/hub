@@ -9,7 +9,7 @@ test.describe("hub mobile shell (preview)", () => {
     const res = await request.get(`${baseURL}/sw.js?${share}`);
     expect(res.ok()).toBeTruthy();
     const body = await res.text();
-    expect(body).toContain("hub-shell-v7");
+    expect(body).toContain("hub-shell-v8");
     expect(body).toContain('url.pathname.startsWith("/app/")');
   });
 

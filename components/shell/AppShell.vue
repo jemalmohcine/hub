@@ -128,13 +128,16 @@ async function signOut() {
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
       <header
         data-testid="app-top-bar"
-        class="sticky top-0 z-30 flex h-14 min-h-14 items-center gap-2 border-b border-border/60 bg-background/95 pl-[max(var(--dh-space-page),env(safe-area-inset-left))] pr-[max(var(--dh-space-page),env(safe-area-inset-right))] pt-[env(safe-area-inset-top)] backdrop-blur-md lg:h-16 lg:px-8"
+        class="sticky top-0 z-40 shrink-0 border-b border-border bg-card pl-[max(var(--dh-space-page),env(safe-area-inset-left))] pr-[max(var(--dh-space-page),env(safe-area-inset-right))] pt-[env(safe-area-inset-top,0px)] lg:bg-card lg:px-8"
       >
+        <div
+          class="flex min-h-[var(--dh-top-bar-row-h)] items-center gap-2 lg:min-h-16"
+        >
         <button
           v-if="showMobileBack"
           type="button"
           data-testid="app-back-button"
-          class="dh-focus-ring inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] border border-border bg-card lg:hidden"
+          class="dh-focus-ring inline-flex h-11 min-h-11 w-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] border border-border bg-background lg:hidden"
           aria-label="Retour"
           @click="goBack"
         >
@@ -143,7 +146,7 @@ async function signOut() {
         <NuxtLink
           v-else
           to="/app/overview"
-          class="dh-focus-ring inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] border border-border bg-card lg:hidden"
+          class="dh-focus-ring inline-flex h-11 min-h-11 w-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] border border-border bg-background lg:hidden"
           aria-label="Accueil"
         >
           <Home class="h-5 w-5 text-primary" />
@@ -151,20 +154,21 @@ async function signOut() {
         <h1 class="min-w-0 flex-1 truncate text-[length:var(--dh-text-base)] font-semibold lg:text-[length:var(--dh-text-lg)]">
           {{ pageTitle }}
         </h1>
-        <DsButton variant="ghost" size="sm" class="hidden shrink-0 sm:inline-flex" aria-label="Palette de commandes" @click="toggle">
+        <DsButton variant="ghost" size="sm" class="hidden h-11 min-h-11 shrink-0 sm:inline-flex" aria-label="Palette de commandes" @click="toggle">
           ⌘K
         </DsButton>
         <DsButton
           size="sm"
           type="button"
-          class="shrink-0"
+          class="h-11 min-h-11 min-w-11 shrink-0 px-3 sm:min-w-0"
           data-testid="snippet-add-header"
           aria-label="Nouveau snippet"
           @click="openQuickAdd()"
         >
           <span class="hidden sm:inline">Ajouter</span>
-          <span class="sm:hidden">+</span>
+          <span class="sm:hidden text-lg leading-none">+</span>
         </DsButton>
+        </div>
       </header>
 
       <main
@@ -177,7 +181,7 @@ async function signOut() {
 
     <nav
       data-testid="mobile-bottom-nav"
-      class="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-border/80 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
+      class="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden"
       aria-label="Navigation mobile"
       style="height: calc(var(--dh-nav-h) + env(safe-area-inset-bottom))"
     >

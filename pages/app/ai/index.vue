@@ -3,7 +3,7 @@ import type { VeilleItem } from "~/shared/veille/types";
 import { toDayKey } from "~/shared/lib/dates";
 import { userFacingDataError } from "~/shared/lib/user-error";
 import { filterClientVeilleItems } from "~/shared/veille/client-filter";
-import { collectVeilleDays, filterVeilleLastSevenDays, latestVeilleFeedDay } from "~/shared/veille/days";
+import { collectVeilleDays, filterVeilleAppFeedItems, latestVeilleFeedDay } from "~/shared/veille/days";
 import { mapVeilleRow } from "~/shared/veille/map-row";
 
 const client = useSupabaseClient();
@@ -35,10 +35,10 @@ const { data, pending, error, refresh } = await useAsyncData(
       saved: saved.has(row.id),
     }));
 
-    const inWindow = filterVeilleLastSevenDays(items);
-    const days = collectVeilleDays(inWindow);
-    const day = latestVeilleFeedDay(inWindow) ?? days[0] ?? toDayKey(new Date());
-    return { items: inWindow, days, day };
+    const feedItems = filterVeilleAppFeedItems(items);
+    const days = collectVeilleDays(feedItems);
+    const day = latestVeilleFeedDay(feedItems) ?? days[0] ?? toDayKey(new Date());
+    return { items: feedItems, days, day };
   },
   { watch: [() => authUserId.value], server: false },
 );

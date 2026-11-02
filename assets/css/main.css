@@ -48,6 +48,8 @@
   --dh-text-2xl: 1.625rem;
   --dh-space-page: 1.25rem;
   --dh-nav-h: 4.25rem;
+  --dh-top-bar-row-h: 2.75rem;
+  --dh-top-bar-h: calc(var(--dh-top-bar-row-h) + env(safe-area-inset-top, 0px));
 }
 
 .dark {
