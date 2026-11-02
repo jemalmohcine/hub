@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const { modules } = useHubModules();
-const colorMode = useColorMode();
+const { toggleLightDark, isDark } = useHubColorMode();
 </script>
 
 <template>
@@ -10,9 +10,9 @@ const colorMode = useColorMode();
       <DsButton
         variant="ghost"
         size="sm"
-        @click="colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'"
+        @click="toggleLightDark()"
       >
-        {{ colorMode.value === 'dark' ? 'Clair' : 'Sombre' }}
+        {{ isDark ? 'Clair' : 'Sombre' }}
       </DsButton>
     </header>
 

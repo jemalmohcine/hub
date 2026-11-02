@@ -4,7 +4,7 @@ defineProps<{
   subtitle?: string;
 }>();
 
-const colorMode = useColorMode();
+const { toggleLightDark, isDark } = useHubColorMode();
 </script>
 
 <template>
@@ -14,9 +14,9 @@ const colorMode = useColorMode();
       <DsButton
         variant="ghost"
         size="sm"
-        @click="colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'"
+        @click="toggleLightDark()"
       >
-        {{ colorMode.value === "dark" ? "Clair" : "Sombre" }}
+        {{ isDark ? "Clair" : "Sombre" }}
       </DsButton>
     </div>
     <div class="dh-surface p-6">

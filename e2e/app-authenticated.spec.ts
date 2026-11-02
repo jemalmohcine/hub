@@ -73,6 +73,19 @@ test.describe("deployed app (authenticated)", () => {
     });
   });
 
+  test("appearance: switch to dark theme applies html.dark", async ({ page, baseURL }) => {
+    await page.goto(`${baseURL}/app/settings/appearance${shareQ}`);
+    await expect(page.locator('[data-testid="mobile-bottom-nav"]')).toBeVisible();
+    await page.locator('[data-testid="theme-option-dark"]').click();
+    await expect
+      .poll(async () => page.evaluate(() => document.documentElement.classList.contains("dark")))
+      .toBe(true);
+    await page.screenshot({
+      path: "/opt/cursor/artifacts/screenshots/e2e-theme-dark-appearance.png",
+      fullPage: true,
+    });
+  });
+
   test("FAB opens quick-add sheet", async ({ page, baseURL }) => {
     await page.goto(`${baseURL}/app/snippets${shareQ}`);
     await page.locator('[data-testid="snippet-fab"]').click();
