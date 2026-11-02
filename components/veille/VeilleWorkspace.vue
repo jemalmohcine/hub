@@ -2,7 +2,6 @@
 import type { VeilleItem, VeilleCategory, VeilleProvider } from "~/shared/veille/types";
 import { VEILLE_FILTER_CHIPS, VEILLE_PROVIDER_LABELS } from "~/shared/veille/labels";
 import { sortVeilleItems } from "~/shared/veille/sort";
-import { filterVeilleLastSevenDays } from "~/shared/veille/days";
 import { feedDayGroupLabel } from "~/shared/veille/day-group";
 import { formatDate } from "~/shared/lib/dates";
 
@@ -23,7 +22,7 @@ const authUserId = useAuthUserId();
 
 const filtered = computed(() => {
   const query = q.value.trim().toLowerCase();
-  let list = filterVeilleLastSevenDays([...props.initialItems]);
+  let list = [...props.initialItems];
 
   if (category.value !== "all") list = list.filter((i) => i.category === category.value);
   if (provider.value !== "all") list = list.filter((i) => i.provider === provider.value);
@@ -125,7 +124,7 @@ async function toggleSave(item: VeilleItem) {
 
     <section v-for="section in groupedSections" :key="section.feedDate" class="flex flex-col gap-2 pb-2">
       <header
-        class="sticky top-14 z-20 border-b border-border bg-background px-[var(--dh-space-page)] py-3 shadow-[0_1px_0_var(--dh-border)] lg:static lg:shadow-none"
+        class="sticky top-[var(--dh-top-bar-h)] z-20 border-b border-border bg-card px-[var(--dh-space-page)] py-3 shadow-[0_1px_0_var(--dh-border)] lg:static lg:shadow-none"
       >
         <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-3">
           <h2 class="text-[length:var(--dh-text-base)] font-semibold capitalize leading-tight text-foreground">

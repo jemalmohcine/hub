@@ -12,12 +12,23 @@ export function veilleSevenDayCutoff(today = hubDayKey()): string {
   return addDaysIso(today, -6);
 }
 
+/** Ingest may tag an editorial day slightly ahead of hub "today" (UTC vs Casablanca). */
+export function veilleMaxVisibleFeedDay(today = hubDayKey()): string {
+  return addDaysIso(today, 1);
+}
+
 export function filterVeilleLastSevenDays<T extends Pick<VeilleItem, "feed_date">>(
   items: T[],
   today = hubDayKey(),
 ): T[] {
   const cutoff = veilleSevenDayCutoff(today);
-  return items.filter((item) => item.feed_date >= cutoff && item.feed_date <= today);
+  const maxDay = veilleMaxVisibleFeedDay(today);
+  return items.filter((item) => item.feed_date >= cutoff && item.feed_date <= maxDay);
+}
+
+/** Full veille page: show every row returned from the API (no rolling window). */
+export function filterVeilleAppFeedItems<T extends Pick<VeilleItem, "feed_date">>(items: T[]): T[] {
+  return items.filter((item) => Boolean(item.feed_date?.trim()));
 }
 
 export function collectVeilleDays(items: Pick<VeilleItem, "feed_date">[]): string[] {
