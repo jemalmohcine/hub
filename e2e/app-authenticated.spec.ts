@@ -62,6 +62,17 @@ test.describe("deployed app (authenticated)", () => {
     });
   });
 
+  test("header + opens quick-add sheet (same as FAB)", async ({ page, baseURL }) => {
+    await page.goto(`${baseURL}/app/ai${shareQ}`);
+    await expect(page.locator('[data-testid="mobile-bottom-nav"]')).toBeVisible();
+    await page.locator('[data-testid="snippet-add-header"]').click();
+    await expect(page.locator('[data-testid="snippet-quick-add-sheet"]')).toBeVisible();
+    await page.screenshot({
+      path: "/opt/cursor/artifacts/screenshots/e2e-header-snippet-add.png",
+      fullPage: true,
+    });
+  });
+
   test("FAB opens quick-add sheet", async ({ page, baseURL }) => {
     await page.goto(`${baseURL}/app/snippets${shareQ}`);
     await page.locator('[data-testid="snippet-fab"]').click();

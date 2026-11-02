@@ -9,6 +9,8 @@ const props = withDefaults(
   { variant: "primary", size: "md", type: "button" },
 );
 
+defineEmits<{ click: [event: MouseEvent] }>();
+
 const classes = computed(() => {
   const base =
     "dh-focus-ring inline-flex items-center justify-center gap-2 rounded-[var(--dh-radius)] font-medium transition-[color,background,opacity] disabled:pointer-events-none disabled:opacity-50";
@@ -27,7 +29,7 @@ const classes = computed(() => {
 </script>
 
 <template>
-  <button :type="type" :class="classes" :disabled="disabled">
+  <button :type="type" :class="classes" :disabled="disabled" @click="$emit('click', $event)">
     <slot />
   </button>
 </template>

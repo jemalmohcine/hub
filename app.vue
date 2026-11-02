@@ -7,9 +7,6 @@
   <NuxtLayout v-else>
     <NuxtPage />
   </NuxtLayout>
-  <ClientOnly>
-    <SnippetsSnippetQuickAddSheet v-if="showAppShell" />
-  </ClientOnly>
   <Teleport to="body">
     <p v-if="toastMessage" class="dh-toast" role="status">{{ toastMessage }}</p>
   </Teleport>

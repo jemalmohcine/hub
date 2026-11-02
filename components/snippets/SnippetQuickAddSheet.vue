@@ -72,7 +72,12 @@ function onKeydown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <DsSheet :open="quickAddOpen" title="Nouveau snippet" data-testid="snippet-quick-add-sheet" @close="closeQuickAdd">
+  <DsSheet
+    :open="quickAddOpen"
+    title="Nouveau snippet"
+    data-testid="snippet-quick-add-sheet"
+    @close="closeQuickAdd"
+  >
     <form class="flex flex-col gap-3" @submit.prevent="save" @keydown="onKeydown">
       <DsInput ref="titleRef" v-model="title" placeholder="Titre" autocomplete="off" />
       <div class="flex gap-2">
