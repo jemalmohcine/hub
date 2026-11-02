@@ -11,6 +11,9 @@ const showAppShell = computed(
 const themeColor = computed(() => (isDark.value ? "#0e0c12" : "#f7f5f2"));
 
 useHead({
+  htmlAttrs: {
+    class: computed(() => (isDark.value ? "dark" : "")),
+  },
   meta: [
     { name: "dh-build", content: config.public.buildSha as string },
     { name: "dh-framework", content: config.public.buildFramework as string },

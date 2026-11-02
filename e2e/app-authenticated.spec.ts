@@ -86,6 +86,29 @@ test.describe("deployed app (authenticated)", () => {
     });
   });
 
+  test("appearance: dark theme persists after reload", async ({ page, baseURL }) => {
+    await page.goto(`${baseURL}/app/settings/appearance${shareQ}`);
+    await expect(page.locator('[data-testid="mobile-bottom-nav"]')).toBeVisible();
+    await page.locator('[data-testid="theme-option-dark"]').click();
+    await expect
+      .poll(async () => page.evaluate(() => document.documentElement.classList.contains("dark")))
+      .toBe(true);
+    await expect
+      .poll(async () =>
+        page.evaluate(() => localStorage.getItem("hub-color-mode")),
+      )
+      .toBe("dark");
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect
+      .poll(async () => page.evaluate(() => document.documentElement.classList.contains("dark")))
+      .toBe(true);
+    await expect
+      .poll(async () =>
+        page.evaluate(() => localStorage.getItem("hub-color-mode")),
+      )
+      .toBe("dark");
+  });
+
   test("FAB opens quick-add sheet", async ({ page, baseURL }) => {
     await page.goto(`${baseURL}/app/snippets${shareQ}`);
     await page.locator('[data-testid="snippet-fab"]').click();
