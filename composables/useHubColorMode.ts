@@ -1,23 +1,34 @@
+import { createSharedComposable } from "@vueuse/core";
 import {
   HUB_COLOR_MODE_STORAGE_KEY,
   type HubColorPreference,
   parseColorPreference,
+  writeStoredColorPreference,
 } from "~/shared/lib/color-mode-storage";
 
-const hubColorModeOptions = {
-  storageKey: HUB_COLOR_MODE_STORAGE_KEY,
-  initialValue: "auto" as HubColorPreference,
-  selector: "html",
-  attribute: "class" as const,
-  modes: {
-    auto: "",
-    light: "",
-    dark: "dark",
-  },
-};
+const useHubColorModeImpl = createSharedComposable(() => {
+  const preferenceStore = useCookie<HubColorPreference>(HUB_COLOR_MODE_STORAGE_KEY, {
+    default: () => "auto",
+    maxAge: 60 * 60 * 24 * 400,
+    sameSite: "lax",
+    watch: true,
+  });
 
-export function useHubColorMode() {
-  const mode = useColorMode(hubColorModeOptions);
+  const mode = useColorMode({
+    storageRef: preferenceStore,
+    storageKey: null,
+    initialValue: "auto",
+    selector: "html",
+    attribute: "class",
+    modes: {
+      auto: "",
+      light: "",
+      dark: "dark",
+    },
+    onChanged() {
+      /* html class is applied via useHead htmlAttrs in app.vue (SSR-safe). */
+    },
+  });
 
   const preference = computed({
     get(): HubColorPreference {
@@ -25,17 +36,35 @@ export function useHubColorMode() {
     },
     set(value: HubColorPreference) {
       mode.store.value = value;
+      persistPreference(value);
     },
   });
 
   const isDark = computed(() => mode.state.value === "dark");
 
+  function persistPreference(value: HubColorPreference) {
+    if (!import.meta.client) return;
+    try {
+      writeStoredColorPreference(localStorage, value);
+    } catch {
+      /* private mode */
+    }
+  }
+
   function setPreference(value: HubColorPreference) {
-    mode.store.value = value;
+    preference.value = value;
   }
 
   function toggleLightDark() {
     setPreference(isDark.value ? "light" : "dark");
+  }
+
+  if (import.meta.client) {
+    watch(
+      () => preference.value,
+      (value) => persistPreference(value),
+      { immediate: true },
+    );
   }
 
   return {
@@ -48,4 +77,6 @@ export function useHubColorMode() {
     state: mode.state,
     store: mode.store,
   };
-}
+});
+
+export const useHubColorMode = useHubColorModeImpl;

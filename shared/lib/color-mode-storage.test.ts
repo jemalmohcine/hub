@@ -21,8 +21,15 @@ describe("normalizeStoredColorMode", () => {
   });
 });
 
+describe("serializeColorPreference", () => {
+  it("stores plain strings for VueUse string serializer", () => {
+    expect(serializeColorPreference("dark")).toBe("dark");
+    expect(serializeColorPreference("dark")).not.toBe(JSON.stringify("dark"));
+  });
+});
+
 describe("migrateColorModeStorage", () => {
-  it("writes JSON hub key from legacy plain string", () => {
+  it("writes plain hub key from legacy plain string", () => {
     const storage = {
       data: {} as Record<string, string>,
       getItem(k: string) {
@@ -31,13 +38,24 @@ describe("migrateColorModeStorage", () => {
       setItem(k: string, v: string) {
         this.data[k] = v;
       },
-      removeItem(k: string) {
-        delete this.data[k];
-      },
     };
     storage.data["vueuse-color-scheme"] = "light";
     migrateColorModeStorage(storage as Storage);
     expect(readStoredColorPreference(storage as Storage)).toBe("light");
-    expect(storage.data["hub-color-mode"]).toBe(serializeColorPreference("light"));
+    expect(storage.data["hub-color-mode"]).toBe("light");
+  });
+
+  it("fixes JSON-quoted hub values to plain strings", () => {
+    const storage = {
+      data: { "hub-color-mode": JSON.stringify("dark") } as Record<string, string>,
+      getItem(k: string) {
+        return this.data[k] ?? null;
+      },
+      setItem(k: string, v: string) {
+        this.data[k] = v;
+      },
+    };
+    migrateColorModeStorage(storage as Storage);
+    expect(storage.data["hub-color-mode"]).toBe("dark");
   });
 });
