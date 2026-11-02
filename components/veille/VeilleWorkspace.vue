@@ -124,7 +124,7 @@ async function toggleSave(item: VeilleItem) {
 
     <section v-for="section in groupedSections" :key="section.feedDate" class="flex flex-col gap-2 pb-2">
       <header
-        class="sticky top-[var(--dh-top-bar-h)] z-20 border-b border-border bg-card px-[var(--dh-space-page)] py-3 shadow-[0_1px_0_var(--dh-border)] lg:static lg:shadow-none"
+        class="sticky top-[var(--dh-top-bar-h)] z-20 border-b border-border bg-background px-[var(--dh-space-page)] py-3 lg:static"
       >
         <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-3">
           <h2 class="text-[length:var(--dh-text-base)] font-semibold capitalize leading-tight text-foreground">

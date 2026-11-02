@@ -128,16 +128,14 @@ async function signOut() {
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
       <header
         data-testid="app-top-bar"
-        class="sticky top-0 z-40 shrink-0 border-b border-border bg-card pl-[max(var(--dh-space-page),env(safe-area-inset-left))] pr-[max(var(--dh-space-page),env(safe-area-inset-right))] pt-[env(safe-area-inset-top,0px)] lg:bg-card lg:px-8"
+        class="app-top-bar sticky top-0 z-40 shrink-0 border-b border-border bg-background pl-[max(var(--dh-space-page),env(safe-area-inset-left))] pr-[max(var(--dh-space-page),env(safe-area-inset-right))] pt-[env(safe-area-inset-top,0px)] lg:px-8"
       >
-        <div
-          class="flex min-h-[var(--dh-top-bar-row-h)] items-center gap-2 lg:min-h-16"
-        >
+        <div class="app-top-bar__actions flex min-h-[var(--dh-top-bar-row-h)] items-center gap-2 lg:min-h-16">
         <button
           v-if="showMobileBack"
           type="button"
           data-testid="app-back-button"
-          class="dh-focus-ring inline-flex h-11 min-h-11 w-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] border border-border bg-background lg:hidden"
+          class="app-top-bar__icon-btn dh-focus-ring inline-flex h-11 min-h-11 w-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] border border-border lg:hidden"
           aria-label="Retour"
           @click="goBack"
         >
@@ -146,12 +144,12 @@ async function signOut() {
         <NuxtLink
           v-else
           to="/app/overview"
-          class="dh-focus-ring inline-flex h-11 min-h-11 w-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] border border-border bg-background lg:hidden"
+          class="app-top-bar__icon-btn dh-focus-ring inline-flex h-11 min-h-11 w-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] border border-border lg:hidden"
           aria-label="Accueil"
         >
           <Home class="h-5 w-5 text-primary" />
         </NuxtLink>
-        <h1 class="min-w-0 flex-1 truncate text-[length:var(--dh-text-base)] font-semibold lg:text-[length:var(--dh-text-lg)]">
+        <h1 class="min-w-0 flex-1 truncate text-[length:var(--dh-text-base)] font-semibold text-foreground lg:text-[length:var(--dh-text-lg)]">
           {{ pageTitle }}
         </h1>
         <DsButton variant="ghost" size="sm" class="hidden h-11 min-h-11 shrink-0 sm:inline-flex" aria-label="Palette de commandes" @click="toggle">
@@ -159,7 +157,7 @@ async function signOut() {
         </DsButton>
         <button
           type="button"
-          class="dh-focus-ring relative z-10 inline-flex h-11 min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--dh-radius)] bg-primary px-3 text-[length:var(--dh-text-sm)] font-medium text-primary-foreground active:brightness-95 sm:min-w-0"
+          class="app-top-bar__add-btn dh-focus-ring relative z-10 inline-flex h-11 min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--dh-radius)] bg-primary px-3 text-[length:var(--dh-text-sm)] font-medium text-primary-foreground sm:min-w-0"
           data-testid="snippet-add-header"
           aria-label="Nouveau snippet"
           @click="openQuickAdd"
