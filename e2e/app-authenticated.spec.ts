@@ -99,8 +99,8 @@ test.describe("deployed app (authenticated)", () => {
 });
 
 test.describe("deployed build metadata", () => {
-  test("sw.js is hub-shell-v8", async ({ request, baseURL }) => {
+  test("sw.js is hub-shell-v9", async ({ request, baseURL }) => {
     const res = await request.get(`${baseURL}/sw.js${shareQ}`);
-    expect(await res.text()).toContain("hub-shell-v8");
+    expect(await res.text()).toContain("hub-shell-v9");
   });
 });

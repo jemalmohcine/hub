@@ -71,6 +71,7 @@ html,
 body,
 #__nuxt {
   min-height: 100%;
+  background-color: var(--dh-bg);
 }
 
 body {
@@ -81,6 +82,48 @@ body {
 
 .app-shell {
   min-height: 100dvh;
+}
+
+/** iOS standalone: opaque top chrome (safe area + bar), no frosted overlay */
+.app-top-bar {
+  background-color: var(--dh-bg);
+  opacity: 1;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-image: none !important;
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+  isolation: isolate;
+}
+
+.app-top-bar::before,
+.app-top-bar::after {
+  display: none !important;
+  content: none !important;
+}
+
+.app-top-bar__icon-btn {
+  background-color: var(--dh-muted);
+  color: var(--dh-fg);
+  opacity: 1;
+  filter: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.app-top-bar__icon-btn .text-primary {
+  color: var(--dh-primary);
+}
+
+.app-top-bar__add-btn {
+  opacity: 1;
+  filter: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.app-top-bar__add-btn:active {
+  filter: none;
 }
 
 .dh-surface {
