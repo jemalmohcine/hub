@@ -48,6 +48,19 @@ test.describe("deployed app (authenticated)", () => {
     expect(topBarStyles.backdrop === "none" || !topBarStyles.backdrop).toBeTruthy();
     expect(parseFloat(topBarStyles.opacity)).toBe(1);
     expect(topBarStyles.boxShadow === "none" || topBarStyles.boxShadow === "").toBeTruthy();
+    const titleStyles = await page.locator(".app-top-bar__title").evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return {
+        filter: cs.filter,
+        textShadow: cs.textShadow,
+        transform: cs.transform,
+        webkitFontSmoothing: (cs as CSSStyleDeclaration & { webkitFontSmoothing?: string }).webkitFontSmoothing,
+      };
+    });
+    expect(titleStyles.filter === "none" || !titleStyles.filter).toBeTruthy();
+    expect(titleStyles.textShadow === "none" || titleStyles.textShadow === "").toBeTruthy();
+    expect(titleStyles.transform === "none" || titleStyles.transform === "matrix(1, 0, 0, 1, 0, 0)").toBeTruthy();
+    await expect(page.locator(".app-top-bar__cmd")).toHaveCount(0);
   });
 
   test("career hub: Retour to overview (not Accueil tab icon only)", async ({ page, baseURL }) => {
@@ -151,8 +164,8 @@ test.describe("deployed app (authenticated)", () => {
 });
 
 test.describe("deployed build metadata", () => {
-  test("sw.js is hub-shell-v10", async ({ request, baseURL }) => {
+  test("sw.js is hub-shell-v11", async ({ request, baseURL }) => {
     const res = await request.get(`${baseURL}/sw.js${shareQ}`);
-    expect(await res.text()).toContain("hub-shell-v10");
+    expect(await res.text()).toContain("hub-shell-v11");
   });
 });

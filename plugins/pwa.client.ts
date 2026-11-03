@@ -4,7 +4,7 @@ export default defineNuxtPlugin(() => {
 
   const register = async () => {
     try {
-      const reg = await navigator.serviceWorker.register("/sw.js?v=10", { updateViaCache: "none" });
+      const reg = await navigator.serviceWorker.register("/sw.js?v=11", { updateViaCache: "none" });
       reg.addEventListener("updatefound", () => {
         const worker = reg.installing;
         if (!worker) return;
