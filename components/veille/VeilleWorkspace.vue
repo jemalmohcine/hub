@@ -170,7 +170,7 @@ async function saveAsSnippet(item: VeilleItem) {
 
     <section v-for="section in groupedSections" :key="section.feedDate" class="flex flex-col gap-2 pb-2">
       <header
-        class="sticky top-[var(--dh-top-bar-h)] z-20 border-b border-border bg-background px-[var(--dh-space-page)] py-3 lg:static"
+        class="sticky top-0 z-20 border-b border-border bg-background px-[var(--dh-space-page)] py-3 max-lg:static lg:static"
       >
         <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-3">
           <h2 class="text-[length:var(--dh-text-base)] font-semibold capitalize leading-tight text-foreground">

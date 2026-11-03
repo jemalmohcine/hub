@@ -5,11 +5,11 @@ const share =
   "_vercel_share=ub1wlHXaGpmrfg8TLJhP71K8wFYVVAAh";
 
 test.describe("hub mobile shell (preview)", () => {
-  test("service worker v11 is deployed", async ({ request, baseURL }) => {
+  test("service worker v12 is deployed", async ({ request, baseURL }) => {
     const res = await request.get(`${baseURL}/sw.js?${share}`);
     expect(res.ok()).toBeTruthy();
     const body = await res.text();
-    expect(body).toContain("hub-shell-v11");
+    expect(body).toContain("hub-shell-v12");
     expect(body).toContain('url.pathname.startsWith("/app/")');
   });
 

@@ -6,6 +6,8 @@ defineProps<{
   error?: string | null;
   compact?: boolean;
 }>();
+
+const hideMobilePageTitle = useAppShellHideMobilePageH1();
 </script>
 
 <template>
@@ -23,7 +25,7 @@ defineProps<{
     </div>
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div class="min-w-0 flex-1">
-        <h1 class="dh-page-title">{{ title }}</h1>
+        <h1 class="dh-page-title" :class="hideMobilePageTitle ? 'max-lg:hidden' : ''">{{ title }}</h1>
         <p v-if="description" class="mt-1 max-w-prose text-[length:var(--dh-text-sm)] leading-relaxed text-muted-foreground">
           {{ description }}
         </p>
