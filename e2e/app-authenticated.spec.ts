@@ -57,6 +57,14 @@ test.describe("deployed app (authenticated)", () => {
     expect(addStyles.boxShadow === "none" || addStyles.boxShadow === "").toBeTruthy();
     expect(addStyles.width).toBeGreaterThanOrEqual(44);
     expect(addStyles.height).toBeGreaterThanOrEqual(44);
+    const logoStyles = await page.locator(".mobile-page-header__logo-svg").evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { filter: cs.filter, boxShadow: cs.boxShadow };
+    });
+    expect(logoStyles.filter === "none" || !logoStyles.filter).toBeTruthy();
+    expect(logoStyles.boxShadow === "none" || logoStyles.boxShadow === "").toBeTruthy();
+    const shellBg = await page.locator(".app-shell").evaluate((el) => getComputedStyle(el).backgroundImage);
+    expect(shellBg === "none" || shellBg === "").toBeTruthy();
   });
 
   test("career hub: bottom nav Accueil returns to overview", async ({ page, baseURL }) => {
@@ -159,8 +167,8 @@ test.describe("deployed app (authenticated)", () => {
 });
 
 test.describe("deployed build metadata", () => {
-  test("sw.js is hub-shell-v12", async ({ request, baseURL }) => {
+  test("sw.js is hub-shell-v13", async ({ request, baseURL }) => {
     const res = await request.get(`${baseURL}/sw.js${shareQ}`);
-    expect(await res.text()).toContain("hub-shell-v12");
+    expect(await res.text()).toContain("hub-shell-v13");
   });
 });

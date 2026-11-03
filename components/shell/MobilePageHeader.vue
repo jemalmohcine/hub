@@ -21,13 +21,12 @@ defineEmits<{ add: [] }>();
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
         >
-          <rect width="32" height="32" rx="8" fill="var(--dh-primary)" />
+          <rect width="32" height="32" rx="8" class="mobile-page-header__logo-bg" />
           <path
             d="M10 8h12v6h-6v14h-6V8z"
-            fill="var(--dh-primary-fg)"
-            stroke="none"
+            class="mobile-page-header__logo-fg"
           />
-          <circle cx="22" cy="11" r="2.25" fill="var(--dh-primary-fg)" />
+          <circle cx="22" cy="11" r="2.25" class="mobile-page-header__logo-fg" />
         </svg>
       </NuxtLink>
       <h1 class="mobile-page-header__title">
