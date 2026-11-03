@@ -85,7 +85,35 @@ body {
 }
 
 /** iOS standalone: opaque top chrome (safe area + bar), no frosted overlay */
+.app-top-bar-host {
+  position: relative;
+  z-index: 50;
+  isolation: isolate;
+}
+
+@media (max-width: 1023px) {
+  .app-top-bar-host {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+  }
+
+  .app-top-bar-spacer {
+    height: var(--dh-top-bar-h);
+    flex-shrink: 0;
+  }
+}
+
+@media (display-mode: standalone) and (max-width: 1023px) {
+  .app-top-bar-host {
+    position: fixed;
+  }
+}
+
 .app-top-bar {
+  pointer-events: auto;
   background-color: var(--dh-bg);
   opacity: 1;
   backdrop-filter: none !important;
@@ -93,11 +121,57 @@ body {
   background-image: none !important;
   mask-image: none !important;
   -webkit-mask-image: none !important;
+  box-shadow: none !important;
+  filter: none !important;
   isolation: isolate;
 }
 
+.app-top-bar__status {
+  display: block;
+  width: 100%;
+  height: env(safe-area-inset-top, 0px);
+  min-height: env(safe-area-inset-top, 0px);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background-color: var(--dh-bg);
+  opacity: 1;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.app-top-bar__actions {
+  position: relative;
+  z-index: 1;
+  background-color: var(--dh-bg);
+  opacity: 1;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+.app-top-bar,
+.app-top-bar__status,
+.app-top-bar__actions,
+.app-top-bar__icon-btn,
+.app-top-bar__add-btn,
+.app-top-bar__cmd {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+  background-image: none !important;
+  filter: none !important;
+}
+
 .app-top-bar::before,
-.app-top-bar::after {
+.app-top-bar::after,
+.app-top-bar__status::before,
+.app-top-bar__status::after,
+.app-top-bar__actions::before,
+.app-top-bar__actions::after {
   display: none !important;
   content: none !important;
 }
@@ -106,9 +180,7 @@ body {
   background-color: var(--dh-muted);
   color: var(--dh-fg);
   opacity: 1;
-  filter: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  box-shadow: none !important;
 }
 
 .app-top-bar__icon-btn .text-primary {
@@ -117,13 +189,21 @@ body {
 
 .app-top-bar__add-btn {
   opacity: 1;
-  filter: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  box-shadow: none !important;
 }
 
 .app-top-bar__add-btn:active {
   filter: none;
+}
+
+.app-top-bar__cmd {
+  background-color: var(--dh-muted);
+  opacity: 1;
+}
+
+/** Scrims only when menus open; never sit above the fixed header while hidden */
+.app-shell-scrim {
+  pointer-events: auto;
 }
 
 .dh-surface {
@@ -186,7 +266,8 @@ body {
 }
 
 .dh-toast {
-  @apply fixed left-1/2 z-[100] -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-[length:var(--dh-text-sm)] font-medium shadow-lg;
+  @apply fixed left-1/2 z-[100] -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-[length:var(--dh-text-sm)] font-medium;
+  box-shadow: 0 4px 16px rgb(20 18 26 / 12%);
   bottom: calc(var(--dh-nav-h) + env(safe-area-inset-bottom) + 0.75rem);
 }
 
