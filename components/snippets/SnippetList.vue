@@ -45,6 +45,16 @@ async function tapSnippet(item: DevSnippet) {
           </div>
         </div>
         <p class="line-clamp-2 font-mono text-[length:var(--dh-text-xs)] text-muted-foreground">{{ item.content }}</p>
+        <a
+          v-if="item.referenceUrl"
+          :href="item.referenceUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="truncate text-[length:var(--dh-text-xs)] text-primary underline"
+          @click.stop
+        >
+          {{ item.referenceUrl }}
+        </a>
         <span class="flex items-center gap-1 text-[length:var(--dh-text-xs)] text-primary">
           <Check v-if="copiedId === item.id" class="h-3.5 w-3.5" />
           {{ copiedId === item.id ? "Copié" : "Toucher pour copier" }}

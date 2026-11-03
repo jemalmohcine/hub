@@ -5,6 +5,10 @@ import { userFacingDataError } from "~/shared/lib/user-error";
 import { filterClientVeilleItems } from "~/shared/veille/client-filter";
 import { collectVeilleDays, filterVeilleAppFeedItems, latestVeilleFeedDay } from "~/shared/veille/days";
 import { mapVeilleRow } from "~/shared/veille/map-row";
+import {
+  fetchSnippetReferenceLinksForUser,
+  normalizeSnippetReferenceUrl,
+} from "~/shared/veille/to-snippet";
 
 definePageMeta({ ssr: false });
 
@@ -26,15 +30,18 @@ const { data, pending, error, refresh } = await useAsyncData(
 
     const uid = authUserId.value;
     let saved = new Set<string>();
+    let snippetLinks = new Set<string>();
     if (uid) {
       const { data: saves } = await client.from("veille_ia_saves").select("item_id").eq("user_id", uid);
       saved = new Set((saves ?? []).map((s) => s.item_id as string));
+      snippetLinks = await fetchSnippetReferenceLinksForUser(client, uid);
     }
 
     const rowsClient = filterClientVeilleItems((rows ?? []).map((row) => mapVeilleRow(row as Record<string, unknown>)));
     const items = rowsClient.map((row) => ({
       ...row,
       saved: saved.has(row.id),
+      savedAsSnippet: snippetLinks.has(normalizeSnippetReferenceUrl(row.link)),
     }));
 
     const feedItems = filterVeilleAppFeedItems(items);

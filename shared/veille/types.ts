@@ -40,6 +40,7 @@ export type VeilleItem = {
   created_at: string;
   updated_at: string;
   saved?: boolean;
+  savedAsSnippet?: boolean;
 };
 
 export type VeilleIngestItem = {
