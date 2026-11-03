@@ -125,17 +125,19 @@ async function signOut() {
       </p>
     </aside>
 
-    <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-      <header
-        data-testid="app-top-bar"
-        class="app-top-bar sticky top-0 z-40 shrink-0 border-b border-border bg-background pl-[max(var(--dh-space-page),env(safe-area-inset-left))] pr-[max(var(--dh-space-page),env(safe-area-inset-right))] pt-[env(safe-area-inset-top,0px)] lg:px-8"
-      >
-        <div class="app-top-bar__actions flex min-h-[var(--dh-top-bar-row-h)] items-center gap-2 lg:min-h-16">
+    <div class="app-shell-main-column flex min-h-0 min-w-0 flex-1 flex-col">
+      <div class="app-top-bar-host">
+        <header
+          data-testid="app-top-bar"
+          class="app-top-bar shrink-0 border-b border-border pl-[max(var(--dh-space-page),env(safe-area-inset-left))] pr-[max(var(--dh-space-page),env(safe-area-inset-right))] lg:px-8"
+        >
+          <div class="app-top-bar__status" aria-hidden="true" />
+          <div class="app-top-bar__actions flex min-h-[var(--dh-top-bar-row-h)] items-center gap-2 lg:min-h-16">
         <button
           v-if="showMobileBack"
           type="button"
           data-testid="app-back-button"
-          class="app-top-bar__icon-btn dh-focus-ring inline-flex h-11 min-h-11 w-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] border border-border lg:hidden"
+          class="app-top-bar__icon-btn dh-focus-ring inline-flex h-11 min-h-[44px] w-11 min-w-[44px] shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] border border-border lg:hidden"
           aria-label="Retour"
           @click="goBack"
         >
@@ -144,7 +146,7 @@ async function signOut() {
         <NuxtLink
           v-else
           to="/app/overview"
-          class="app-top-bar__icon-btn dh-focus-ring inline-flex h-11 min-h-11 w-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] border border-border lg:hidden"
+          class="app-top-bar__icon-btn dh-focus-ring inline-flex h-11 min-h-[44px] w-11 min-w-[44px] shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] border border-border lg:hidden"
           aria-label="Accueil"
         >
           <Home class="h-5 w-5 text-primary" />
@@ -152,12 +154,12 @@ async function signOut() {
         <h1 class="min-w-0 flex-1 truncate text-[length:var(--dh-text-base)] font-semibold text-foreground lg:text-[length:var(--dh-text-lg)]">
           {{ pageTitle }}
         </h1>
-        <DsButton variant="ghost" size="sm" class="hidden h-11 min-h-11 shrink-0 sm:inline-flex" aria-label="Palette de commandes" @click="toggle">
+        <DsButton variant="ghost" size="sm" class="app-top-bar__cmd hidden h-11 min-h-[44px] shrink-0 sm:inline-flex" aria-label="Palette de commandes" @click="toggle">
           ⌘K
         </DsButton>
         <button
           type="button"
-          class="app-top-bar__add-btn dh-focus-ring relative z-10 inline-flex h-11 min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--dh-radius)] bg-primary px-3 text-[length:var(--dh-text-sm)] font-medium text-primary-foreground sm:min-w-0"
+          class="app-top-bar__add-btn dh-focus-ring relative z-[1] inline-flex h-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-[var(--dh-radius)] bg-primary px-3 text-[length:var(--dh-text-sm)] font-medium text-primary-foreground sm:min-w-0"
           data-testid="snippet-add-header"
           aria-label="Nouveau snippet"
           @click="openQuickAdd"
@@ -165,8 +167,10 @@ async function signOut() {
           <span class="hidden sm:inline">Ajouter</span>
           <span class="sm:hidden text-lg leading-none">+</span>
         </button>
-        </div>
-      </header>
+          </div>
+        </header>
+      </div>
+      <div class="app-top-bar-spacer shrink-0 lg:hidden" aria-hidden="true" />
 
       <main
         data-testid="app-main"
@@ -204,7 +208,11 @@ async function signOut() {
     </nav>
 
     <Teleport to="body">
-      <div v-if="sheetOpen" class="fixed inset-0 z-[60] bg-black/40 lg:hidden" @click="sheetOpen = false">
+      <div
+        v-if="sheetOpen"
+        class="app-shell-scrim fixed inset-0 z-[60] bg-black/40 lg:hidden"
+        @click="sheetOpen = false"
+      >
         <div
           class="absolute inset-x-0 bottom-0 rounded-t-[var(--dh-radius-xl)] border border-border bg-card p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]"
           @click.stop
@@ -234,7 +242,7 @@ async function signOut() {
 
       <div
         v-if="open"
-        class="fixed inset-0 z-[60] flex items-start justify-center bg-black/45 p-4 pt-[10vh]"
+        class="app-shell-scrim fixed inset-0 z-[60] flex items-start justify-center bg-black/45 p-4 pt-[max(10vh,calc(var(--dh-top-bar-h)+0.5rem))]"
         @click.self="close"
       >
         <div class="dh-surface w-full max-w-md p-2">

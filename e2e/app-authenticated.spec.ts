@@ -37,6 +37,17 @@ test.describe("deployed app (authenticated)", () => {
       parseFloat(getComputedStyle(el).paddingLeft),
     );
     expect(padLeft).toBeGreaterThan(8);
+    const topBarStyles = await page.locator('[data-testid="app-top-bar"]').evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return {
+        backdrop: cs.backdropFilter || (cs as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter,
+        opacity: cs.opacity,
+        boxShadow: cs.boxShadow,
+      };
+    });
+    expect(topBarStyles.backdrop === "none" || !topBarStyles.backdrop).toBeTruthy();
+    expect(parseFloat(topBarStyles.opacity)).toBe(1);
+    expect(topBarStyles.boxShadow === "none" || topBarStyles.boxShadow === "").toBeTruthy();
   });
 
   test("career hub: Retour to overview (not Accueil tab icon only)", async ({ page, baseURL }) => {
@@ -65,7 +76,12 @@ test.describe("deployed app (authenticated)", () => {
   test("header + opens quick-add sheet (same as FAB)", async ({ page, baseURL }) => {
     await page.goto(`${baseURL}/app/ai${shareQ}`);
     await expect(page.locator('[data-testid="mobile-bottom-nav"]')).toBeVisible();
-    await page.locator('[data-testid="snippet-add-header"]').click();
+    const addBtn = page.locator('[data-testid="snippet-add-header"]');
+    const box = await addBtn.boundingBox();
+    expect(box).toBeTruthy();
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    await addBtn.click();
     await expect(page.locator('[data-testid="snippet-quick-add-sheet"]')).toBeVisible();
     await page.screenshot({
       path: "/opt/cursor/artifacts/screenshots/e2e-header-snippet-add.png",
@@ -135,8 +151,8 @@ test.describe("deployed app (authenticated)", () => {
 });
 
 test.describe("deployed build metadata", () => {
-  test("sw.js is hub-shell-v9", async ({ request, baseURL }) => {
+  test("sw.js is hub-shell-v10", async ({ request, baseURL }) => {
     const res = await request.get(`${baseURL}/sw.js${shareQ}`);
-    expect(await res.text()).toContain("hub-shell-v9");
+    expect(await res.text()).toContain("hub-shell-v10");
   });
 });

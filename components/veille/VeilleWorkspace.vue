@@ -4,6 +4,10 @@ import { VEILLE_FILTER_CHIPS, VEILLE_PROVIDER_LABELS } from "~/shared/veille/lab
 import { sortVeilleItems } from "~/shared/veille/sort";
 import { feedDayGroupLabel } from "~/shared/veille/day-group";
 import { formatDate } from "~/shared/lib/dates";
+import {
+  normalizeSnippetReferenceUrl,
+  saveVeilleItemAsSnippet,
+} from "~/shared/veille/to-snippet";
 
 const props = defineProps<{
   initialItems: VeilleItem[];
@@ -16,9 +20,21 @@ const provider = ref<VeilleProvider | "all">("all");
 const savedOnly = ref(false);
 const q = ref("");
 const selectedId = ref<string | null>(null);
+const savingSnippetLink = ref<string | null>(null);
 
 const client = useSupabaseClient();
 const authUserId = useAuthUserId();
+const { showToast } = useToast();
+const { notifySnippetSaved } = useSnippetQuickAdd();
+
+const snippetLinks = ref(
+  new Set(
+    props.initialItems
+      .filter((i) => i.savedAsSnippet)
+      .map((i) => normalizeSnippetReferenceUrl(i.link))
+      .filter(Boolean),
+  ),
+);
 
 const filtered = computed(() => {
   const query = q.value.trim().toLowerCase();
@@ -45,11 +61,11 @@ const groupedSections = computed(() => {
   return [...map.entries()]
     .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
     .map(([feedDate, items]) => ({
-    feedDate,
-    label: feedDayGroupLabel(feedDate),
-    sub: formatDate(`${feedDate}T12:00:00`, "fr", "dayMonthYear"),
-    items,
-  }));
+      feedDate,
+      label: feedDayGroupLabel(feedDate),
+      sub: formatDate(`${feedDate}T12:00:00`, "fr", "dayMonthYear"),
+      items,
+    }));
 });
 
 const selected = computed(
@@ -58,6 +74,10 @@ const selected = computed(
     props.initialItems.find((i) => i.id === selectedId.value) ??
     null,
 );
+
+function isSavedAsSnippet(item: VeilleItem): boolean {
+  return snippetLinks.value.has(normalizeSnippetReferenceUrl(item.link));
+}
 
 async function toggleSave(item: VeilleItem) {
   const uid = authUserId.value ?? (await ensureAuthUserId());
@@ -68,6 +88,32 @@ async function toggleSave(item: VeilleItem) {
   } else {
     await client.from("veille_ia_saves").insert({ user_id: uid, item_id: item.id });
     item.saved = true;
+  }
+}
+
+async function saveAsSnippet(item: VeilleItem) {
+  if (isSavedAsSnippet(item)) return;
+  const uid = authUserId.value ?? (await ensureAuthUserId());
+  if (!uid) return;
+
+  const linkKey = normalizeSnippetReferenceUrl(item.link);
+  savingSnippetLink.value = linkKey;
+  try {
+    const result = await saveVeilleItemAsSnippet(client, uid, item, snippetLinks.value);
+    if (result.status === "duplicate") {
+      snippetLinks.value.add(linkKey);
+      item.savedAsSnippet = true;
+      showToast("Déjà sauvé");
+      return;
+    }
+    snippetLinks.value.add(linkKey);
+    item.savedAsSnippet = true;
+    notifySnippetSaved();
+    showToast("Ajouté aux snippets");
+  } catch {
+    showToast("Impossible d'ajouter le snippet");
+  } finally {
+    savingSnippetLink.value = null;
   }
 }
 </script>
@@ -142,7 +188,10 @@ async function toggleSave(item: VeilleItem) {
         v-for="item in section.items"
         :key="item.id"
         :item="item"
+        :saved-as-snippet="isSavedAsSnippet(item)"
+        :saving-snippet="savingSnippetLink === normalizeSnippetReferenceUrl(item.link)"
         @open="selectedId = $event"
+        @save-snippet="saveAsSnippet(item)"
       />
     </section>
 
@@ -171,15 +220,31 @@ async function toggleSave(item: VeilleItem) {
             </li>
           </ul>
         </section>
-        <div class="mt-4 flex flex-wrap gap-2">
-          <DsButton variant="secondary" size="sm" @click="toggleSave(selected)">
-            {{ selected.saved ? "Retirer" : "Enregistrer" }}
+        <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <DsButton
+            variant="primary"
+            size="sm"
+            class="min-h-[44px] w-full sm:w-auto"
+            data-testid="veille-save-snippet-detail"
+            :disabled="isSavedAsSnippet(selected) || savingSnippetLink === normalizeSnippetReferenceUrl(selected.link)"
+            @click="saveAsSnippet(selected)"
+          >
+            {{
+              isSavedAsSnippet(selected)
+                ? "Déjà sauvé"
+                : savingSnippetLink === normalizeSnippetReferenceUrl(selected.link)
+                  ? "Enregistrement…"
+                  : "Sauver en snippet"
+            }}
+          </DsButton>
+          <DsButton variant="secondary" size="sm" class="min-h-[44px] w-full sm:w-auto" @click="toggleSave(selected)">
+            {{ selected.saved ? "Retirer des favoris" : "Enregistrer" }}
           </DsButton>
           <a
             :href="selected.link"
             target="_blank"
             rel="noopener noreferrer"
-            class="dh-focus-ring inline-flex items-center text-[length:var(--dh-text-sm)] text-primary underline"
+            class="dh-focus-ring inline-flex min-h-[44px] w-full items-center justify-center text-[length:var(--dh-text-sm)] text-primary underline sm:w-auto sm:justify-start"
           >
             Source externe
           </a>

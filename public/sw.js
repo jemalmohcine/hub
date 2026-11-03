@@ -1,5 +1,5 @@
 /* hub PWA — never cache HTML or Nuxt bundles; static icons only */
-const CACHE = "hub-shell-v9";
+const CACHE = "hub-shell-v10";
 const PRECACHE = [
   "/manifest.webmanifest",
   "/icons/icon-192x192.png",
