@@ -29,44 +29,39 @@ test.describe("deployed app (authenticated)", () => {
     });
   });
 
-  test("overview shell: nav, FAB, main padding", async ({ page, baseURL }) => {
+  test("overview shell: mobile in-flow header and snippet add", async ({ page, baseURL }) => {
     await page.goto(`${baseURL}/app/overview${shareQ}`);
     await expect(page.locator('[data-testid="mobile-bottom-nav"]')).toBeVisible();
-    await expect(page.locator('[data-testid="snippet-fab"]')).toBeVisible();
+    await expect(page.locator('[data-testid="snippet-fab"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid="snippet-add-header"]')).toBeVisible();
+    const headerPosition = await page.locator('[data-testid="mobile-page-header"]').evaluate((el) => getComputedStyle(el).position);
+    expect(headerPosition).toBe("static");
+    const mobileTitle = page.locator(".mobile-page-header__title");
+    await expect(mobileTitle).toHaveText("Accueil");
+    await expect(page.locator(".dh-page-title")).toHaveCount(0);
     const padLeft = await page.locator('[data-testid="app-main"]').evaluate((el) =>
       parseFloat(getComputedStyle(el).paddingLeft),
     );
     expect(padLeft).toBeGreaterThan(8);
-    const topBarStyles = await page.locator('[data-testid="app-top-bar"]').evaluate((el) => {
+    const addStyles = await page.locator(".mobile-page-header__add").evaluate((el) => {
       const cs = getComputedStyle(el);
-      return {
-        backdrop: cs.backdropFilter || (cs as CSSStyleDeclaration & { webkitBackdropFilter?: string }).webkitBackdropFilter,
-        opacity: cs.opacity,
-        boxShadow: cs.boxShadow,
-      };
-    });
-    expect(topBarStyles.backdrop === "none" || !topBarStyles.backdrop).toBeTruthy();
-    expect(parseFloat(topBarStyles.opacity)).toBe(1);
-    expect(topBarStyles.boxShadow === "none" || topBarStyles.boxShadow === "").toBeTruthy();
-    const titleStyles = await page.locator(".app-top-bar__title").evaluate((el) => {
-      const cs = getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
       return {
         filter: cs.filter,
-        textShadow: cs.textShadow,
-        transform: cs.transform,
-        webkitFontSmoothing: (cs as CSSStyleDeclaration & { webkitFontSmoothing?: string }).webkitFontSmoothing,
+        boxShadow: cs.boxShadow,
+        width: rect.width,
+        height: rect.height,
       };
     });
-    expect(titleStyles.filter === "none" || !titleStyles.filter).toBeTruthy();
-    expect(titleStyles.textShadow === "none" || titleStyles.textShadow === "").toBeTruthy();
-    expect(titleStyles.transform === "none" || titleStyles.transform === "matrix(1, 0, 0, 1, 0, 0)").toBeTruthy();
-    await expect(page.locator(".app-top-bar__cmd")).toHaveCount(0);
+    expect(addStyles.filter === "none" || !addStyles.filter).toBeTruthy();
+    expect(addStyles.boxShadow === "none" || addStyles.boxShadow === "").toBeTruthy();
+    expect(addStyles.width).toBeGreaterThanOrEqual(44);
+    expect(addStyles.height).toBeGreaterThanOrEqual(44);
   });
 
-  test("career hub: Retour to overview (not Accueil tab icon only)", async ({ page, baseURL }) => {
+  test("career hub: bottom nav Accueil returns to overview", async ({ page, baseURL }) => {
     await page.goto(`${baseURL}/app/career${shareQ}`);
-    await expect(page.locator('[data-testid="app-back-button"]')).toBeVisible();
-    await page.locator('[data-testid="app-back-button"]').click();
+    await page.locator('[data-testid="mobile-bottom-nav"] a[href*="/app/overview"]').click();
     await expect(page).toHaveURL(/\/app\/overview/);
   });
 
@@ -148,10 +143,10 @@ test.describe("deployed app (authenticated)", () => {
     });
   });
 
-  test("outils/json: title, back, padding", async ({ page, baseURL }) => {
+  test("outils/json: title, back link, padding", async ({ page, baseURL }) => {
     await page.goto(`${baseURL}/app/outils/json${shareQ}`);
-    await expect(page.locator('[data-testid="app-back-button"]')).toBeVisible();
-    await expect(page.getByRole("heading", { name: "JSON" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Outils/i })).toBeVisible();
+    await expect(page.locator(".mobile-page-header__title")).toHaveText("JSON");
     const padLeft = await page.locator('[data-testid="app-main"]').evaluate((el) =>
       parseFloat(getComputedStyle(el).paddingLeft),
     );
@@ -164,8 +159,8 @@ test.describe("deployed app (authenticated)", () => {
 });
 
 test.describe("deployed build metadata", () => {
-  test("sw.js is hub-shell-v11", async ({ request, baseURL }) => {
+  test("sw.js is hub-shell-v12", async ({ request, baseURL }) => {
     const res = await request.get(`${baseURL}/sw.js${shareQ}`);
-    expect(await res.text()).toContain("hub-shell-v11");
+    expect(await res.text()).toContain("hub-shell-v12");
   });
 });

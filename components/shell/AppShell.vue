@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {
   Briefcase,
-  ChevronLeft,
   Code2,
   Home,
   LayoutGrid,
@@ -12,16 +11,17 @@ import {
   Sparkles,
   Wrench,
 } from "lucide-vue-next";
+import { resolveAppShellPageTitle } from "~/shared/shell/page-title";
 
 const route = useRoute();
-const router = useRouter();
 const user = useSupabaseUser();
 const config = useRuntimeConfig();
 const buildSha = computed(() => String(config.public.buildSha || "dev"));
 const { open, query, filtered, toggle, close, run } = useCommandPalette();
 const { openQuickAdd } = useSnippetQuickAdd();
-const { backTarget, showMobileBack } = useAppNav();
 useCommandPaletteShortcuts(toggle, close);
+
+provideAppShellChrome();
 
 const sheetOpen = ref(false);
 
@@ -51,33 +51,7 @@ function isActive(match: (p: string) => boolean) {
   return match(route.path);
 }
 
-const pageTitle = computed(() => {
-  if (route.path.startsWith("/app/ai") || route.path.startsWith("/app/veille")) return "Veille";
-  if (route.path.startsWith("/app/snippets")) return "Snippets";
-  if (route.path.startsWith("/app/outils/json")) return "JSON";
-  if (route.path.startsWith("/app/outils/encode")) return "Base64 / URL";
-  if (route.path.startsWith("/app/outils/jwt")) return "JWT";
-  if (route.path.startsWith("/app/outils/regex")) return "Regex";
-  if (route.path.startsWith("/app/outils/uuid")) return "UUID / hash";
-  if (route.path.startsWith("/app/outils/timestamp")) return "Timestamp";
-  if (route.path.startsWith("/app/outils/color")) return "Couleurs";
-  if (route.path.startsWith("/app/outils")) return "Outils";
-  if (route.path.startsWith("/app/career")) return "Carrière";
-  if (route.path.startsWith("/app/expenses")) return "Budget";
-  if (route.path.startsWith("/app/settings/account")) return "Compte";
-  if (route.path.startsWith("/app/settings/appearance")) return "Apparence";
-  if (route.path.startsWith("/app/settings/security")) return "Sécurité";
-  if (route.path.startsWith("/app/settings/billing")) return "Facturation";
-  if (route.path.startsWith("/app/settings/modules")) return "Modules";
-  if (route.path.startsWith("/app/settings")) return "Paramètres";
-  if (route.path === "/admin") return "Admin";
-  if (route.path.startsWith("/app/overview")) return "Accueil";
-  return "hub";
-});
-
-function goBack() {
-  if (backTarget.value) router.push(backTarget.value);
-}
+const pageTitle = computed(() => resolveAppShellPageTitle(route.path));
 
 async function signOut() {
   const client = useSupabaseClient();
@@ -126,58 +100,37 @@ async function signOut() {
     </aside>
 
     <div class="app-shell-main-column flex min-h-0 min-w-0 flex-1 flex-col">
-      <div class="app-top-bar-host">
-        <header
-          data-testid="app-top-bar"
-          class="app-top-bar shrink-0 border-b border-border pl-[max(var(--dh-space-page),env(safe-area-inset-left))] pr-[max(var(--dh-space-page),env(safe-area-inset-right))] lg:px-8"
-        >
-          <div class="app-top-bar__status" aria-hidden="true" />
-          <div class="app-top-bar__actions flex min-h-[var(--dh-top-bar-row-h)] items-center gap-2 lg:min-h-16">
-        <button
-          v-if="showMobileBack"
-          type="button"
-          data-testid="app-back-button"
-          class="app-top-bar__icon-btn inline-flex h-11 min-h-[44px] w-11 min-w-[44px] shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] lg:hidden"
-          aria-label="Retour"
-          @click="goBack"
-        >
-          <ChevronLeft class="h-5 w-5 shrink-0" stroke-width="2" />
-        </button>
-        <NuxtLink
-          v-else
-          to="/app/overview"
-          class="app-top-bar__icon-btn inline-flex h-11 min-h-[44px] w-11 min-w-[44px] shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] lg:hidden"
-          aria-label="Accueil"
-        >
-          <Home class="h-5 w-5 shrink-0 text-primary" stroke-width="2" />
-        </NuxtLink>
-        <h1
-          class="app-top-bar__title min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[length:var(--dh-text-base)] lg:text-[length:var(--dh-text-lg)]"
-        >
-          {{ pageTitle }}
-        </h1>
-        <button
-          type="button"
-          class="app-top-bar__cmd hidden h-11 min-h-[44px] shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] px-3 lg:inline-flex"
-          aria-label="Palette de commandes"
-          @click="toggle"
-        >
-          ⌘K
-        </button>
-        <button
-          type="button"
-          class="app-top-bar__add-btn inline-flex h-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-[var(--dh-radius)] px-3 text-[length:var(--dh-text-sm)] sm:min-w-0"
-          data-testid="snippet-add-header"
-          aria-label="Nouveau snippet"
-          @click="openQuickAdd"
-        >
-          <span class="hidden sm:inline">Ajouter</span>
-          <span class="sm:hidden text-lg leading-none">+</span>
-        </button>
-          </div>
-        </header>
-      </div>
-      <div class="app-top-bar-spacer shrink-0 lg:hidden" aria-hidden="true" />
+      <ShellMobilePageHeader :title="pageTitle" @add="openQuickAdd()" />
+
+      <header
+        data-testid="app-top-bar"
+        class="app-top-bar hidden shrink-0 border-b border-border pl-[max(var(--dh-space-page),env(safe-area-inset-left))] pr-[max(var(--dh-space-page),env(safe-area-inset-right))] lg:block lg:px-8"
+      >
+        <div class="app-top-bar__actions flex min-h-16 items-center gap-2">
+          <h1
+            class="app-top-bar__title min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[length:var(--dh-text-lg)]"
+          >
+            {{ pageTitle }}
+          </h1>
+          <button
+            type="button"
+            class="app-top-bar__cmd inline-flex h-11 min-h-[44px] shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] px-3"
+            aria-label="Palette de commandes"
+            @click="toggle"
+          >
+            ⌘K
+          </button>
+          <button
+            type="button"
+            class="app-top-bar__add-btn inline-flex h-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-[var(--dh-radius)] px-3 text-[length:var(--dh-text-sm)]"
+            data-testid="snippet-add-header-desktop"
+            aria-label="Nouveau snippet"
+            @click="openQuickAdd()"
+          >
+            Ajouter
+          </button>
+        </div>
+      </header>
 
       <main
         data-testid="app-main"
@@ -249,7 +202,7 @@ async function signOut() {
 
       <div
         v-if="open"
-        class="app-shell-scrim fixed inset-0 z-[60] flex items-start justify-center bg-black/45 p-4 pt-[max(10vh,calc(var(--dh-top-bar-h)+0.5rem))]"
+        class="app-shell-scrim fixed inset-0 z-[60] flex items-start justify-center bg-black/45 p-4 pt-[10vh]"
         @click.self="close"
       >
         <div class="dh-surface w-full max-w-md p-2">
@@ -273,7 +226,7 @@ async function signOut() {
         v-if="route.path.startsWith('/app')"
         type="button"
         data-testid="snippet-fab"
-        class="dh-focus-ring fixed z-[45] flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95 max-lg:right-[max(1rem,env(safe-area-inset-right))] max-lg:bottom-[calc(var(--dh-nav-h)+env(safe-area-inset-bottom)+1rem)] lg:bottom-8 lg:right-8"
+        class="dh-focus-ring fixed z-[45] hidden h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg lg:bottom-8 lg:right-8 lg:flex"
         aria-label="Nouveau snippet"
         @click="openQuickAdd()"
       >
