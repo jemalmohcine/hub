@@ -137,29 +137,36 @@ async function signOut() {
           v-if="showMobileBack"
           type="button"
           data-testid="app-back-button"
-          class="app-top-bar__icon-btn dh-focus-ring inline-flex h-11 min-h-[44px] w-11 min-w-[44px] shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] border border-border lg:hidden"
+          class="app-top-bar__icon-btn inline-flex h-11 min-h-[44px] w-11 min-w-[44px] shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] lg:hidden"
           aria-label="Retour"
           @click="goBack"
         >
-          <ChevronLeft class="h-5 w-5" />
+          <ChevronLeft class="h-5 w-5 shrink-0" stroke-width="2" />
         </button>
         <NuxtLink
           v-else
           to="/app/overview"
-          class="app-top-bar__icon-btn dh-focus-ring inline-flex h-11 min-h-[44px] w-11 min-w-[44px] shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] border border-border lg:hidden"
+          class="app-top-bar__icon-btn inline-flex h-11 min-h-[44px] w-11 min-w-[44px] shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] lg:hidden"
           aria-label="Accueil"
         >
-          <Home class="h-5 w-5 text-primary" />
+          <Home class="h-5 w-5 shrink-0 text-primary" stroke-width="2" />
         </NuxtLink>
-        <h1 class="min-w-0 flex-1 truncate text-[length:var(--dh-text-base)] font-semibold text-foreground lg:text-[length:var(--dh-text-lg)]">
+        <h1
+          class="app-top-bar__title min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[length:var(--dh-text-base)] lg:text-[length:var(--dh-text-lg)]"
+        >
           {{ pageTitle }}
         </h1>
-        <DsButton variant="ghost" size="sm" class="app-top-bar__cmd hidden h-11 min-h-[44px] shrink-0 sm:inline-flex" aria-label="Palette de commandes" @click="toggle">
-          ⌘K
-        </DsButton>
         <button
           type="button"
-          class="app-top-bar__add-btn dh-focus-ring relative z-[1] inline-flex h-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-[var(--dh-radius)] bg-primary px-3 text-[length:var(--dh-text-sm)] font-medium text-primary-foreground sm:min-w-0"
+          class="app-top-bar__cmd hidden h-11 min-h-[44px] shrink-0 items-center justify-center rounded-[var(--dh-radius-lg)] px-3 lg:inline-flex"
+          aria-label="Palette de commandes"
+          @click="toggle"
+        >
+          ⌘K
+        </button>
+        <button
+          type="button"
+          class="app-top-bar__add-btn inline-flex h-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-[var(--dh-radius)] px-3 text-[length:var(--dh-text-sm)] sm:min-w-0"
           data-testid="snippet-add-header"
           aria-label="Nouveau snippet"
           @click="openQuickAdd"
